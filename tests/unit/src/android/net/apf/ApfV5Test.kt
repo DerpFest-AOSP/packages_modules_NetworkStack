@@ -39,13 +39,15 @@ class ApfV5Test {
         assertFailsWith<IllegalInstructionException> { gen.addCountAndPass(1000) }
         assertFailsWith<IllegalInstructionException> { gen.addTransmit() }
         assertFailsWith<IllegalInstructionException> { gen.addDiscard() }
+        assertFailsWith<IllegalInstructionException> { gen.addAllocateR0() }
+        assertFailsWith<IllegalInstructionException> { gen.addAllocate(100) }
     }
 
     @Test
-    fun testApfInstructionArgumentCheck() {
+    fun testApfInstructionEncodingSizeCheck() {
         var gen = ApfGenerator(ApfGenerator.MIN_APF_VERSION_IN_DEV)
-        assertFailsWith<IllegalArgumentException> { gen.addCountAndPass(0) }
-        assertFailsWith<IllegalArgumentException> { gen.addCountAndDrop(0) }
+        assertFailsWith<IllegalArgumentException> { gen.addAllocate(65536) }
+        assertFailsWith<IllegalArgumentException> { gen.addAllocate(-1) }
     }
 
     @Test
@@ -81,10 +83,18 @@ class ApfV5Test {
                         0x03, 0xe8.toByte()), program)
 
         gen = ApfGenerator(ApfGenerator.MIN_APF_VERSION_IN_DEV)
-        gen.addAlloc(ApfGenerator.Register.R0)
+        gen.addAllocateR0()
+        gen.addAllocate(1500)
         program = gen.generate()
-        assertContentEquals(byteArrayOf(encodeInstruction(21, 1, 0), 36), program)
-        assertContentEquals(arrayOf("       0: alloc r0"), ApfJniUtils.disassembleApf(program))
+        // encoding ALLOC opcode: opcode=21(EXT opcode number), imm=36(TRANS opcode number).
+        // R=0 means length stored in R0. R=1 means the length stored in imm1.
+        assertContentEquals(byteArrayOf(
+                encodeInstruction(opcode = 21, immLength = 1, register = 0), 36,
+                encodeInstruction(opcode = 21, immLength = 1, register = 1), 36, 0x05,
+                0xDC.toByte()),
+        program)
+        // TODO: add back disassembling test check after we update the apf_disassembler
+        // assertContentEquals(arrayOf("       0: alloc"), ApfJniUtils.disassembleApf(program))
 
         gen = ApfGenerator(ApfGenerator.MIN_APF_VERSION_IN_DEV)
         gen.addTransmit()

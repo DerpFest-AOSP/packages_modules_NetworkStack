@@ -41,6 +41,14 @@ class ApfV5Test {
         assertFailsWith<IllegalInstructionException> { gen.addDiscard() }
         assertFailsWith<IllegalInstructionException> { gen.addAllocateR0() }
         assertFailsWith<IllegalInstructionException> { gen.addAllocate(100) }
+        assertFailsWith<IllegalInstructionException> { gen.addData(ByteArray(3) { 0x01 }) }
+    }
+
+    @Test
+    fun testDataInstructionMustComeFirst() {
+        var gen = ApfGenerator(ApfGenerator.MIN_APF_VERSION_IN_DEV)
+        gen.addAllocateR0()
+        assertFailsWith<IllegalInstructionException> { gen.addData(ByteArray(3) { 0x01 }) }
     }
 
     @Test
@@ -110,6 +118,15 @@ class ApfV5Test {
         // TODO: add back disassembling test check after we update the apf_disassembler
         // assertContentEquals(arrayOf("       0: trans"), ApfJniUtils.disassembleApf(program))
 
+        gen = ApfGenerator(ApfGenerator.MIN_APF_VERSION_IN_DEV)
+        val largeByteArray = ByteArray(256) { 0x01 }
+        gen.addData(largeByteArray)
+        program = gen.generate()
+        // encoding DATA opcode: opcode=14(JMP), R=1
+        assertContentEquals(byteArrayOf(
+                encodeInstruction(opcode = 14, immLength = 2, register = 1), 0x01, 0x00) +
+                largeByteArray, program)
+
         // TODO: add back when support write opcode
 //        gen = ApfGenerator(ApfGenerator.MIN_APF_VERSION_IN_DEV)
 //        gen.addWrite(0x01, 1)
@@ -141,7 +158,7 @@ class ApfV5Test {
 //                "       2: write r0, 2",
 //                "       4: write r0, 4"), ApfJniUtils.disassembleApf(program))
 
-        // TODO: add back when we properly support copy opcode
+        // TODO: add back the following test case when implementing EPKTCOPY, EDATACOPY opcodes.
 //        gen = ApfGenerator(ApfGenerator.MIN_APF_VERSION_IN_DEV)
 //        gen.addDataCopy(1, 5)
 //        gen.addPacketCopy(1000, 255)

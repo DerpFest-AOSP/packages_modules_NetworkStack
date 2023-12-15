@@ -241,13 +241,12 @@ public class ApfGenerator {
             if (mTargetLabel == null) {
                 return false;
             }
-            int oldSize = size();
             int oldTargetLabelSize = mTargetLabelSize;
             mTargetLabelSize = calculateImmSize(calculateTargetLabelOffset(), false);
             if (mTargetLabelSize > oldTargetLabelSize) {
                 throw new IllegalStateException("instruction grew");
             }
-            return size() < oldSize;
+            return mTargetLabelSize < oldTargetLabelSize;
         }
 
         /**

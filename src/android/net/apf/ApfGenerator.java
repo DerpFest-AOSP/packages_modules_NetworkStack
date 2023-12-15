@@ -16,6 +16,8 @@
 
 package android.net.apf;
 
+import androidx.annotation.NonNull;
+
 import com.android.internal.annotations.VisibleForTesting;
 
 import java.util.ArrayList;
@@ -898,7 +900,8 @@ public class ApfGenerator {
      */
     public ApfGenerator addCountAndPass(int counterNumber) throws IllegalInstructionException {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        checkCounterNumber(counterNumber);
+        checkRange("CounterNumber", counterNumber /* value */, 1 /* lowerBound */,
+                1000 /* upperBound */);
         Instruction instruction = new Instruction(Opcodes.PASS, Register.R0);
         instruction.addUnsignedImm(counterNumber);
         addInstruction(instruction);
@@ -921,7 +924,8 @@ public class ApfGenerator {
      */
     public ApfGenerator addCountAndDrop(int counterNumber) throws IllegalInstructionException {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        checkCounterNumber(counterNumber);
+        checkRange("CounterNumber", counterNumber /* value */, 1 /* lowerBound */,
+                1000 /* upperBound */);
         Instruction instruction = new Instruction(Opcodes.DROP, Register.R1);
         instruction.addUnsignedImm(counterNumber);
         addInstruction(instruction);
@@ -1129,11 +1133,14 @@ public class ApfGenerator {
         }
     }
 
-    private void checkCounterNumber(int counterNumber) {
-        if (counterNumber < 1 || counterNumber > 1000) {
-            throw new IllegalArgumentException(
-                    "Counter number must be in range (0, 1000], counterNumber: " + counterNumber);
+    private void checkRange(@NonNull String variableName, int value, int lowerBound,
+            int upperBound) {
+        if (value >= lowerBound && value <= upperBound) {
+            return;
         }
+        throw new IllegalArgumentException(
+                String.format("%s: %d, must be in range [%d, %d]", variableName, value, lowerBound,
+                        upperBound));
     }
 
     /**

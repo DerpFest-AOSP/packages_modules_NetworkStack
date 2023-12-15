@@ -131,6 +131,17 @@ public class ApfGenerator {
         }
     }
 
+    private enum IntImmediateType {
+        INDETERMINATE_SIZE_SIGNED,
+        INDETERMINATE_SIZE_UNSIGNED,
+        SIGNED_8,
+        UNSIGNED_8,
+        SIGNED_BE16,
+        UNSIGNED_BE16,
+        SIGNED_BE32,
+        UNSIGNED_BE32;
+    }
+
     private static class IntImmediate {
         public final boolean mSigned;
         public final byte mImmSize;

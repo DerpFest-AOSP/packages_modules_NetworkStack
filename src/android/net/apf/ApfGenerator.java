@@ -143,6 +143,8 @@ public class ApfGenerator {
     }
 
     private static class IntImmediate {
+        public final IntImmediateType mImmediateType;
+        // TODO: remove mSigned and mImmSize fields in follow up CL
         public final boolean mSigned;
         public final byte mImmSize;
         public final int mValue;
@@ -151,16 +153,81 @@ public class ApfGenerator {
             this(value, signed, calculateImmSize(value, signed));
         }
 
+        // TODO: Remove this constructor in follow up CLs.
         IntImmediate(int value, boolean signed, byte size) {
             mValue = value;
             mSigned = signed;
             mImmSize = size;
+            if (signed) {
+                mImmediateType = IntImmediateType.INDETERMINATE_SIZE_SIGNED;
+            } else {
+                mImmediateType = IntImmediateType.INDETERMINATE_SIZE_UNSIGNED;
+            }
+        }
+
+        IntImmediate(int value, IntImmediateType type) {
+            mImmediateType = type;
+            mValue = value;
+            // The following logic for initialize mSigned and mImmSize could be removed after we
+            // remove those two variable
+            switch (type) {
+                case INDETERMINATE_SIZE_SIGNED:
+                case SIGNED_8:
+                case SIGNED_BE16:
+                case SIGNED_BE32:
+                    mSigned = true;
+                    break;
+                default:
+                    mSigned = false;
+            }
+            mImmSize = calculateImmSize(value, mSigned);
+        }
+
+        public static IntImmediate newSignedIndeterminate(int imm) {
+            return new IntImmediate(imm, IntImmediateType.INDETERMINATE_SIZE_SIGNED);
+        }
+
+        public static IntImmediate newUnsignedIndeterminate(long imm) {
+            // upperBound is 2^32 - 1
+            checkRange("Unsigned Indeterminate IMM", imm, 0 /* lowerBound */,
+                    4294967295L /* upperBound */);
+            return new IntImmediate((int) imm, IntImmediateType.INDETERMINATE_SIZE_UNSIGNED);
+        }
+
+        public static IntImmediate newSigned8(byte imm) {
+            checkRange("Signed8 IMM", imm, Byte.MIN_VALUE, Byte.MAX_VALUE);
+            return new IntImmediate(imm, IntImmediateType.SIGNED_8);
+        }
+
+        public static IntImmediate newUnsigned8(int imm) {
+            checkRange("Unsigned8 IMM", imm, 0, 255);
+            return new IntImmediate(imm, IntImmediateType.UNSIGNED_8);
+        }
+
+        public static IntImmediate newSignedBe16(short imm) {
+            return new IntImmediate(imm, IntImmediateType.SIGNED_BE16);
+        }
+
+        public static IntImmediate newUnsignedBe16(int imm) {
+            checkRange("UnsignedBe16 IMM", imm, 0, 65535);
+            return new IntImmediate(imm, IntImmediateType.UNSIGNED_BE16);
+        }
+
+        public static IntImmediate newSignedBe32(int imm) {
+            return new IntImmediate(imm, IntImmediateType.SIGNED_BE32);
+        }
+
+        public static IntImmediate newUnsignedBe32(long imm) {
+            // upperBound is 2^32 - 1
+            checkRange("UnsignedBe32 IMM", imm, 0 /* lowerBound */,
+                    4294967295L /* upperBound */);
+            return new IntImmediate((int) imm, IntImmediateType.UNSIGNED_BE32);
         }
 
         @Override
         public String toString() {
-            return "Immediate{" + "mSigned=" + mSigned + ", mImmSize=" + mImmSize + ", mValue="
-                    + mValue + '}';
+            return "IntImmediate{" + "mImmediateType=" + mImmediateType + ", mSigned=" + mSigned
+                    + ", mImmSize=" + mImmSize + ", mValue=" + mValue + '}';
         }
     }
 
@@ -1143,8 +1210,8 @@ public class ApfGenerator {
         }
     }
 
-    private void checkRange(@NonNull String variableName, int value, int lowerBound,
-            int upperBound) {
+    private static void checkRange(@NonNull String variableName, long value, long lowerBound,
+            long upperBound) {
         if (value >= lowerBound && value <= upperBound) {
             return;
         }

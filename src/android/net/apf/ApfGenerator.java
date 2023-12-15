@@ -26,7 +26,7 @@ import java.util.List;
  * APF assembler/generator.  A tool for generating an APF program.
  *
  * Call add*() functions to add instructions to the program, then call
- * {@link generate} to get the APF bytecode for the program.
+ * {@link ApfGenerator#generate} to get the APF bytecode for the program.
  *
  * @hide
  */
@@ -284,7 +284,7 @@ public class ApfGenerator {
         }
 
         /**
-         * Generate bytecode for this instruction at offset {@link offset}.
+         * Generate bytecode for this instruction at offset {@link Instruction#offset}.
          */
         void generate(byte[] bytecode) throws IllegalInstructionException {
             if (mOpcode == Opcodes.LABEL.value) {

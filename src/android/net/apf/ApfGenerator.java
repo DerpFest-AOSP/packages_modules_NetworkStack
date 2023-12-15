@@ -131,16 +131,16 @@ public class ApfGenerator {
         }
     }
 
-    private static class Immediate {
+    private static class IntImmediate {
         public final boolean mSigned;
         public final byte mImmSize;
         public final int mValue;
 
-        Immediate(int value, boolean signed) {
+        IntImmediate(int value, boolean signed) {
             this(value, signed, calculateImmSize(value, signed));
         }
 
-        Immediate(int value, boolean signed, byte size) {
+        IntImmediate(int value, boolean signed, byte size) {
             mValue = value;
             mSigned = signed;
             mImmSize = size;
@@ -156,7 +156,7 @@ public class ApfGenerator {
     private class Instruction {
         private final byte mOpcode;   // A "Opcode" value.
         private final byte mRegister; // A "Register" value.
-        public final List<Immediate> mImms = new ArrayList<>();
+        public final List<IntImmediate> mIntImms = new ArrayList<>();
         // When mOpcode is a jump:
         private byte mTargetLabelSize;
         private String mTargetLabel;
@@ -176,19 +176,19 @@ public class ApfGenerator {
         }
 
         void addUnsignedImm(int imm) {
-            addImm(new Immediate(imm, false));
+            addImm(new IntImmediate(imm, false));
         }
 
         void addUnsignedImm(int imm, byte size) {
-            addImm(new Immediate(imm, false, size));
+            addImm(new IntImmediate(imm, false, size));
         }
 
         void addSignedImm(int imm) {
-            addImm(new Immediate(imm, true));
+            addImm(new IntImmediate(imm, true));
         }
 
-        void addImm(Immediate imm) {
-            mImms.add(imm);
+        void addImm(IntImmediate imm) {
+            mIntImms.add(imm);
         }
 
         void setLabel(String label) throws IllegalInstructionException {
@@ -224,7 +224,7 @@ public class ApfGenerator {
             int size = 1;
             byte maxImmSize = getMaxImmSize();
             // For the copy opcode, the last imm is the length field is always 1 byte
-            size += mImms.size() * maxImmSize;
+            size += mIntImms.size() * maxImmSize;
             if (mTargetLabel != null) {
                 size += maxImmSize;
             }
@@ -299,7 +299,7 @@ public class ApfGenerator {
                 writingOffset = writeValue(calculateTargetLabelOffset(), bytecode, writingOffset,
                         maxImmSize);
             }
-            for (Immediate imm : mImms) {
+            for (IntImmediate imm : mIntImms) {
                 writingOffset = writeValue(imm.mValue, bytecode, writingOffset, maxImmSize);
             }
             if (mBytesImm != null) {
@@ -322,8 +322,8 @@ public class ApfGenerator {
          */
         private byte getMaxImmSize() {
             byte maxSize = mTargetLabelSize;
-            for (int i = 0; i < mImms.size(); ++i) {
-                maxSize = (byte) Math.max(maxSize, mImms.get(i).mImmSize);
+            for (int i = 0; i < mIntImms.size(); ++i) {
+                maxSize = (byte) Math.max(maxSize, mIntImms.get(i).mImmSize);
             }
             return maxSize;
         }

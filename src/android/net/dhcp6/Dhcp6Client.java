@@ -85,8 +85,6 @@ public class Dhcp6Client extends StateMachine {
     // Message.arg1 arguments to CMD_DHCP6_RESULT notification
     public static final int DHCP6_PD_SUCCESS = 1;
     public static final int DHCP6_PD_PREFIX_EXPIRED = 2;
-    public static final int DHCP6_PD_PREFIX_CHANGED = 3;
-    public static final int DHCP6_PD_PREFIX_MSG_EXCHANGE_TERMINATED = 4;
 
     // Notification from DHCPv6 state machine before quitting
     public static final int CMD_ON_QUIT = PUBLIC_BASE + 4;

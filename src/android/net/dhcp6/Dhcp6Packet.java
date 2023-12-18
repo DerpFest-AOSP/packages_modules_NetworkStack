@@ -207,14 +207,21 @@ public class Dhcp6Packet {
         public final int t2;
         @NonNull
         public final List<IaPrefixOption> ipos;
+        public final short statusCode;
 
         public PrefixDelegation(int iaid, int t1, int t2,
-                @NonNull final List<IaPrefixOption> ipos) {
+                @NonNull final List<IaPrefixOption> ipos, short statusCode) {
             Objects.requireNonNull(ipos);
             this.iaid = iaid;
             this.t1 = t1;
             this.t2 = t2;
             this.ipos = ipos;
+            this.statusCode = statusCode;
+        }
+
+        public PrefixDelegation(int iaid, int t1, int t2,
+                @NonNull final List<IaPrefixOption> ipos) {
+            this(iaid, t1, t2, ipos, STATUS_SUCCESS /* statusCode */);
         }
 
         /**
@@ -249,6 +256,7 @@ public class Dhcp6Packet {
                 final int t1 = buffer.getInt();
                 final int t2 = buffer.getInt();
                 final List<IaPrefixOption> ipos = new ArrayList<IaPrefixOption>();
+                short statusCode = STATUS_SUCCESS;
                 while (buffer.remaining() > 0) {
                     final int original = buffer.position();
                     final short optionType = buffer.getShort();
@@ -260,12 +268,17 @@ public class Dhcp6Packet {
                             Log.d(TAG, "IA Prefix Option: " + ipo);
                             ipos.add(ipo);
                             break;
-                        // TODO: support DHCP6_STATUS_CODE option
+                        case DHCP6_STATUS_CODE:
+                            statusCode = buffer.getShort();
+                            if (optionLen > 2) {
+                                buffer.position(buffer.position() + (optionLen - 2));
+                            }
+                            break;
                         default:
                             skipOption(buffer, optionLen);
                     }
                 }
-                return new PrefixDelegation(iaid, t1, t2, ipos);
+                return new PrefixDelegation(iaid, t1, t2, ipos, statusCode);
             } catch (BufferUnderflowException e) {
                 throw new ParseException(e.getMessage());
             }
@@ -312,8 +325,8 @@ public class Dhcp6Packet {
 
         @Override
         public String toString() {
-            return "Prefix Delegation: iaid " + iaid + ", t1 " + t1 + ", t2 " + t2
-                    + ", IA prefix options: " + ipos;
+            return String.format("Prefix Delegation, iaid: %s, t1: %s, t2: %s, status code: %s,"
+                    + " IA prefix options: %s", iaid, t1, t2, statusCodeToString(statusCode), ipos);
         }
 
         /**
@@ -361,6 +374,27 @@ public class Dhcp6Packet {
     public static class ParseException extends Exception {
         ParseException(String msg) {
             super(msg);
+        }
+    }
+
+    private static String statusCodeToString(short statusCode) {
+        switch (statusCode) {
+            case STATUS_SUCCESS:
+                return "Success";
+            case STATUS_UNSPEC_FAIL:
+                return "UnspecFail";
+            case STATUS_NO_ADDR_AVAI:
+                return "NoAddrsAvail";
+            case STATUS_NO_BINDING:
+                return "NoBinding";
+            case STATUS_PREFIX_NOT_ONLINK:
+                return "NotOnLink";
+            case STATUS_USE_MULTICAST:
+                return "UseMulticast";
+            case STATUS_NO_PREFIX_AVAI:
+                return "NoPrefixAvail";
+            default:
+                return "Unknown";
         }
     }
 

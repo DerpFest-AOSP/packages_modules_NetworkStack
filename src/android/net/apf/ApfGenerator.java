@@ -292,27 +292,45 @@ public class ApfGenerator {
             mRegister = (byte) register.value;
         }
 
+        Instruction(ExtendedOpcodes extendedOpcodes, Register register) {
+            mOpcode = (byte) Opcodes.EXT.value;
+            mRegister = (byte) register.value;
+            addUnsignedImm(extendedOpcodes.value);
+        }
+
+        Instruction(ExtendedOpcodes extendedOpcodes, int slot, Register register) {
+            mOpcode = (byte) Opcodes.EXT.value;
+            mRegister = (byte) register.value;
+            addUnsignedImm(extendedOpcodes.value + slot);
+        }
+
         Instruction(Opcodes opcode) {
             this(opcode, Register.R0);
         }
 
-        void addUnsignedImm(int imm) {
+        Instruction(ExtendedOpcodes extendedOpcodes) {
+            this(extendedOpcodes, Register.R0);
+        }
+
+        Instruction addUnsignedImm(int imm) {
             addImm(new IntImmediate(imm, false));
+            return this;
         }
 
         void addUnsignedImm(int imm, byte size) {
             addImm(new IntImmediate(imm, false, size));
         }
 
-        void addSignedImm(int imm) {
+        Instruction addSignedImm(int imm) {
             addImm(new IntImmediate(imm, true));
+            return this;
         }
 
         void addImm(IntImmediate imm) {
             mIntImms.add(imm);
         }
 
-        void setLabel(String label) throws IllegalInstructionException {
+        Instruction setLabel(String label) throws IllegalInstructionException {
             if (mLabels.containsKey(label)) {
                 throw new IllegalInstructionException("duplicate label " + label);
             }
@@ -321,18 +339,21 @@ public class ApfGenerator {
             }
             mLabel = label;
             mLabels.put(label, this);
+            return this;
         }
 
-        void setTargetLabel(String label) {
+        Instruction setTargetLabel(String label) {
             mTargetLabel = label;
             mTargetLabelSize = 4; // May shrink later on in generate().
+            return this;
         }
 
-        void setBytesImm(byte[] bytes) {
+        Instruction setBytesImm(byte[] bytes) {
             if (mOpcode != Opcodes.JNEBS.value) {
                 throw new IllegalStateException("adding compare bytes to non-JNEBS instruction");
             }
             mBytesImm = bytes;
+            return this;
         }
 
         /**
@@ -555,11 +576,12 @@ public class ApfGenerator {
         }
     }
 
-    private void addInstruction(Instruction instruction) {
+    private ApfGenerator addInstruction(Instruction instruction) {
         if (mGenerated) {
             throw new IllegalStateException("Program already generated");
         }
         mInstructions.add(instruction);
+        return this;
     }
 
     /**
@@ -578,20 +600,14 @@ public class ApfGenerator {
      * In this case "next_filter" may not have any generated code associated with it.
      */
     public ApfGenerator defineLabel(String name) throws IllegalInstructionException {
-        Instruction instruction = new Instruction(Opcodes.LABEL);
-        instruction.setLabel(name);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.LABEL).setLabel(name));
     }
 
     /**
      * Add an unconditional jump instruction to the end of the program.
      */
     public ApfGenerator addJump(String target) {
-        Instruction instruction = new Instruction(Opcodes.JMP);
-        instruction.setTargetLabel(target);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.JMP).setTargetLabel(target));
     }
 
     /**
@@ -599,10 +615,7 @@ public class ApfGenerator {
      * bytes from the beginning of the packet into {@code register}.
      */
     public ApfGenerator addLoad8(Register register, int offset) {
-        Instruction instruction = new Instruction(Opcodes.LDB, register);
-        instruction.addUnsignedImm(offset);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.LDB, register).addUnsignedImm(offset));
     }
 
     /**
@@ -610,10 +623,7 @@ public class ApfGenerator {
      * bytes from the beginning of the packet into {@code register}.
      */
     public ApfGenerator addLoad16(Register register, int offset) {
-        Instruction instruction = new Instruction(Opcodes.LDH, register);
-        instruction.addUnsignedImm(offset);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.LDH, register).addUnsignedImm(offset));
     }
 
     /**
@@ -621,10 +631,7 @@ public class ApfGenerator {
      * bytes from the beginning of the packet into {@code register}.
      */
     public ApfGenerator addLoad32(Register register, int offset) {
-        Instruction instruction = new Instruction(Opcodes.LDW, register);
-        instruction.addUnsignedImm(offset);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.LDW, register).addUnsignedImm(offset));
     }
 
     /**
@@ -633,10 +640,7 @@ public class ApfGenerator {
      * the sum of {@code offset} and the value in register R1.
      */
     public ApfGenerator addLoad8Indexed(Register register, int offset) {
-        Instruction instruction = new Instruction(Opcodes.LDBX, register);
-        instruction.addUnsignedImm(offset);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.LDBX, register).addUnsignedImm(offset));
     }
 
     /**
@@ -645,10 +649,7 @@ public class ApfGenerator {
      * the sum of {@code offset} and the value in register R1.
      */
     public ApfGenerator addLoad16Indexed(Register register, int offset) {
-        Instruction instruction = new Instruction(Opcodes.LDHX, register);
-        instruction.addUnsignedImm(offset);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.LDHX, register).addUnsignedImm(offset));
     }
 
     /**
@@ -657,70 +658,49 @@ public class ApfGenerator {
      * the sum of {@code offset} and the value in register R1.
      */
     public ApfGenerator addLoad32Indexed(Register register, int offset) {
-        Instruction instruction = new Instruction(Opcodes.LDWX, register);
-        instruction.addUnsignedImm(offset);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.LDWX, register).addUnsignedImm(offset));
     }
 
     /**
      * Add an instruction to the end of the program to add {@code value} to register R0.
      */
     public ApfGenerator addAdd(int value) {
-        Instruction instruction = new Instruction(Opcodes.ADD);
-        instruction.addUnsignedImm(value);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.ADD).addUnsignedImm(value));
     }
 
     /**
      * Add an instruction to the end of the program to multiply register R0 by {@code value}.
      */
     public ApfGenerator addMul(int value) {
-        Instruction instruction = new Instruction(Opcodes.MUL);
-        instruction.addUnsignedImm(value);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.MUL).addUnsignedImm(value));
     }
 
     /**
      * Add an instruction to the end of the program to divide register R0 by {@code value}.
      */
     public ApfGenerator addDiv(int value) {
-        Instruction instruction = new Instruction(Opcodes.DIV);
-        instruction.addUnsignedImm(value);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.DIV).addUnsignedImm(value));
     }
 
     /**
      * Add an instruction to the end of the program to logically and register R0 with {@code value}.
      */
     public ApfGenerator addAnd(int value) {
-        Instruction instruction = new Instruction(Opcodes.AND);
-        instruction.addUnsignedImm(value);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.AND).addUnsignedImm(value));
     }
 
     /**
      * Add an instruction to the end of the program to logically or register R0 with {@code value}.
      */
     public ApfGenerator addOr(int value) {
-        Instruction instruction = new Instruction(Opcodes.OR);
-        instruction.addUnsignedImm(value);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.OR).addUnsignedImm(value));
     }
 
     /**
      * Add an instruction to the end of the program to shift left register R0 by {@code value} bits.
      */
     public ApfGenerator addLeftShift(int value) {
-        Instruction instruction = new Instruction(Opcodes.SH);
-        instruction.addSignedImm(value);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.SH).addSignedImm(value));
     }
 
     /**
@@ -728,37 +708,28 @@ public class ApfGenerator {
      * bits.
      */
     public ApfGenerator addRightShift(int value) {
-        Instruction instruction = new Instruction(Opcodes.SH);
-        instruction.addSignedImm(-value);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.SH).addSignedImm(-value));
     }
 
     /**
      * Add an instruction to the end of the program to add register R1 to register R0.
      */
     public ApfGenerator addAddR1() {
-        Instruction instruction = new Instruction(Opcodes.ADD, Register.R1);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.ADD, Register.R1));
     }
 
     /**
      * Add an instruction to the end of the program to multiply register R0 by register R1.
      */
     public ApfGenerator addMulR1() {
-        Instruction instruction = new Instruction(Opcodes.MUL, Register.R1);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.MUL, Register.R1));
     }
 
     /**
      * Add an instruction to the end of the program to divide register R0 by register R1.
      */
     public ApfGenerator addDivR1() {
-        Instruction instruction = new Instruction(Opcodes.DIV, Register.R1);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.DIV, Register.R1));
     }
 
     /**
@@ -766,9 +737,7 @@ public class ApfGenerator {
      * and store the result back into register R0.
      */
     public ApfGenerator addAndR1() {
-        Instruction instruction = new Instruction(Opcodes.AND, Register.R1);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.AND, Register.R1));
     }
 
     /**
@@ -776,9 +745,7 @@ public class ApfGenerator {
      * and store the result back into register R0.
      */
     public ApfGenerator addOrR1() {
-        Instruction instruction = new Instruction(Opcodes.OR, Register.R1);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.OR, Register.R1));
     }
 
     /**
@@ -786,19 +753,14 @@ public class ApfGenerator {
      * register R1.
      */
     public ApfGenerator addLeftShiftR1() {
-        Instruction instruction = new Instruction(Opcodes.SH, Register.R1);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.SH, Register.R1));
     }
 
     /**
      * Add an instruction to the end of the program to move {@code value} into {@code register}.
      */
     public ApfGenerator addLoadImmediate(Register register, int value) {
-        Instruction instruction = new Instruction(Opcodes.LI, register);
-        instruction.addSignedImm(value);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.LI, register).addSignedImm(value));
     }
 
     /**
@@ -806,11 +768,8 @@ public class ApfGenerator {
      * value equals {@code value}.
      */
     public ApfGenerator addJumpIfR0Equals(int value, String target) {
-        Instruction instruction = new Instruction(Opcodes.JEQ);
-        instruction.addUnsignedImm(value);
-        instruction.setTargetLabel(target);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.JEQ).addUnsignedImm(value).setTargetLabel(
+                target));
     }
 
     /**
@@ -818,11 +777,8 @@ public class ApfGenerator {
      * value does not equal {@code value}.
      */
     public ApfGenerator addJumpIfR0NotEquals(int value, String target) {
-        Instruction instruction = new Instruction(Opcodes.JNE);
-        instruction.addUnsignedImm(value);
-        instruction.setTargetLabel(target);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.JNE).addUnsignedImm(value).setTargetLabel(
+                target));
     }
 
     /**
@@ -830,11 +786,8 @@ public class ApfGenerator {
      * value is greater than {@code value}.
      */
     public ApfGenerator addJumpIfR0GreaterThan(int value, String target) {
-        Instruction instruction = new Instruction(Opcodes.JGT);
-        instruction.addUnsignedImm(value);
-        instruction.setTargetLabel(target);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.JGT).addUnsignedImm(value).setTargetLabel(
+                target));
     }
 
     /**
@@ -842,11 +795,8 @@ public class ApfGenerator {
      * value is less than {@code value}.
      */
     public ApfGenerator addJumpIfR0LessThan(int value, String target) {
-        Instruction instruction = new Instruction(Opcodes.JLT);
-        instruction.addUnsignedImm(value);
-        instruction.setTargetLabel(target);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.JLT).addUnsignedImm(value).setTargetLabel(
+                target));
     }
 
     /**
@@ -854,21 +804,15 @@ public class ApfGenerator {
      * value has any bits set that are also set in {@code value}.
      */
     public ApfGenerator addJumpIfR0AnyBitsSet(int value, String target) {
-        Instruction instruction = new Instruction(Opcodes.JSET);
-        instruction.addUnsignedImm(value);
-        instruction.setTargetLabel(target);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.JSET).addUnsignedImm(value).setTargetLabel(
+                target));
     }
     /**
      * Add an instruction to the end of the program to jump to {@code target} if register R0's
      * value equals register R1's value.
      */
     public ApfGenerator addJumpIfR0EqualsR1(String target) {
-        Instruction instruction = new Instruction(Opcodes.JEQ, Register.R1);
-        instruction.setTargetLabel(target);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.JEQ, Register.R1).setTargetLabel(target));
     }
 
     /**
@@ -876,10 +820,7 @@ public class ApfGenerator {
      * value does not equal register R1's value.
      */
     public ApfGenerator addJumpIfR0NotEqualsR1(String target) {
-        Instruction instruction = new Instruction(Opcodes.JNE, Register.R1);
-        instruction.setTargetLabel(target);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.JNE, Register.R1).setTargetLabel(target));
     }
 
     /**
@@ -887,10 +828,7 @@ public class ApfGenerator {
      * value is greater than register R1's value.
      */
     public ApfGenerator addJumpIfR0GreaterThanR1(String target) {
-        Instruction instruction = new Instruction(Opcodes.JGT, Register.R1);
-        instruction.setTargetLabel(target);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.JGT, Register.R1).setTargetLabel(target));
     }
 
     /**
@@ -898,10 +836,7 @@ public class ApfGenerator {
      * value is less than register R1's value.
      */
     public ApfGenerator addJumpIfR0LessThanR1(String target) {
-        Instruction instruction = new Instruction(Opcodes.JLT, Register.R1);
-        instruction.setTargetLabel(target);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.JLT, Register.R1).setTargetLabel(target));
     }
 
     /**
@@ -909,10 +844,7 @@ public class ApfGenerator {
      * value has any bits set that are also set in R1's value.
      */
     public ApfGenerator addJumpIfR0AnyBitsSetR1(String target) {
-        Instruction instruction = new Instruction(Opcodes.JSET, Register.R1);
-        instruction.setTargetLabel(target);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.JSET, Register.R1).setTargetLabel(target));
     }
 
     /**
@@ -925,12 +857,8 @@ public class ApfGenerator {
         if (register == Register.R1) {
             throw new IllegalInstructionException("JNEBS fails with R1");
         }
-        Instruction instruction = new Instruction(Opcodes.JNEBS, register);
-        instruction.addUnsignedImm(bytes.length);
-        instruction.setTargetLabel(target);
-        instruction.setBytesImm(bytes);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.JNEBS, register).addUnsignedImm(
+                bytes.length).setTargetLabel(target).setBytesImm(bytes));
     }
 
     /**
@@ -942,10 +870,7 @@ public class ApfGenerator {
         if (slot < 0 || slot > (MEMORY_SLOTS - 1)) {
             throw new IllegalInstructionException("illegal memory slot number: " + slot);
         }
-        Instruction instruction = new Instruction(Opcodes.EXT, register);
-        instruction.addUnsignedImm(ExtendedOpcodes.LDM.value + slot);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(ExtendedOpcodes.LDM, slot, register));
     }
 
     /**
@@ -957,40 +882,28 @@ public class ApfGenerator {
         if (slot < 0 || slot > (MEMORY_SLOTS - 1)) {
             throw new IllegalInstructionException("illegal memory slot number: " + slot);
         }
-        Instruction instruction = new Instruction(Opcodes.EXT, register);
-        instruction.addUnsignedImm(ExtendedOpcodes.STM.value + slot);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(ExtendedOpcodes.STM, slot, register));
     }
 
     /**
      * Add an instruction to the end of the program to logically not {@code register}.
      */
     public ApfGenerator addNot(Register register) {
-        Instruction instruction = new Instruction(Opcodes.EXT, register);
-        instruction.addUnsignedImm(ExtendedOpcodes.NOT.value);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(ExtendedOpcodes.NOT, register));
     }
 
     /**
      * Add an instruction to the end of the program to negate {@code register}.
      */
     public ApfGenerator addNeg(Register register) {
-        Instruction instruction = new Instruction(Opcodes.EXT, register);
-        instruction.addUnsignedImm(ExtendedOpcodes.NEG.value);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(ExtendedOpcodes.NEG, register));
     }
 
     /**
      * Add an instruction to swap the values in register R0 and register R1.
      */
     public ApfGenerator addSwap() {
-        Instruction instruction = new Instruction(Opcodes.EXT);
-        instruction.addUnsignedImm(ExtendedOpcodes.SWAP.value);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(ExtendedOpcodes.SWAP));
     }
 
     /**
@@ -998,19 +911,14 @@ public class ApfGenerator {
      * {@code register} from the other register.
      */
     public ApfGenerator addMove(Register register) {
-        Instruction instruction = new Instruction(Opcodes.EXT, register);
-        instruction.addUnsignedImm(ExtendedOpcodes.MOVE.value);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(ExtendedOpcodes.MOVE, register));
     }
 
     /**
      * Add an instruction to the end of the program to let the program immediately return PASS.
      */
     public ApfGenerator addPass() throws IllegalInstructionException {
-        Instruction instruction = new Instruction(Opcodes.PASS, Register.R0);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.PASS, Register.R0));
     }
 
     /**
@@ -1021,10 +929,8 @@ public class ApfGenerator {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
         checkRange("CounterNumber", counterNumber /* value */, 1 /* lowerBound */,
                 1000 /* upperBound */);
-        Instruction instruction = new Instruction(Opcodes.PASS, Register.R0);
-        instruction.addUnsignedImm(counterNumber);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(
+                new Instruction(Opcodes.PASS, Register.R0).addUnsignedImm(counterNumber));
     }
 
     /**
@@ -1032,9 +938,7 @@ public class ApfGenerator {
      */
     public ApfGenerator addDrop() throws IllegalInstructionException {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        Instruction instruction = new Instruction(Opcodes.DROP, Register.R1);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.DROP, Register.R1));
     }
 
     /**
@@ -1045,10 +949,8 @@ public class ApfGenerator {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
         checkRange("CounterNumber", counterNumber /* value */, 1 /* lowerBound */,
                 1000 /* upperBound */);
-        Instruction instruction = new Instruction(Opcodes.DROP, Register.R1);
-        instruction.addUnsignedImm(counterNumber);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(
+                new Instruction(Opcodes.DROP, Register.R1).addUnsignedImm(counterNumber));
     }
 
     /**
@@ -1058,10 +960,7 @@ public class ApfGenerator {
      */
     public ApfGenerator addAlloc(Register register) throws IllegalInstructionException {
         requireApfVersion(5);
-        Instruction instruction = new Instruction(Opcodes.EXT, register);
-        instruction.addUnsignedImm(ExtendedOpcodes.ALLOC.value);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(ExtendedOpcodes.ALLOC));
     }
 
     /**
@@ -1069,10 +968,7 @@ public class ApfGenerator {
      */
     public ApfGenerator addTransmit() throws IllegalInstructionException {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        Instruction instruction = new Instruction(Opcodes.EXT, Register.R0);
-        instruction.addUnsignedImm(ExtendedOpcodes.TRANSMIT.value);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(ExtendedOpcodes.TRANSMIT, Register.R0));
     }
 
     /**
@@ -1080,10 +976,7 @@ public class ApfGenerator {
      */
     public ApfGenerator addDiscard() throws IllegalInstructionException {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        Instruction instruction = new Instruction(Opcodes.EXT, Register.R1);
-        instruction.addUnsignedImm(ExtendedOpcodes.DISCARD.value);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(ExtendedOpcodes.DISCARD, Register.R1));
     }
 
     // TODO: add back when support WRITE opcode
@@ -1271,10 +1164,8 @@ public class ApfGenerator {
     public ApfGenerator addLoadData(Register destinationRegister, int offset)
             throws IllegalInstructionException {
         requireApfVersion(3);
-        Instruction instruction = new Instruction(Opcodes.LDDW, destinationRegister);
-        instruction.addSignedImm(offset);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(
+                new Instruction(Opcodes.LDDW, destinationRegister).addSignedImm(offset));
     }
 
     /**
@@ -1286,10 +1177,7 @@ public class ApfGenerator {
     public ApfGenerator addStoreData(Register sourceRegister, int offset)
             throws IllegalInstructionException {
         requireApfVersion(3);
-        Instruction instruction = new Instruction(Opcodes.STDW, sourceRegister);
-        instruction.addSignedImm(offset);
-        addInstruction(instruction);
-        return this;
+        return addInstruction(new Instruction(Opcodes.STDW, sourceRegister).addSignedImm(offset));
     }
 
     /**

@@ -144,43 +144,11 @@ public class ApfGenerator {
 
     private static class IntImmediate {
         public final IntImmediateType mImmediateType;
-        // TODO: remove mSigned and mImmSize fields in follow up CL
-        public final boolean mSigned;
-        public final int mImmSize;
         public final int mValue;
-
-        IntImmediate(int value, boolean signed) {
-            this(value, signed, calculateImmSize(value, signed));
-        }
-
-        // TODO: Remove this constructor in follow up CLs.
-        IntImmediate(int value, boolean signed, int size) {
-            mValue = value;
-            mSigned = signed;
-            mImmSize = size;
-            if (signed) {
-                mImmediateType = IntImmediateType.INDETERMINATE_SIZE_SIGNED;
-            } else {
-                mImmediateType = IntImmediateType.INDETERMINATE_SIZE_UNSIGNED;
-            }
-        }
 
         IntImmediate(int value, IntImmediateType type) {
             mImmediateType = type;
             mValue = value;
-            // The following logic for initialize mSigned and mImmSize could be removed after we
-            // remove those two variable
-            switch (type) {
-                case INDETERMINATE_SIZE_SIGNED:
-                case SIGNED_8:
-                case SIGNED_BE16:
-                case SIGNED_BE32:
-                    mSigned = true;
-                    break;
-                default:
-                    mSigned = false;
-            }
-            mImmSize = calculateImmSize(value, mSigned);
         }
 
         private int calculateIndeterminateSize() {
@@ -237,6 +205,12 @@ public class ApfGenerator {
             return new IntImmediate((int) imm, IntImmediateType.INDETERMINATE_SIZE_UNSIGNED);
         }
 
+        public static IntImmediate newTwosComplementUnsignedIndeterminate(long imm) {
+            checkRange("Unsigned Indeterminate IMM", imm, Integer.MIN_VALUE,
+                    4294967295L /* upperBound */);
+            return new IntImmediate((int) imm, IntImmediateType.INDETERMINATE_SIZE_UNSIGNED);
+        }
+
         public static IntImmediate newSigned8(byte imm) {
             checkRange("Signed8 IMM", imm, Byte.MIN_VALUE, Byte.MAX_VALUE);
             return new IntImmediate(imm, IntImmediateType.SIGNED_8);
@@ -269,8 +243,8 @@ public class ApfGenerator {
 
         @Override
         public String toString() {
-            return "IntImmediate{" + "mImmediateType=" + mImmediateType + ", mSigned=" + mSigned
-                    + ", mImmSize=" + mImmSize + ", mValue=" + mValue + '}';
+            return "IntImmediate{" + "mImmediateType=" + mImmediateType + ", mValue=" + mValue
+                    + '}';
         }
     }
 
@@ -295,13 +269,13 @@ public class ApfGenerator {
         Instruction(ExtendedOpcodes extendedOpcodes, Register register) {
             mOpcode = (byte) Opcodes.EXT.value;
             mRegister = (byte) register.value;
-            addUnsignedImm(extendedOpcodes.value);
+            addUnsignedIndeterminateIntImm(extendedOpcodes.value);
         }
 
         Instruction(ExtendedOpcodes extendedOpcodes, int slot, Register register) {
             mOpcode = (byte) Opcodes.EXT.value;
             mRegister = (byte) register.value;
-            addUnsignedImm(extendedOpcodes.value + slot);
+            addUnsignedIndeterminateIntImm(extendedOpcodes.value + slot);
         }
 
         Instruction(Opcodes opcode) {
@@ -312,22 +286,19 @@ public class ApfGenerator {
             this(extendedOpcodes, Register.R0);
         }
 
-        Instruction addUnsignedImm(int imm) {
-            addImm(new IntImmediate(imm, false));
+        Instruction addUnsignedIndeterminateIntImm(int imm) {
+            mIntImms.add(IntImmediate.newUnsignedIndeterminate(imm));
             return this;
         }
 
-        void addUnsignedImm(int imm, byte size) {
-            addImm(new IntImmediate(imm, false, size));
-        }
-
-        Instruction addSignedImm(int imm) {
-            addImm(new IntImmediate(imm, true));
+        Instruction addSignedIndeterminateIntImm(int imm) {
+            mIntImms.add(IntImmediate.newSignedIndeterminate(imm));
             return this;
         }
 
-        void addImm(IntImmediate imm) {
-            mIntImms.add(imm);
+        Instruction addTwosComplementUnsignedIndeterminateIntImm(int imm) {
+            mIntImms.add(IntImmediate.newTwosComplementUnsignedIndeterminate(imm));
+            return this;
         }
 
         Instruction setLabel(String label) throws IllegalInstructionException {
@@ -615,7 +586,8 @@ public class ApfGenerator {
      * bytes from the beginning of the packet into {@code register}.
      */
     public ApfGenerator addLoad8(Register register, int offset) {
-        return addInstruction(new Instruction(Opcodes.LDB, register).addUnsignedImm(offset));
+        return addInstruction(
+                new Instruction(Opcodes.LDB, register).addUnsignedIndeterminateIntImm(offset));
     }
 
     /**
@@ -623,7 +595,8 @@ public class ApfGenerator {
      * bytes from the beginning of the packet into {@code register}.
      */
     public ApfGenerator addLoad16(Register register, int offset) {
-        return addInstruction(new Instruction(Opcodes.LDH, register).addUnsignedImm(offset));
+        return addInstruction(
+                new Instruction(Opcodes.LDH, register).addUnsignedIndeterminateIntImm(offset));
     }
 
     /**
@@ -631,7 +604,8 @@ public class ApfGenerator {
      * bytes from the beginning of the packet into {@code register}.
      */
     public ApfGenerator addLoad32(Register register, int offset) {
-        return addInstruction(new Instruction(Opcodes.LDW, register).addUnsignedImm(offset));
+        return addInstruction(
+                new Instruction(Opcodes.LDW, register).addUnsignedIndeterminateIntImm(offset));
     }
 
     /**
@@ -640,7 +614,8 @@ public class ApfGenerator {
      * the sum of {@code offset} and the value in register R1.
      */
     public ApfGenerator addLoad8Indexed(Register register, int offset) {
-        return addInstruction(new Instruction(Opcodes.LDBX, register).addUnsignedImm(offset));
+        return addInstruction(
+                new Instruction(Opcodes.LDBX, register).addUnsignedIndeterminateIntImm(offset));
     }
 
     /**
@@ -649,7 +624,8 @@ public class ApfGenerator {
      * the sum of {@code offset} and the value in register R1.
      */
     public ApfGenerator addLoad16Indexed(Register register, int offset) {
-        return addInstruction(new Instruction(Opcodes.LDHX, register).addUnsignedImm(offset));
+        return addInstruction(
+                new Instruction(Opcodes.LDHX, register).addUnsignedIndeterminateIntImm(offset));
     }
 
     /**
@@ -658,57 +634,63 @@ public class ApfGenerator {
      * the sum of {@code offset} and the value in register R1.
      */
     public ApfGenerator addLoad32Indexed(Register register, int offset) {
-        return addInstruction(new Instruction(Opcodes.LDWX, register).addUnsignedImm(offset));
+        return addInstruction(
+                new Instruction(Opcodes.LDWX, register).addUnsignedIndeterminateIntImm(offset));
     }
 
     /**
      * Add an instruction to the end of the program to add {@code value} to register R0.
      */
     public ApfGenerator addAdd(int value) {
-        return addInstruction(new Instruction(Opcodes.ADD).addUnsignedImm(value));
+        return addInstruction(
+                new Instruction(Opcodes.ADD).addTwosComplementUnsignedIndeterminateIntImm(value));
     }
 
     /**
      * Add an instruction to the end of the program to multiply register R0 by {@code value}.
      */
     public ApfGenerator addMul(int value) {
-        return addInstruction(new Instruction(Opcodes.MUL).addUnsignedImm(value));
+        return addInstruction(new Instruction(Opcodes.MUL).addUnsignedIndeterminateIntImm(value));
     }
 
     /**
      * Add an instruction to the end of the program to divide register R0 by {@code value}.
      */
     public ApfGenerator addDiv(int value) {
-        return addInstruction(new Instruction(Opcodes.DIV).addUnsignedImm(value));
+        return addInstruction(new Instruction(Opcodes.DIV).addUnsignedIndeterminateIntImm(value));
     }
 
     /**
      * Add an instruction to the end of the program to logically and register R0 with {@code value}.
      */
     public ApfGenerator addAnd(int value) {
-        return addInstruction(new Instruction(Opcodes.AND).addUnsignedImm(value));
+        return addInstruction(
+                new Instruction(Opcodes.AND).addTwosComplementUnsignedIndeterminateIntImm(value));
     }
 
     /**
      * Add an instruction to the end of the program to logically or register R0 with {@code value}.
      */
     public ApfGenerator addOr(int value) {
-        return addInstruction(new Instruction(Opcodes.OR).addUnsignedImm(value));
+        return addInstruction(
+                new Instruction(Opcodes.OR).addTwosComplementUnsignedIndeterminateIntImm(value));
     }
 
     /**
      * Add an instruction to the end of the program to shift left register R0 by {@code value} bits.
      */
+    // TODO: consider whether should change the argument type to byte
     public ApfGenerator addLeftShift(int value) {
-        return addInstruction(new Instruction(Opcodes.SH).addSignedImm(value));
+        return addInstruction(new Instruction(Opcodes.SH).addSignedIndeterminateIntImm(value));
     }
 
     /**
      * Add an instruction to the end of the program to shift right register R0 by {@code value}
      * bits.
      */
+    // TODO: consider whether should change the argument type to byte
     public ApfGenerator addRightShift(int value) {
-        return addInstruction(new Instruction(Opcodes.SH).addSignedImm(-value));
+        return addInstruction(new Instruction(Opcodes.SH).addSignedIndeterminateIntImm(-value));
     }
 
     /**
@@ -760,7 +742,8 @@ public class ApfGenerator {
      * Add an instruction to the end of the program to move {@code value} into {@code register}.
      */
     public ApfGenerator addLoadImmediate(Register register, int value) {
-        return addInstruction(new Instruction(Opcodes.LI, register).addSignedImm(value));
+        return addInstruction(
+                new Instruction(Opcodes.LI, register).addSignedIndeterminateIntImm(value));
     }
 
     /**
@@ -768,7 +751,8 @@ public class ApfGenerator {
      * value equals {@code value}.
      */
     public ApfGenerator addJumpIfR0Equals(int value, String target) {
-        return addInstruction(new Instruction(Opcodes.JEQ).addUnsignedImm(value).setTargetLabel(
+        return addInstruction(new Instruction(
+                Opcodes.JEQ).addTwosComplementUnsignedIndeterminateIntImm(value).setTargetLabel(
                 target));
     }
 
@@ -777,7 +761,8 @@ public class ApfGenerator {
      * value does not equal {@code value}.
      */
     public ApfGenerator addJumpIfR0NotEquals(int value, String target) {
-        return addInstruction(new Instruction(Opcodes.JNE).addUnsignedImm(value).setTargetLabel(
+        return addInstruction(new Instruction(
+                Opcodes.JNE).addTwosComplementUnsignedIndeterminateIntImm(value).setTargetLabel(
                 target));
     }
 
@@ -786,8 +771,8 @@ public class ApfGenerator {
      * value is greater than {@code value}.
      */
     public ApfGenerator addJumpIfR0GreaterThan(int value, String target) {
-        return addInstruction(new Instruction(Opcodes.JGT).addUnsignedImm(value).setTargetLabel(
-                target));
+        return addInstruction(new Instruction(Opcodes.JGT).addUnsignedIndeterminateIntImm(
+                value).setTargetLabel(target));
     }
 
     /**
@@ -795,8 +780,8 @@ public class ApfGenerator {
      * value is less than {@code value}.
      */
     public ApfGenerator addJumpIfR0LessThan(int value, String target) {
-        return addInstruction(new Instruction(Opcodes.JLT).addUnsignedImm(value).setTargetLabel(
-                target));
+        return addInstruction(new Instruction(Opcodes.JLT).addUnsignedIndeterminateIntImm(
+                value).setTargetLabel(target));
     }
 
     /**
@@ -804,7 +789,8 @@ public class ApfGenerator {
      * value has any bits set that are also set in {@code value}.
      */
     public ApfGenerator addJumpIfR0AnyBitsSet(int value, String target) {
-        return addInstruction(new Instruction(Opcodes.JSET).addUnsignedImm(value).setTargetLabel(
+        return addInstruction(new Instruction(
+                Opcodes.JSET).addTwosComplementUnsignedIndeterminateIntImm(value).setTargetLabel(
                 target));
     }
     /**
@@ -857,8 +843,9 @@ public class ApfGenerator {
         if (register == Register.R1) {
             throw new IllegalInstructionException("JNEBS fails with R1");
         }
-        return addInstruction(new Instruction(Opcodes.JNEBS, register).addUnsignedImm(
-                bytes.length).setTargetLabel(target).setBytesImm(bytes));
+        return addInstruction(new Instruction(Opcodes.JNEBS,
+                register).addUnsignedIndeterminateIntImm(bytes.length).setTargetLabel(
+                target).setBytesImm(bytes));
     }
 
     /**
@@ -930,7 +917,8 @@ public class ApfGenerator {
         checkRange("CounterNumber", counterNumber /* value */, 1 /* lowerBound */,
                 1000 /* upperBound */);
         return addInstruction(
-                new Instruction(Opcodes.PASS, Register.R0).addUnsignedImm(counterNumber));
+                new Instruction(Opcodes.PASS, Register.R0).addUnsignedIndeterminateIntImm(
+                        counterNumber));
     }
 
     /**
@@ -950,7 +938,8 @@ public class ApfGenerator {
         checkRange("CounterNumber", counterNumber /* value */, 1 /* lowerBound */,
                 1000 /* upperBound */);
         return addInstruction(
-                new Instruction(Opcodes.DROP, Register.R1).addUnsignedImm(counterNumber));
+                new Instruction(Opcodes.DROP, Register.R1).addUnsignedIndeterminateIntImm(
+                        counterNumber));
     }
 
     /**
@@ -1165,7 +1154,8 @@ public class ApfGenerator {
             throws IllegalInstructionException {
         requireApfVersion(3);
         return addInstruction(
-                new Instruction(Opcodes.LDDW, destinationRegister).addSignedImm(offset));
+                new Instruction(Opcodes.LDDW, destinationRegister).addSignedIndeterminateIntImm(
+                        offset));
     }
 
     /**
@@ -1177,7 +1167,8 @@ public class ApfGenerator {
     public ApfGenerator addStoreData(Register sourceRegister, int offset)
             throws IllegalInstructionException {
         requireApfVersion(3);
-        return addInstruction(new Instruction(Opcodes.STDW, sourceRegister).addSignedImm(offset));
+        return addInstruction(
+                new Instruction(Opcodes.STDW, sourceRegister).addSignedIndeterminateIntImm(offset));
     }
 
     /**

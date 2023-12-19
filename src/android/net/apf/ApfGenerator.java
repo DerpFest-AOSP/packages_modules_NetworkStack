@@ -279,8 +279,12 @@ public class ApfGenerator {
             addUnsignedIndeterminate(extendedOpcodes.value);
         }
 
-        Instruction(ExtendedOpcodes extendedOpcodes, int slot, Register register) {
+        Instruction(ExtendedOpcodes extendedOpcodes, int slot, Register register)
+                throws IllegalInstructionException {
             this(Opcodes.EXT, register);
+            if (slot < 0 || slot > (MEMORY_SLOTS - 1)) {
+                throw new IllegalInstructionException("illegal memory slot number: " + slot);
+            }
             addUnsignedIndeterminate(extendedOpcodes.value + slot);
         }
 
@@ -857,9 +861,6 @@ public class ApfGenerator {
      */
     public ApfGenerator addLoadFromMemory(Register r, int slot)
             throws IllegalInstructionException {
-        if (slot < 0 || slot > (MEMORY_SLOTS - 1)) {
-            throw new IllegalInstructionException("illegal memory slot number: " + slot);
-        }
         return append(new Instruction(ExtendedOpcodes.LDM, slot, r));
     }
 
@@ -869,9 +870,6 @@ public class ApfGenerator {
      */
     public ApfGenerator addStoreToMemory(Register r, int slot)
             throws IllegalInstructionException {
-        if (slot < 0 || slot > (MEMORY_SLOTS - 1)) {
-            throw new IllegalInstructionException("illegal memory slot number: " + slot);
-        }
         return append(new Instruction(ExtendedOpcodes.STM, slot, r));
     }
 

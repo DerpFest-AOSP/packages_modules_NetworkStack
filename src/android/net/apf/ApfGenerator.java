@@ -16,6 +16,9 @@
 
 package android.net.apf;
 
+import static android.net.apf.ApfGenerator.Register.R0;
+import static android.net.apf.ApfGenerator.Register.R1;
+
 import androidx.annotation.NonNull;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -289,11 +292,11 @@ public class ApfGenerator {
         }
 
         Instruction(Opcodes opcode) {
-            this(opcode, Register.R0);
+            this(opcode, R0);
         }
 
         Instruction(ExtendedOpcodes extendedOpcodes) {
-            this(extendedOpcodes, Register.R0);
+            this(extendedOpcodes, R0);
         }
 
         Instruction addUnsignedIndeterminate(int imm) {
@@ -657,8 +660,7 @@ public class ApfGenerator {
      * Add an instruction to the end of the program to add {@code value} to register R0.
      */
     public ApfGenerator addAdd(int val) {
-        return append(
-                new Instruction(Opcodes.ADD).addTwosCompUnsignedIndeterminate(val));
+        return append(new Instruction(Opcodes.ADD).addTwosCompUnsignedIndeterminate(val));
     }
 
     /**
@@ -679,16 +681,14 @@ public class ApfGenerator {
      * Add an instruction to the end of the program to logically and register R0 with {@code value}.
      */
     public ApfGenerator addAnd(int val) {
-        return append(
-                new Instruction(Opcodes.AND).addTwosCompUnsignedIndeterminate(val));
+        return append(new Instruction(Opcodes.AND).addTwosCompUnsignedIndeterminate(val));
     }
 
     /**
      * Add an instruction to the end of the program to logically or register R0 with {@code value}.
      */
     public ApfGenerator addOr(int val) {
-        return append(
-                new Instruction(Opcodes.OR).addTwosCompUnsignedIndeterminate(val));
+        return append(new Instruction(Opcodes.OR).addTwosCompUnsignedIndeterminate(val));
     }
 
     /**
@@ -712,21 +712,21 @@ public class ApfGenerator {
      * Add an instruction to the end of the program to add register R1 to register R0.
      */
     public ApfGenerator addAddR1() {
-        return append(new Instruction(Opcodes.ADD, Register.R1));
+        return append(new Instruction(Opcodes.ADD, R1));
     }
 
     /**
      * Add an instruction to the end of the program to multiply register R0 by register R1.
      */
     public ApfGenerator addMulR1() {
-        return append(new Instruction(Opcodes.MUL, Register.R1));
+        return append(new Instruction(Opcodes.MUL, R1));
     }
 
     /**
      * Add an instruction to the end of the program to divide register R0 by register R1.
      */
     public ApfGenerator addDivR1() {
-        return append(new Instruction(Opcodes.DIV, Register.R1));
+        return append(new Instruction(Opcodes.DIV, R1));
     }
 
     /**
@@ -734,7 +734,7 @@ public class ApfGenerator {
      * and store the result back into register R0.
      */
     public ApfGenerator addAndR1() {
-        return append(new Instruction(Opcodes.AND, Register.R1));
+        return append(new Instruction(Opcodes.AND, R1));
     }
 
     /**
@@ -742,7 +742,7 @@ public class ApfGenerator {
      * and store the result back into register R0.
      */
     public ApfGenerator addOrR1() {
-        return append(new Instruction(Opcodes.OR, Register.R1));
+        return append(new Instruction(Opcodes.OR, R1));
     }
 
     /**
@@ -750,15 +750,14 @@ public class ApfGenerator {
      * register R1.
      */
     public ApfGenerator addLeftShiftR1() {
-        return append(new Instruction(Opcodes.SH, Register.R1));
+        return append(new Instruction(Opcodes.SH, R1));
     }
 
     /**
      * Add an instruction to the end of the program to move {@code value} into {@code register}.
      */
     public ApfGenerator addLoadImmediate(Register register, int value) {
-        return append(
-                new Instruction(Opcodes.LI, register).addSignedIndeterminate(value));
+        return append(new Instruction(Opcodes.LI, register).addSignedIndeterminate(value));
     }
 
     /**
@@ -803,15 +802,14 @@ public class ApfGenerator {
      */
     public ApfGenerator addJumpIfR0AnyBitsSet(int val, String tgt) {
         return append(new Instruction(
-                Opcodes.JSET).addTwosCompUnsignedIndeterminate(val).setTargetLabel(
-                tgt));
+                Opcodes.JSET).addTwosCompUnsignedIndeterminate(val).setTargetLabel(tgt));
     }
     /**
      * Add an instruction to the end of the program to jump to {@code target} if register R0's
      * value equals register R1's value.
      */
     public ApfGenerator addJumpIfR0EqualsR1(String tgt) {
-        return append(new Instruction(Opcodes.JEQ, Register.R1).setTargetLabel(tgt));
+        return append(new Instruction(Opcodes.JEQ, R1).setTargetLabel(tgt));
     }
 
     /**
@@ -819,7 +817,7 @@ public class ApfGenerator {
      * value does not equal register R1's value.
      */
     public ApfGenerator addJumpIfR0NotEqualsR1(String tgt) {
-        return append(new Instruction(Opcodes.JNE, Register.R1).setTargetLabel(tgt));
+        return append(new Instruction(Opcodes.JNE, R1).setTargetLabel(tgt));
     }
 
     /**
@@ -827,7 +825,7 @@ public class ApfGenerator {
      * value is greater than register R1's value.
      */
     public ApfGenerator addJumpIfR0GreaterThanR1(String tgt) {
-        return append(new Instruction(Opcodes.JGT, Register.R1).setTargetLabel(tgt));
+        return append(new Instruction(Opcodes.JGT, R1).setTargetLabel(tgt));
     }
 
     /**
@@ -835,7 +833,7 @@ public class ApfGenerator {
      * value is less than register R1's value.
      */
     public ApfGenerator addJumpIfR0LessThanR1(String target) {
-        return append(new Instruction(Opcodes.JLT, Register.R1).setTargetLabel(target));
+        return append(new Instruction(Opcodes.JLT, R1).setTargetLabel(target));
     }
 
     /**
@@ -843,7 +841,7 @@ public class ApfGenerator {
      * value has any bits set that are also set in R1's value.
      */
     public ApfGenerator addJumpIfR0AnyBitsSetR1(String tgt) {
-        return append(new Instruction(Opcodes.JSET, Register.R1).setTargetLabel(tgt));
+        return append(new Instruction(Opcodes.JSET, R1).setTargetLabel(tgt));
     }
 
     /**
@@ -928,7 +926,7 @@ public class ApfGenerator {
     public ApfGenerator addDrop() throws IllegalInstructionException {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
         // DROP requires using R1 because it shares opcode with PASS
-        return append(new Instruction(Opcodes.DROP, Register.R1));
+        return append(new Instruction(Opcodes.DROP, R1));
     }
 
     /**
@@ -940,8 +938,7 @@ public class ApfGenerator {
         checkRange("CounterNumber", cnt /* value */, 1 /* lowerBound */,
                 1000 /* upperBound */);
         // DROP requires using R1 because it shares opcode with PASS
-        return append(
-                new Instruction(Opcodes.DROP, Register.R1).addUnsignedIndeterminate(cnt));
+        return append(new Instruction(Opcodes.DROP, R1).addUnsignedIndeterminate(cnt));
     }
 
     /**
@@ -961,8 +958,7 @@ public class ApfGenerator {
     public ApfGenerator addAllocate(int size) throws IllegalInstructionException {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
         // R1 means the extra be16 immediate is present
-        return append(
-                new Instruction(ExtendedOpcodes.ALLOCATE, Register.R1).addUnsignedBe16Imm(size));
+        return append(new Instruction(ExtendedOpcodes.ALLOCATE, R1).addUnsignedBe16Imm(size));
     }
 
     /**
@@ -980,7 +976,7 @@ public class ApfGenerator {
     public ApfGenerator addDiscard() throws IllegalInstructionException {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
         // DISCARD requires using R1 because it shares opcode with TRANSMIT
-        return append(new Instruction(ExtendedOpcodes.DISCARD, Register.R1));
+        return append(new Instruction(ExtendedOpcodes.DISCARD, R1));
     }
 
     // TODO: add back when support WRITE opcode

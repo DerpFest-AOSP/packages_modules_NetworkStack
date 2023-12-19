@@ -898,8 +898,9 @@ public class ApfGenerator {
     /**
      * Add an instruction to the end of the program to let the program immediately return PASS.
      */
-    public ApfGenerator addPass() throws IllegalInstructionException {
-        return append(new Instruction(Opcodes.PASS, Register.R0));
+    public ApfGenerator addPass() {
+        // PASS requires using R0 because it shares opcode with DROP
+        return append(new Instruction(Opcodes.PASS));
     }
 
     /**
@@ -910,8 +911,8 @@ public class ApfGenerator {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
         checkRange("CounterNumber", cnt /* value */, 1 /* lowerBound */,
                 1000 /* upperBound */);
-        return append(
-                new Instruction(Opcodes.PASS, Register.R0).addUnsignedIndeterminateIntImm(cnt));
+        // PASS requires using R0 because it shares opcode with DROP
+        return append(new Instruction(Opcodes.PASS).addUnsignedIndeterminateIntImm(cnt));
     }
 
     /**
@@ -919,6 +920,7 @@ public class ApfGenerator {
      */
     public ApfGenerator addDrop() throws IllegalInstructionException {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
+        // DROP requires using R1 because it shares opcode with PASS
         return append(new Instruction(Opcodes.DROP, Register.R1));
     }
 
@@ -930,6 +932,7 @@ public class ApfGenerator {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
         checkRange("CounterNumber", cnt /* value */, 1 /* lowerBound */,
                 1000 /* upperBound */);
+        // DROP requires using R1 because it shares opcode with PASS
         return append(
                 new Instruction(Opcodes.DROP, Register.R1).addUnsignedIndeterminateIntImm(cnt));
     }
@@ -940,7 +943,7 @@ public class ApfGenerator {
      */
     public ApfGenerator addAllocateR0() throws IllegalInstructionException {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        return append(new Instruction(ExtendedOpcodes.ALLOCATE, Register.R0));
+        return append(new Instruction(ExtendedOpcodes.ALLOCATE));
     }
 
     /**
@@ -950,6 +953,7 @@ public class ApfGenerator {
      */
     public ApfGenerator addAllocate(int size) throws IllegalInstructionException {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
+        // R1 means the extra be16 immediate is present
         return append(
                 new Instruction(ExtendedOpcodes.ALLOCATE, Register.R1).addUnsignedBe16Imm(size));
     }
@@ -959,7 +963,8 @@ public class ApfGenerator {
      */
     public ApfGenerator addTransmit() throws IllegalInstructionException {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        return append(new Instruction(ExtendedOpcodes.TRANSMIT, Register.R0));
+        // TRANSMIT requires using R0 because it shares opcode with DISCARD
+        return append(new Instruction(ExtendedOpcodes.TRANSMIT));
     }
 
     /**
@@ -967,6 +972,7 @@ public class ApfGenerator {
      */
     public ApfGenerator addDiscard() throws IllegalInstructionException {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
+        // DISCARD requires using R1 because it shares opcode with TRANSMIT
         return append(new Instruction(ExtendedOpcodes.DISCARD, Register.R1));
     }
 

@@ -301,7 +301,7 @@ public class DnsUtils {
         gen.addJumpIfR0NotEquals(label.length(), noMatchLabel);
         gen.addLoadFromMemory(R0, SLOT_CURRENT_PARSE_OFFSET);
         gen.addAdd(1);
-        gen.addJumpIfBytesNotEqual(R0, label.getBytes(), noMatchLabel);
+        gen.addJumpIfBytesAtR0NotEqual(label.getBytes(), noMatchLabel);
 
         // Prep offset of next label.
         gen.addAdd(label.length());

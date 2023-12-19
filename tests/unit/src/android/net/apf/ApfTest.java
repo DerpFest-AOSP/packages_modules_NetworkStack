@@ -632,7 +632,7 @@ public class ApfTest {
         // Test jump if bytes not equal.
         gen = new ApfGenerator(MIN_APF_VERSION);
         gen.addLoadImmediate(R0, 1);
-        gen.addJumpIfBytesNotEqual(R0, new byte[]{123}, gen.DROP_LABEL);
+        gen.addJumpIfBytesAtR0NotEqual(new byte[]{123}, gen.DROP_LABEL);
         program = gen.generate();
         assertEquals(6, program.length);
         assertEquals((13 << 3) | (1 << 1) | 0, program[0]);
@@ -644,20 +644,20 @@ public class ApfTest {
         assertDrop(program, new byte[MIN_PKT_SIZE], 0);
         gen = new ApfGenerator(MIN_APF_VERSION);
         gen.addLoadImmediate(R0, 1);
-        gen.addJumpIfBytesNotEqual(R0, new byte[]{123}, gen.DROP_LABEL);
+        gen.addJumpIfBytesAtR0NotEqual(new byte[]{123}, gen.DROP_LABEL);
         byte[] packet123 = {0,123,0,0,0,0,0,0,0,0,0,0,0,0,0};
         assertPass(gen, packet123, 0);
         gen = new ApfGenerator(MIN_APF_VERSION);
-        gen.addJumpIfBytesNotEqual(R0, new byte[]{123}, gen.DROP_LABEL);
+        gen.addJumpIfBytesAtR0NotEqual(new byte[]{123}, gen.DROP_LABEL);
         assertDrop(gen, packet123, 0);
         gen = new ApfGenerator(MIN_APF_VERSION);
         gen.addLoadImmediate(R0, 1);
-        gen.addJumpIfBytesNotEqual(R0, new byte[]{1,2,30,4,5}, gen.DROP_LABEL);
+        gen.addJumpIfBytesAtR0NotEqual(new byte[]{1, 2, 30, 4, 5}, gen.DROP_LABEL);
         byte[] packet12345 = {0,1,2,3,4,5,0,0,0,0,0,0,0,0,0};
         assertDrop(gen, packet12345, 0);
         gen = new ApfGenerator(MIN_APF_VERSION);
         gen.addLoadImmediate(R0, 1);
-        gen.addJumpIfBytesNotEqual(R0, new byte[]{1,2,3,4,5}, gen.DROP_LABEL);
+        gen.addJumpIfBytesAtR0NotEqual(new byte[]{1, 2, 3, 4, 5}, gen.DROP_LABEL);
         assertPass(gen, packet12345, 0);
     }
 

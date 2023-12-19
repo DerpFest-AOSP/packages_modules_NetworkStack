@@ -122,13 +122,6 @@ public class IpClientLinkObserver implements NetworkObserver {
         void update(boolean linkState);
 
         /**
-         * Called when an IPv6 address was removed from the interface.
-         *
-         * @param addr The removed IPv6 address.
-         */
-        void onIpv6AddressRemoved(Inet6Address addr);
-
-        /**
          * Called when the clat interface was added/removed.
          *
          * @param add True: clat interface was added.
@@ -332,10 +325,6 @@ public class IpClientLinkObserver implements NetworkObserver {
         }
         if (changed) {
             mCallback.update(linkState);
-            if (!add && address.isIpv6()) {
-                final Inet6Address addr = (Inet6Address) address.getAddress();
-                mCallback.onIpv6AddressRemoved(addr);
-            }
         }
         return changed;
     }

@@ -20,9 +20,7 @@ import static android.net.dhcp6.Dhcp6Packet.IAID;
 import static android.net.dhcp6.Dhcp6Packet.PrefixDelegation;
 import static android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY;
 import static android.system.OsConstants.AF_INET6;
-import static android.system.OsConstants.IFA_F_NODAD;
 import static android.system.OsConstants.IPPROTO_UDP;
-import static android.system.OsConstants.RT_SCOPE_UNIVERSE;
 import static android.system.OsConstants.SOCK_DGRAM;
 import static android.system.OsConstants.SOCK_NONBLOCK;
 
@@ -31,14 +29,8 @@ import static com.android.net.module.util.NetworkStackConstants.DHCP6_CLIENT_POR
 import static com.android.net.module.util.NetworkStackConstants.DHCP6_SERVER_PORT;
 import static com.android.net.module.util.NetworkStackConstants.IPV6_ADDR_ANY;
 import static com.android.net.module.util.NetworkStackConstants.RFC7421_PREFIX_LENGTH;
-import static com.android.networkstack.apishim.ConstantsShim.IFA_F_MANAGETEMPADDR;
-import static com.android.networkstack.apishim.ConstantsShim.IFA_F_NOPREFIXROUTE;
-import static com.android.networkstack.util.NetworkStackUtils.createInet6AddressFromEui64;
-import static com.android.networkstack.util.NetworkStackUtils.macAddressToEui64;
 
 import android.content.Context;
-import android.net.IpPrefix;
-import android.net.LinkAddress;
 import android.net.ip.IpClient;
 import android.net.util.SocketUtils;
 import android.os.Handler;
@@ -58,12 +50,10 @@ import com.android.internal.util.WakeupMessage;
 import com.android.net.module.util.DeviceConfigUtils;
 import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.PacketReader;
-import com.android.net.module.util.netlink.NetlinkUtils;
 import com.android.net.module.util.structs.IaPrefixOption;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
-import java.net.Inet6Address;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -95,8 +85,6 @@ public class Dhcp6Client extends StateMachine {
     // Message.arg1 arguments to CMD_DHCP6_RESULT notification
     public static final int DHCP6_PD_SUCCESS = 1;
     public static final int DHCP6_PD_PREFIX_EXPIRED = 2;
-    public static final int DHCP6_PD_PREFIX_CHANGED = 3;
-    public static final int DHCP6_PD_PREFIX_MSG_EXCHANGE_TERMINATED = 4;
 
     // Notification from DHCPv6 state machine before quitting
     public static final int CMD_ON_QUIT = PUBLIC_BASE + 4;
@@ -436,8 +424,8 @@ public class Dhcp6Client extends StateMachine {
         Log.d(TAG, "Scheduling IA_PD expiry in " + expirationTimeout + "s");
     }
 
-    private void notifyPrefixDelegation(int result, @Nullable final PrefixDelegation pd) {
-        mController.sendMessage(CMD_DHCP6_RESULT, result, 0, pd);
+    private void notifyPrefixDelegation(int result, @Nullable final List<IaPrefixOption> ipos) {
+        mController.sendMessage(CMD_DHCP6_RESULT, result, 0, ipos);
     }
 
     private void clearDhcp6State() {
@@ -621,7 +609,7 @@ public class Dhcp6Client extends StateMachine {
         public boolean processMessage(Message message) {
             switch (message.what) {
                 case CMD_DHCP6_PD_EXPIRE:
-                    notifyPrefixDelegation(DHCP6_PD_PREFIX_EXPIRED, null);
+                    notifyPrefixDelegation(DHCP6_PD_PREFIX_EXPIRED, mReply.getValidIaPrefixes());
                     transitionTo(mSolicitState);
                     return HANDLED;
                 default:
@@ -639,33 +627,6 @@ public class Dhcp6Client extends StateMachine {
         }
     }
 
-    // Create an IPv6 address from the interface mac address with IFA_F_MANAGETEMPADDR
-    // flag, kernel will create another privacy IPv6 address on behalf of user space.
-    // We don't need to remember IPv6 addresses that need to extend the lifetime every
-    // time it enters BoundState.
-    private boolean addInterfaceAddress(@NonNull final Inet6Address address,
-            @NonNull final IaPrefixOption ipo) {
-        final int flags = IFA_F_NOPREFIXROUTE | IFA_F_MANAGETEMPADDR | IFA_F_NODAD;
-        final long now = SystemClock.elapsedRealtime();
-        final long deprecationTime = now + ipo.preferred;
-        final long expirationTime = now + ipo.valid;
-        final LinkAddress la = new LinkAddress(address, RFC7421_PREFIX_LENGTH, flags,
-                RT_SCOPE_UNIVERSE /* scope */, deprecationTime, expirationTime);
-        if (!la.isGlobalPreferred()) {
-            Log.e(TAG, la + " is not a global preferred IPv6 address");
-            return false;
-        }
-        if (!NetlinkUtils.sendRtmNewAddressRequest(mIface.index, address,
-                (short) RFC7421_PREFIX_LENGTH,
-                flags, (byte) RT_SCOPE_UNIVERSE /* scope */,
-                ipo.preferred, ipo.valid)) {
-            Log.e(TAG, "Failed to set IPv6 address " + address.getHostAddress()
-                    + "%" + mIface.index);
-            return false;
-        }
-        return true;
-    }
-
     /**
      * Client has already obtained the lease(e.g. IA_PD option) from server and stays in Bound
      * state until T1 expires, and then transition to Renew state to extend the lease duration.
@@ -675,26 +636,9 @@ public class Dhcp6Client extends StateMachine {
         public void enter() {
             super.enter();
             scheduleLeaseTimers();
-
-            // TODO: roll back to SOLICIT state after a delay if something wrong happens
-            // instead of returning directly.
-            for (IaPrefixOption ipo : mReply.getValidIaPrefixes()) {
-                // TODO: The prefix with preferred/valid lifetime of 0 is valid, but client
-                // should stop using the prefix immediately. Actually kernel doesn't accept
-                // the address with valid lifetime of 0 and returns EINVAL when it sees that.
-                // We should send RTM_DELADDR netlink message to kernel to delete these addresses
-                // from the interface if any.
-                // Configure IPv6 addresses based on the delegated prefix(es) on the interface.
-                // We've checked that delegated prefix is valid upon receiving the response from
-                // DHCPv6 server, and the server may assign a prefix with length less than 64. So
-                // for SLAAC use case we always set the prefix length to 64 even if the delegated
-                // prefix length is less than 64.
-                final IpPrefix prefix = ipo.getIpPrefix();
-                final Inet6Address address = createInet6AddressFromEui64(prefix,
-                        macAddressToEui64(mIface.macAddr));
-                if (!addInterfaceAddress(address, ipo)) continue;
-            }
-            notifyPrefixDelegation(DHCP6_PD_SUCCESS, mReply);
+            // Pass valid delegated prefix(es) to IpClient for IPv6 address configuration and
+            // active prefix(es) maintenance.
+            notifyPrefixDelegation(DHCP6_PD_SUCCESS, mReply.getValidIaPrefixes());
         }
 
         @Override

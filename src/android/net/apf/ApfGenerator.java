@@ -215,6 +215,10 @@ public class ApfGenerator {
             return new IntImmediate((int) imm, IntImmediateType.INDETERMINATE_SIZE_UNSIGNED);
         }
 
+        public static IntImmediate newTwosComplementSignedIndeterminate(long imm) {
+            return new IntImmediate((int) imm, IntImmediateType.INDETERMINATE_SIZE_SIGNED);
+        }
+
         public static IntImmediate newSigned8(byte imm) {
             checkRange("Signed8 IMM", imm, Byte.MIN_VALUE, Byte.MAX_VALUE);
             return new IntImmediate(imm, IntImmediateType.SIGNED_8);
@@ -305,6 +309,11 @@ public class ApfGenerator {
 
         Instruction addTwosCompUnsignedIndeterminate(int imm) {
             mIntImms.add(IntImmediate.newTwosComplementUnsignedIndeterminate(imm));
+            return this;
+        }
+
+        Instruction addTwosCompSignedIndeterminate(int imm) {
+            mIntImms.add(IntImmediate.newTwosComplementSignedIndeterminate(imm));
             return this;
         }
 

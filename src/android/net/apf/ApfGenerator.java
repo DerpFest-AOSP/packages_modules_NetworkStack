@@ -271,14 +271,12 @@ public class ApfGenerator {
         }
 
         Instruction(ExtendedOpcodes extendedOpcodes, Register register) {
-            mOpcode = (byte) Opcodes.EXT.value;
-            mRegister = (byte) register.value;
+            this(Opcodes.EXT, register);
             addUnsignedIndeterminateIntImm(extendedOpcodes.value);
         }
 
         Instruction(ExtendedOpcodes extendedOpcodes, int slot, Register register) {
-            mOpcode = (byte) Opcodes.EXT.value;
-            mRegister = (byte) register.value;
+            this(Opcodes.EXT, register);
             addUnsignedIndeterminateIntImm(extendedOpcodes.value + slot);
         }
 

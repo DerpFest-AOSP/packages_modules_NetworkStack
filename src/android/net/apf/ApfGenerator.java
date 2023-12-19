@@ -97,7 +97,11 @@ public class ApfGenerator {
         NEG(33),  // Negate, e.g. "neg R0"
         SWAP(34), // Swap, e.g. "swap R0,R1"
         MOVE(35),  // Move, e.g. "move R0,R1"
-        ALLOC(36), // Allocate buffer, "e.g. ALLOC R0"
+        // Allocate writable output buffer.
+        // R=0, use register R0 to store the length. R=1, encode the length in the u16 int imm2.
+        // "e.g. allocate R0"
+        // "e.g. allocate 123"
+        ALLOCATE(36),
         //  Transmit and deallocate the buffer (transmission can be delayed until the program
         //  terminates). R=0 means discard the buffer, R=1 means transmit the buffer.
         // "e.g. trans"
@@ -293,6 +297,11 @@ public class ApfGenerator {
 
         Instruction addSignedIndeterminateIntImm(int imm) {
             mIntImms.add(IntImmediate.newSignedIndeterminate(imm));
+            return this;
+        }
+
+        Instruction addUnsignedBe16Imm(int imm) {
+            mIntImms.add(IntImmediate.newUnsignedBe16(imm));
             return this;
         }
 
@@ -944,12 +953,22 @@ public class ApfGenerator {
 
     /**
      * Add an instruction to the end of the program to call the apf_allocate_buffer() function.
-     *
-     * @param register the register value contains the buffer size.
+     * Buffer length to be allocated is stored in register 0.
      */
-    public ApfGenerator addAlloc(Register register) throws IllegalInstructionException {
-        requireApfVersion(5);
-        return addInstruction(new Instruction(ExtendedOpcodes.ALLOC));
+    public ApfGenerator addAllocateR0() throws IllegalInstructionException {
+        requireApfVersion(MIN_APF_VERSION_IN_DEV);
+        return addInstruction(new Instruction(ExtendedOpcodes.ALLOCATE, Register.R0));
+    }
+
+    /**
+     * Add an instruction to the end of the program to call the apf_allocate_buffer() function.
+     *
+     * @param size the buffer length to be allocated.
+     */
+    public ApfGenerator addAllocate(int size) throws IllegalInstructionException {
+        requireApfVersion(MIN_APF_VERSION_IN_DEV);
+        return addInstruction(
+                new Instruction(ExtendedOpcodes.ALLOCATE, Register.R1).addUnsignedBe16Imm(size));
     }
 
     /**

@@ -51,7 +51,6 @@ import static com.android.networkstack.util.NetworkStackUtils.IPCLIENT_DHCPV6_PR
 import static com.android.networkstack.util.NetworkStackUtils.IPCLIENT_GARP_NA_ROAMING_VERSION;
 import static com.android.networkstack.util.NetworkStackUtils.IPCLIENT_GRATUITOUS_NA_VERSION;
 import static com.android.networkstack.util.NetworkStackUtils.IPCLIENT_IGNORE_LOW_RA_LIFETIME_VERSION;
-import static com.android.networkstack.util.NetworkStackUtils.IPCLIENT_MULTICAST_NS_VERSION;
 import static com.android.networkstack.util.NetworkStackUtils.createInet6AddressFromEui64;
 import static com.android.networkstack.util.NetworkStackUtils.macAddressToEui64;
 import static com.android.server.util.PermissionUtil.enforceNetworkStackCallingPermission;
@@ -1128,10 +1127,6 @@ public class IpClient extends StateMachine {
         return mDependencies.isFeatureEnabled(mContext, IPCLIENT_GARP_NA_ROAMING_VERSION);
     }
 
-    private boolean isMulticastNsEnabled() {
-        return mDependencies.isFeatureNotChickenedOut(mContext, IPCLIENT_MULTICAST_NS_VERSION);
-    }
-
     @VisibleForTesting
     static MacAddress getInitialBssid(final Layer2Information layer2Info,
             final ScanResultInfo scanResultInfo, boolean isAtLeastS) {
@@ -2070,9 +2065,7 @@ public class IpClient extends StateMachine {
         //
         // TODO: stop sending this multicast NS after deployment of RFC9131 in the field, leverage
         // the gratuitous NA to update the first-hop router's neighbor cache entry.
-        if (isMulticastNsEnabled()) {
-            maybeSendMulticastNSes(newLp);
-        }
+        maybeSendMulticastNSes(newLp);
 
         // Either success IPv4 or IPv6 provisioning triggers new LinkProperties update,
         // wait for the provisioning completion and record the latency.

@@ -835,15 +835,10 @@ public class ApfGenerator {
 
     /**
      * Add an instruction to the end of the program to jump to {@code target} if the bytes of the
-     * packet at an offset specified by {@code register} don't match {@code bytes}, {@code register}
-     * must be R0.
+     * packet at an offset specified by {@code register} don't match {@code bytes}
      */
-    public ApfGenerator addJumpIfBytesNotEqual(Register r, byte[] bytes, String tgt)
-            throws IllegalInstructionException {
-        if (r == Register.R1) {
-            throw new IllegalInstructionException("JNEBS fails with R1");
-        }
-        return append(new Instruction(Opcodes.JNEBS, r).addUnsignedIndeterminateIntImm(
+    public ApfGenerator addJumpIfBytesAtR0NotEqual(byte[] bytes, String tgt) {
+        return append(new Instruction(Opcodes.JNEBS).addUnsignedIndeterminateIntImm(
                 bytes.length).setTargetLabel(tgt).setBytesImm(bytes));
     }
 

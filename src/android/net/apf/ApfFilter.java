@@ -1148,7 +1148,7 @@ public class ApfFilter implements AndroidPacketFilter {
                 // Generate code to match the packet bytes.
                 if (section.type == PacketSection.Type.MATCH) {
                     gen.addLoadImmediate(Register.R0, section.start);
-                    gen.addJumpIfBytesNotEqual(Register.R0,
+                    gen.addJumpIfBytesAtR0NotEqual(
                             Arrays.copyOfRange(mPacket.array(), section.start,
                                     section.start + section.length),
                             nextFilterLabel);
@@ -1283,7 +1283,7 @@ public class ApfFilter implements AndroidPacketFilter {
             final String nextFilterLabel = "natt_keepalive_filter" + getUniqueNumberLocked();
 
             gen.addLoadImmediate(Register.R0, ETH_HEADER_LEN + IPV4_SRC_ADDR_OFFSET);
-            gen.addJumpIfBytesNotEqual(Register.R0, mSrcDstAddr, nextFilterLabel);
+            gen.addJumpIfBytesAtR0NotEqual(mSrcDstAddr, nextFilterLabel);
 
             // A NAT-T keepalive packet contains 1 byte payload with the value 0xff
             // Check payload length is 1
@@ -1298,11 +1298,11 @@ public class ApfFilter implements AndroidPacketFilter {
             // Check that the ports match
             gen.addLoadFromMemory(Register.R0, gen.IPV4_HEADER_SIZE_MEMORY_SLOT);
             gen.addAdd(ETH_HEADER_LEN);
-            gen.addJumpIfBytesNotEqual(Register.R0, mPortFingerprint, nextFilterLabel);
+            gen.addJumpIfBytesAtR0NotEqual(mPortFingerprint, nextFilterLabel);
 
             // Payload offset = R0 + UDP header length
             gen.addAdd(UDP_HEADER_LEN);
-            gen.addJumpIfBytesNotEqual(Register.R0, mPayload, nextFilterLabel);
+            gen.addJumpIfBytesAtR0NotEqual(mPayload, nextFilterLabel);
 
             maybeSetupCounter(gen, Counter.DROPPED_IPV4_NATT_KEEPALIVE);
             gen.addJump(mCountAndDropLabel);
@@ -1398,7 +1398,7 @@ public class ApfFilter implements AndroidPacketFilter {
             final String nextFilterLabel = "keepalive_ack" + getUniqueNumberLocked();
 
             gen.addLoadImmediate(Register.R0, ETH_HEADER_LEN + IPV4_SRC_ADDR_OFFSET);
-            gen.addJumpIfBytesNotEqual(Register.R0, mSrcDstAddr, nextFilterLabel);
+            gen.addJumpIfBytesAtR0NotEqual(mSrcDstAddr, nextFilterLabel);
 
             // Skip to the next filter if it's not zero-sized :
             // TCP_HEADER_SIZE + IPV4_HEADER_SIZE - ipv4_total_length == 0
@@ -1420,7 +1420,7 @@ public class ApfFilter implements AndroidPacketFilter {
             gen.addLoadFromMemory(Register.R1, gen.IPV4_HEADER_SIZE_MEMORY_SLOT);
             gen.addLoadImmediate(Register.R0, ETH_HEADER_LEN);
             gen.addAddR1();
-            gen.addJumpIfBytesNotEqual(Register.R0, mPortSeqAckFingerprint, nextFilterLabel);
+            gen.addJumpIfBytesAtR0NotEqual(mPortSeqAckFingerprint, nextFilterLabel);
 
             maybeSetupCounter(gen, Counter.DROPPED_IPV4_KEEPALIVE_ACK);
             gen.addJump(mCountAndDropLabel);
@@ -1522,7 +1522,7 @@ public class ApfFilter implements AndroidPacketFilter {
         // Drop if not ARP IPv4.
         gen.addLoadImmediate(Register.R0, ARP_HEADER_OFFSET);
         maybeSetupCounter(gen, Counter.DROPPED_ARP_NON_IPV4);
-        gen.addJumpIfBytesNotEqual(Register.R0, ARP_IPV4_HEADER, mCountAndDropLabel);
+        gen.addJumpIfBytesAtR0NotEqual(ARP_IPV4_HEADER, mCountAndDropLabel);
 
         // Drop if unknown ARP opcode.
         gen.addLoad16(Register.R0, ARP_OPCODE_OFFSET);
@@ -1538,7 +1538,7 @@ public class ApfFilter implements AndroidPacketFilter {
         // Pass if non-broadcast reply.
         gen.addLoadImmediate(Register.R0, ETH_DEST_ADDR_OFFSET);
         maybeSetupCounter(gen, Counter.PASSED_ARP_UNICAST_REPLY);
-        gen.addJumpIfBytesNotEqual(Register.R0, ETHER_BROADCAST, mCountAndPassLabel);
+        gen.addJumpIfBytesAtR0NotEqual(ETHER_BROADCAST, mCountAndPassLabel);
 
         // Either a request, or a broadcast reply.
         gen.defineLabel(checkTargetIPv4);
@@ -1552,7 +1552,7 @@ public class ApfFilter implements AndroidPacketFilter {
             // and broadcast replies with a different target IPv4 address.
             gen.addLoadImmediate(Register.R0, ARP_TARGET_IP_ADDRESS_OFFSET);
             maybeSetupCounter(gen, Counter.DROPPED_ARP_OTHER_HOST);
-            gen.addJumpIfBytesNotEqual(Register.R0, mIPv4Address, mCountAndDropLabel);
+            gen.addJumpIfBytesAtR0NotEqual(mIPv4Address, mCountAndDropLabel);
         }
 
         maybeSetupCounter(gen, Counter.PASSED_ARP);
@@ -1600,7 +1600,7 @@ public class ApfFilter implements AndroidPacketFilter {
             gen.addLoadImmediate(Register.R0, DHCP_CLIENT_MAC_OFFSET);
             // NOTE: Relies on R1 containing IPv4 header offset.
             gen.addAddR1();
-            gen.addJumpIfBytesNotEqual(Register.R0, mHardwareAddress, skipDhcpv4Filter);
+            gen.addJumpIfBytesAtR0NotEqual(mHardwareAddress, skipDhcpv4Filter);
             maybeSetupCounter(gen, Counter.PASSED_DHCP);
             gen.addJump(mCountAndPassLabel);
 
@@ -1639,7 +1639,7 @@ public class ApfFilter implements AndroidPacketFilter {
             // TODO: can we invert this condition to fall through to the common pass case below?
             maybeSetupCounter(gen, Counter.PASSED_IPV4_UNICAST);
             gen.addLoadImmediate(Register.R0, ETH_DEST_ADDR_OFFSET);
-            gen.addJumpIfBytesNotEqual(Register.R0, ETHER_BROADCAST, mCountAndPassLabel);
+            gen.addJumpIfBytesAtR0NotEqual(ETHER_BROADCAST, mCountAndPassLabel);
             maybeSetupCounter(gen, Counter.DROPPED_IPV4_L2_BROADCAST);
             gen.addJump(mCountAndDropLabel);
         }
@@ -1763,8 +1763,7 @@ public class ApfFilter implements AndroidPacketFilter {
         // TODO: Drop only if they don't contain the address of on-link neighbours.
         final byte[] unsolicitedNaDropPrefix = Arrays.copyOf(IPV6_ALL_NODES_ADDRESS, 15);
         gen.addLoadImmediate(Register.R0, IPV6_DEST_ADDR_OFFSET);
-        gen.addJumpIfBytesNotEqual(Register.R0, unsolicitedNaDropPrefix,
-                skipUnsolicitedMulticastNALabel);
+        gen.addJumpIfBytesAtR0NotEqual(unsolicitedNaDropPrefix, skipUnsolicitedMulticastNALabel);
 
         maybeSetupCounter(gen, Counter.DROPPED_IPV6_MULTICAST_NA);
         gen.addJump(mCountAndDropLabel);
@@ -1821,8 +1820,7 @@ public class ApfFilter implements AndroidPacketFilter {
 
         // Check it's L2 mDNS multicast address.
         gen.addLoadImmediate(Register.R0, ETH_DEST_ADDR_OFFSET);
-        gen.addJumpIfBytesNotEqual(Register.R0, ETH_MULTICAST_MDNS_V4_MAC_ADDRESS,
-                skipMdnsv4Filter);
+        gen.addJumpIfBytesAtR0NotEqual(ETH_MULTICAST_MDNS_V4_MAC_ADDRESS, skipMdnsv4Filter);
 
         // Checks it's IPv4.
         gen.addLoad16(Register.R0, ETH_ETHERTYPE_OFFSET);
@@ -1845,8 +1843,7 @@ public class ApfFilter implements AndroidPacketFilter {
 
         // Checks it's L2 mDNS multicast address.
         // Relies on R0 containing the ethernet destination mac address offset.
-        gen.addJumpIfBytesNotEqual(Register.R0, ETH_MULTICAST_MDNS_V6_MAC_ADDRESS,
-                skipMdnsFilter);
+        gen.addJumpIfBytesAtR0NotEqual(ETH_MULTICAST_MDNS_V6_MAC_ADDRESS, skipMdnsFilter);
 
         // Checks it's IPv6.
         gen.addLoad16(Register.R0, ETH_ETHERTYPE_OFFSET);
@@ -1877,7 +1874,7 @@ public class ApfFilter implements AndroidPacketFilter {
         for (int i = 0; i < mMdnsAllowList.size(); ++i) {
             final String mDnsNextAllowedQnameCheck = "mdns_next_allowed_qname_check" + i;
             final byte[] encodedQname = encodeQname(mMdnsAllowList.get(i));
-            gen.addJumpIfBytesNotEqual(Register.R0, encodedQname, mDnsNextAllowedQnameCheck);
+            gen.addJumpIfBytesAtR0NotEqual(encodedQname, mDnsNextAllowedQnameCheck);
             // QNAME matched
             gen.addJump(mDnsAcceptPacket);
             // QNAME not matched
@@ -2023,7 +2020,7 @@ public class ApfFilter implements AndroidPacketFilter {
         // Drop non-IP non-ARP broadcasts, pass the rest
         gen.addLoadImmediate(Register.R0, ETH_DEST_ADDR_OFFSET);
         maybeSetupCounter(gen, Counter.PASSED_NON_IP_UNICAST);
-        gen.addJumpIfBytesNotEqual(Register.R0, ETHER_BROADCAST, mCountAndPassLabel);
+        gen.addJumpIfBytesAtR0NotEqual(ETHER_BROADCAST, mCountAndPassLabel);
         maybeSetupCounter(gen, Counter.DROPPED_ETH_BROADCAST);
         gen.addJump(mCountAndDropLabel);
 

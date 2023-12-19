@@ -16,6 +16,7 @@
 
 package android.net.apf;
 
+import static android.net.apf.ApfGenerator.APF_VERSION_4;
 import static android.net.apf.ApfGenerator.Register.R0;
 import static android.net.apf.ApfGenerator.Register.R1;
 import static android.net.apf.ApfJniUtils.compareBpfApf;
@@ -747,23 +748,23 @@ public class ApfTest {
         ApfGenerator gen;
 
         // Load data with no offset: lddw R0, [0 + r1]
-        gen = new ApfGenerator(3);
+        gen = new ApfGenerator(APF_VERSION_4);
         gen.addLoadData(R0, 0);
         assertProgramEquals(new byte[]{LDDW_OP | SIZE0}, gen.generate());
 
         // Store data with 8bit negative offset: lddw r0, [-42 + r1]
-        gen = new ApfGenerator(3);
+        gen = new ApfGenerator(APF_VERSION_4);
         gen.addStoreData(R0, -42);
         assertProgramEquals(new byte[]{STDW_OP | SIZE8, -42}, gen.generate());
 
         // Store data to R1 with 16bit negative offset: stdw r1, [-0x1122 + r0]
-        gen = new ApfGenerator(3);
+        gen = new ApfGenerator(APF_VERSION_4);
         gen.addStoreData(R1, -0x1122);
         assertProgramEquals(new byte[]{STDW_OP | SIZE16 | R1_REG, (byte)0xEE, (byte)0xDE},
                 gen.generate());
 
         // Load data to R1 with 32bit negative offset: lddw r1, [0xDEADBEEF + r0]
-        gen = new ApfGenerator(3);
+        gen = new ApfGenerator(APF_VERSION_4);
         gen.addLoadData(R1, 0xDEADBEEF);
         assertProgramEquals(
                 new byte[]{LDDW_OP | SIZE32 | R1_REG,
@@ -781,12 +782,12 @@ public class ApfTest {
         byte[] expected_data = data.clone();
 
         // No memory access instructions: should leave the data segment untouched.
-        ApfGenerator gen = new ApfGenerator(3);
+        ApfGenerator gen = new ApfGenerator(APF_VERSION_4);
         assertDataMemoryContents(PASS, gen.generate(), packet, data, expected_data);
 
         // Expect value 0x87654321 to be stored starting from address -11 from the end of the
         // data buffer, in big-endian order.
-        gen = new ApfGenerator(3);
+        gen = new ApfGenerator(APF_VERSION_4);
         gen.addLoadImmediate(R0, 0x87654321);
         gen.addLoadImmediate(R1, -5);
         gen.addStoreData(R0, -6);  // -5 + -6 = -11 (offset +5 with data_len=16)
@@ -803,7 +804,7 @@ public class ApfTest {
     @Test
     public void testApfDataRead() throws IllegalInstructionException, Exception {
         // Program that DROPs if address 10 (-6) contains 0x87654321.
-        ApfGenerator gen = new ApfGenerator(3);
+        ApfGenerator gen = new ApfGenerator(APF_VERSION_4);
         gen.addLoadImmediate(R1, 1000);
         gen.addLoadData(R0, -1006);  // 1000 + -1006 = -6 (offset +10 with data_len=16)
         gen.addJumpIfR0Equals(0x87654321, gen.DROP_LABEL);
@@ -832,7 +833,7 @@ public class ApfTest {
      */
     @Test
     public void testApfDataReadModifyWrite() throws IllegalInstructionException, Exception {
-        ApfGenerator gen = new ApfGenerator(3);
+        ApfGenerator gen = new ApfGenerator(APF_VERSION_4);
         gen.addLoadImmediate(R1, -22);
         gen.addLoadData(R0, 0);  // Load from address 32 -22 + 0 = 10
         gen.addAdd(0x78453412);  // 87654321 + 78453412 = FFAA7733
@@ -859,35 +860,35 @@ public class ApfTest {
         byte[] expected_data = data;
 
         // Program that DROPs unconditionally. This is our the baseline.
-        ApfGenerator gen = new ApfGenerator(3);
+        ApfGenerator gen = new ApfGenerator(APF_VERSION_4);
         gen.addLoadImmediate(R0, 3);
         gen.addLoadData(R1, 7);
         gen.addJump(gen.DROP_LABEL);
         assertDataMemoryContents(DROP, gen.generate(), packet, data, expected_data);
 
         // Same program as before, but this time we're trying to load past the end of the data.
-        gen = new ApfGenerator(3);
+        gen = new ApfGenerator(APF_VERSION_4);
         gen.addLoadImmediate(R0, 20);
         gen.addLoadData(R1, 15);  // 20 + 15 > 32
         gen.addJump(gen.DROP_LABEL);  // Not reached.
         assertDataMemoryContents(PASS, gen.generate(), packet, data, expected_data);
 
         // Subtracting an immediate should work...
-        gen = new ApfGenerator(3);
+        gen = new ApfGenerator(APF_VERSION_4);
         gen.addLoadImmediate(R0, 20);
         gen.addLoadData(R1, -4);
         gen.addJump(gen.DROP_LABEL);
         assertDataMemoryContents(DROP, gen.generate(), packet, data, expected_data);
 
         // ...and underflowing simply wraps around to the end of the buffer...
-        gen = new ApfGenerator(3);
+        gen = new ApfGenerator(APF_VERSION_4);
         gen.addLoadImmediate(R0, 20);
         gen.addLoadData(R1, -30);
         gen.addJump(gen.DROP_LABEL);
         assertDataMemoryContents(DROP, gen.generate(), packet, data, expected_data);
 
         // ...but doesn't allow accesses before the start of the buffer
-        gen = new ApfGenerator(3);
+        gen = new ApfGenerator(APF_VERSION_4);
         gen.addLoadImmediate(R0, 20);
         gen.addLoadData(R1, -1000);
         gen.addJump(gen.DROP_LABEL);  // Not reached.

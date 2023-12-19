@@ -521,6 +521,7 @@ public class ApfGenerator {
     // This version number syncs up with APF_VERSION in hardware/google/apf/apf_interpreter.h
     public static final int MIN_APF_VERSION = 2;
     public static final int MIN_APF_VERSION_IN_DEV = 5;
+    public static final int APF_VERSION_4 = 4;
 
 
     private final ArrayList<Instruction> mInstructions = new ArrayList<Instruction>();
@@ -1154,11 +1155,11 @@ public class ApfGenerator {
      * Add an instruction to the end of the program to load 32 bits from the data memory into
      * {@code register}. The source address is computed by adding the signed immediate
      * @{code offset} to the other register.
-     * Requires APF v3 or greater.
+     * Requires APF v4 or greater.
      */
     public ApfGenerator addLoadData(Register dst, int ofs)
             throws IllegalInstructionException {
-        requireApfVersion(3);
+        requireApfVersion(APF_VERSION_4);
         return append(new Instruction(Opcodes.LDDW, dst).addSignedIndeterminateIntImm(ofs));
     }
 
@@ -1166,11 +1167,11 @@ public class ApfGenerator {
      * Add an instruction to the end of the program to store 32 bits from {@code register} into the
      * data memory. The destination address is computed by adding the signed immediate
      * @{code offset} to the other register.
-     * Requires APF v3 or greater.
+     * Requires APF v4 or greater.
      */
     public ApfGenerator addStoreData(Register src, int ofs)
             throws IllegalInstructionException {
-        requireApfVersion(3);
+        requireApfVersion(APF_VERSION_4);
         return append(new Instruction(Opcodes.STDW, src).addSignedIndeterminateIntImm(ofs));
     }
 

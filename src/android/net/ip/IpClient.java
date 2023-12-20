@@ -46,7 +46,7 @@ import static com.android.networkstack.apishim.ConstantsShim.IFA_F_MANAGETEMPADD
 import static com.android.networkstack.apishim.ConstantsShim.IFA_F_NOPREFIXROUTE;
 import static com.android.networkstack.util.NetworkStackUtils.APF_HANDLE_LIGHT_DOZE_FORCE_DISABLE;
 import static com.android.networkstack.util.NetworkStackUtils.APF_NEW_RA_FILTER_VERSION;
-import static com.android.networkstack.util.NetworkStackUtils.APF_POLLING_COUNTERS_FORCE_DISABLE;
+import static com.android.networkstack.util.NetworkStackUtils.APF_POLLING_COUNTERS_VERSION;
 import static com.android.networkstack.util.NetworkStackUtils.IPCLIENT_DHCPV6_PREFIX_DELEGATION_VERSION;
 import static com.android.networkstack.util.NetworkStackUtils.IPCLIENT_GARP_NA_ROAMING_VERSION;
 import static com.android.networkstack.util.NetworkStackUtils.IPCLIENT_GRATUITOUS_NA_VERSION;
@@ -704,7 +704,7 @@ public class IpClient extends StateMachine {
     private final boolean mUseNewApfFilter;
     private final boolean mEnableIpClientIgnoreLowRaLifetime;
     private final boolean mApfShouldHandleLightDoze;
-    private final boolean mApfShouldPollingCounters;
+    private final boolean mEnableApfPollingCounters;
 
     private InterfaceParams mInterfaceParams;
 
@@ -937,13 +937,13 @@ public class IpClient extends StateMachine {
                 CONFIG_APF_COUNTER_POLLING_INTERVAL_SECS,
                 DEFAULT_APF_COUNTER_POLLING_INTERVAL_SECS) * DateUtils.SECOND_IN_MILLIS;
         mUseNewApfFilter = mDependencies.isFeatureEnabled(context, APF_NEW_RA_FILTER_VERSION);
+        mEnableApfPollingCounters = mDependencies.isFeatureEnabled(context,
+                APF_POLLING_COUNTERS_VERSION);
         mEnableIpClientIgnoreLowRaLifetime = mDependencies.isFeatureEnabled(context,
                 IPCLIENT_IGNORE_LOW_RA_LIFETIME_VERSION);
         // Light doze mode status checking API is only available at T or later releases.
         mApfShouldHandleLightDoze = SdkLevel.isAtLeastT() && mDependencies.isFeatureNotChickenedOut(
                 mContext, APF_HANDLE_LIGHT_DOZE_FORCE_DISABLE);
-        mApfShouldPollingCounters = mDependencies.isFeatureNotChickenedOut(
-                mContext, APF_POLLING_COUNTERS_FORCE_DISABLE);
 
         IpClientLinkObserver.Configuration config = new IpClientLinkObserver.Configuration(
                 mMinRdnssLifetimeSec);
@@ -2932,7 +2932,7 @@ public class IpClient extends StateMachine {
             if (mApfFilter == null) {
                 mCallback.setFallbackMulticastFilter(mMulticastFiltering);
             }
-            if (mApfShouldPollingCounters) {
+            if (mEnableApfPollingCounters) {
                 sendMessageDelayed(CMD_UPDATE_APF_DATA_SNAPSHOT, mApfCounterPollingIntervalMs);
             }
 

@@ -312,6 +312,7 @@ public abstract class IpClientIntegrationTestCommon {
 
     protected static final long TEST_TIMEOUT_MS = 2_000L;
     private static final long TEST_WAIT_ENOBUFS_TIMEOUT_MS = 30_000L;
+    private static final long TEST_WAIT_RENEW_REBIND_RETRANSMIT_MS = 15_000L;
 
     @Rule
     public final DevSdkIgnoreRule mIgnoreRule = new DevSdkIgnoreRule();
@@ -5395,7 +5396,7 @@ public abstract class IpClientIntegrationTestCommon {
         packet = getNextDhcp6Packet(PACKET_TIMEOUT_MS);
         assertTrue(packet instanceof Dhcp6RequestPacket);
 
-        // Reply for Request with NoPrefixAvai status code. Not sure if this is reasonable in
+        // Reply for Request with NoPrefixAvail status code. Not sure if this is reasonable in
         // practice, but Server can do everything it wants.
         pd = new PrefixDelegation(packet.getIaId(), 0 /* t1 */, 0 /* t2 */,
                 new ArrayList<IaPrefixOption>() /* ipos */, Dhcp6Packet.STATUS_NO_PREFIX_AVAI);
@@ -5403,10 +5404,114 @@ public abstract class IpClientIntegrationTestCommon {
         mPacketReader.sendResponse(buildDhcp6Reply(packet, iapd.array(), mClientMac,
                 (Inet6Address) mClientIpAddress, false /* rapidCommit */));
 
-        // Check if client will ignore Reply for Request with NoPrefixAvai status code, and
+        // Check if client will ignore Reply for Request with NoPrefixAvail status code, and
         // rollback to SolicitState.
         packet = getNextDhcp6Packet(PACKET_TIMEOUT_MS);
         assertTrue(packet instanceof Dhcp6SolicitPacket);
+    }
+
+    @Test
+    @SignatureRequiredTest(reason = "Need to mock the DHCP6 renew/rebind alarms")
+    public void testDhcp6ReplyForRenewWithNoPrefixAvailStatusCode() throws Exception {
+        prepareDhcp6PdRenewTest();
+
+        final InOrder inOrder = inOrder(mAlarm);
+        final Handler handler = mDependencies.mDhcp6Client.getHandler();
+        final OnAlarmListener renewAlarm = expectAlarmSet(inOrder, "RENEW", 3600, handler);
+
+        handler.post(() -> renewAlarm.onAlarm());
+        HandlerUtils.waitForIdle(handler, TEST_TIMEOUT_MS);
+
+        Dhcp6Packet packet = getNextDhcp6Packet();
+        assertTrue(packet instanceof Dhcp6RenewPacket);
+
+        // Reply with normal IA_PD.
+        final IpPrefix prefix = new IpPrefix("2001:db8:1::/64");
+        final IaPrefixOption ipo = buildIaPrefixOption(prefix, 4500 /* preferred */,
+                7200 /* valid */);
+        PrefixDelegation pd = new PrefixDelegation(packet.getIaId(), 1000 /* t1 */,
+                2000 /* t2 */, Arrays.asList(ipo));
+        ByteBuffer iapd = pd.build();
+        mPacketReader.sendResponse(buildDhcp6Reply(packet, iapd.array(), mClientMac,
+                (Inet6Address) mClientIpAddress, false /* rapidCommit */));
+        HandlerUtils.waitForIdle(handler, TEST_TIMEOUT_MS);
+
+        // Trigger another Renew message.
+        handler.post(() -> renewAlarm.onAlarm());
+        HandlerUtils.waitForIdle(handler, TEST_TIMEOUT_MS);
+
+        packet = getNextDhcp6Packet();
+        assertTrue(packet instanceof Dhcp6RenewPacket);
+
+        // Reply for Renew with NoPrefixAvail status code, check if client will retransmit the
+        // Renew message.
+        pd = new PrefixDelegation(packet.getIaId(), 3600 /* t1 */, 4500 /* t2 */,
+                new ArrayList<IaPrefixOption>(0) /* ipos */, Dhcp6Packet.STATUS_NO_PREFIX_AVAI);
+        iapd = pd.build();
+        mPacketReader.sendResponse(buildDhcp6Reply(packet, iapd.array(), mClientMac,
+                (Inet6Address) mClientIpAddress, false /* rapidCommit */));
+
+        packet = getNextDhcp6Packet(TEST_WAIT_RENEW_REBIND_RETRANSMIT_MS);
+        assertTrue(packet instanceof Dhcp6RenewPacket);
+    }
+
+    @Test
+    @SignatureRequiredTest(reason = "Need to mock the DHCP6 renew/rebind alarms")
+    public void testDhcp6ReplyForRebindWithNoPrefixAvailStatusCode() throws Exception {
+        prepareDhcp6PdRenewTest();
+
+        final InOrder inOrder = inOrder(mAlarm);
+        final Handler handler = mDependencies.mDhcp6Client.getHandler();
+        final OnAlarmListener renewAlarm = expectAlarmSet(inOrder, "RENEW", 3600, handler);
+        final OnAlarmListener rebindAlarm = expectAlarmSet(inOrder, "REBIND", 4500, handler);
+
+        handler.post(() -> renewAlarm.onAlarm());
+        HandlerUtils.waitForIdle(handler, TEST_TIMEOUT_MS);
+
+        Dhcp6Packet packet = getNextDhcp6Packet();
+        assertTrue(packet instanceof Dhcp6RenewPacket);
+
+        handler.post(() -> rebindAlarm.onAlarm());
+        HandlerUtils.waitForIdle(handler, TEST_TIMEOUT_MS);
+
+        packet = getNextDhcp6Packet();
+        assertTrue(packet instanceof Dhcp6RebindPacket);
+
+        // Reply with normal IA_PD.
+        final IpPrefix prefix = new IpPrefix("2001:db8:1::/64");
+        final IaPrefixOption ipo = buildIaPrefixOption(prefix, 4500 /* preferred */,
+                7200 /* valid */);
+        PrefixDelegation pd = new PrefixDelegation(packet.getIaId(), 1000 /* t1 */,
+                2000 /* t2 */, Arrays.asList(ipo));
+        ByteBuffer iapd = pd.build();
+        mPacketReader.sendResponse(buildDhcp6Reply(packet, iapd.array(), mClientMac,
+                (Inet6Address) mClientIpAddress, false /* rapidCommit */));
+        HandlerUtils.waitForIdle(handler, TEST_TIMEOUT_MS);
+
+        // Trigger another Rebind message.
+        handler.post(() -> renewAlarm.onAlarm());
+        HandlerUtils.waitForIdle(handler, TEST_TIMEOUT_MS);
+
+        packet = getNextDhcp6Packet();
+        assertTrue(packet instanceof Dhcp6RenewPacket);
+
+        handler.post(() -> rebindAlarm.onAlarm());
+        HandlerUtils.waitForIdle(handler, TEST_TIMEOUT_MS);
+
+        packet = getNextDhcp6Packet();
+        assertTrue(packet instanceof Dhcp6RebindPacket);
+
+        // Reply for Rebind with NoPrefixAvail status code, check if client will retransmit the
+        // Rebind message.
+        pd = new PrefixDelegation(packet.getIaId(), 3600 /* t1 */,
+                4500 /* t2 */, new ArrayList<IaPrefixOption>(0) /* ipos */,
+                Dhcp6Packet.STATUS_NO_PREFIX_AVAI);
+        iapd = pd.build();
+        mPacketReader.sendResponse(buildDhcp6Reply(packet, iapd.array(), mClientMac,
+                (Inet6Address) mClientIpAddress, false /* rapidCommit */));
+
+        packet = getNextDhcp6Packet(TEST_WAIT_RENEW_REBIND_RETRANSMIT_MS);
+        assertTrue(packet instanceof Dhcp6RebindPacket);
     }
 
     @Test

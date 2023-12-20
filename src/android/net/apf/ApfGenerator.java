@@ -83,7 +83,9 @@ public class ApfGenerator {
         EXT(21),   // Followed by immediate indicating ExtendedOpcodes.
         LDDW(22),  // Load 4 bytes from data memory address (register + immediate): "lddw R0, [5]R1"
         STDW(23),  // Store 4 bytes to data memory address (register + immediate): "stdw R0, [5]R1"
-        WRITE(24),  // Write 1, 2 or 4 bytes imm to the output buffer, e.g. "WRITE 5"
+        // Write 1, 2 or 4 bytes immediate to the output buffer and auto-increment the pointer to
+        // write. e.g. "write 5"
+        WRITE(24),
         // Copy the data from input packet or APF data region to output buffer. Register bit is
         // used to specify the source of data copy: R=0 means copy from packet, R=1 means copy
         // from APF data region. The source offset is encoded in the first imm and the copy length
@@ -272,6 +274,7 @@ public class ApfGenerator {
         public final List<IntImmediate> mIntImms = new ArrayList<>();
         // When mOpcode is a jump:
         private int mTargetLabelSize;
+        private int mLenFieldOverride = -1;
         private String mTargetLabel;
         // When mOpcode == Opcodes.LABEL:
         private String mLabel;
@@ -376,6 +379,11 @@ public class ApfGenerator {
             return this;
         }
 
+        Instruction overrideLenField(int size) {
+            mLenFieldOverride = size;
+            return this;
+        }
+
         Instruction setBytesImm(byte[] bytes) {
             mBytesImm = bytes;
             return this;
@@ -423,6 +431,21 @@ public class ApfGenerator {
          * Assemble value for instruction size field.
          */
         private int generateImmSizeField() {
+            // If we already know the size the length field, just use it
+            switch (mLenFieldOverride) {
+                case -1:
+                    break;
+                case 1:
+                    return 1;
+                case 2:
+                    return 2;
+                case 4:
+                    return 3;
+                default:
+                    throw new IllegalStateException(
+                            "mLenFieldOverride has invalid value: " + mLenFieldOverride);
+            }
+            // Otherwise, calculate
             int immSize = calculateRequiredIndeterminateSize();
             // Encode size field to fit in 2 bits: 0->0, 1->1, 2->2, 3->4.
             return immSize == 4 ? 3 : immSize;
@@ -1023,30 +1046,30 @@ public class ApfGenerator {
         return append(new Instruction(ExtendedOpcodes.DISCARD, R1));
     }
 
-    // TODO: add back when support WRITE opcode
-//    /**
-//     * Add an instruction to the end of the program to write 1, 2 or 4 bytes value to output
-//     buffer.
-//     *
-//     * @param value the value to write
-//     * @param size the size of the value
-//     * @return the ApfGenerator object
-//     * @throws IllegalInstructionException throws when size is not 1, 2 or 4
-//     */
-//    public ApfGenerator addWrite(int value, byte size) throws IllegalInstructionException {
-//        requireApfVersion(5);
-//        if (!(size == 1 || size == 2 || size == 4)) {
-//            throw new IllegalInstructionException("length field must be 1, 2 or 4");
-//        }
-//        if (size < calculateImmSize(value, false)) {
-//            throw new IllegalInstructionException(
-//                    String.format("the value %d is unfit into size: %d", value, size));
-//        }
-//        Instruction instruction = new Instruction(Opcodes.WRITE);
-//        instruction.addUnsignedImm(value, size);
-//        addInstruction(instruction);
-//        return this;
-//    }
+    /**
+     * Add an instruction to the end of the program to write 1 byte value to output buffer.
+     */
+    public ApfGenerator addWrite1(int val) throws IllegalInstructionException {
+        requireApfVersion(MIN_APF_VERSION_IN_DEV);
+        append(new Instruction(Opcodes.WRITE).overrideLenField(1).addUnsigned8(val));
+        return this;
+    }
+
+    /**
+     * Add an instruction to the end of the program to write 2 bytes value to output buffer.
+     */
+    public ApfGenerator addWrite2(int val) throws IllegalInstructionException {
+        requireApfVersion(MIN_APF_VERSION_IN_DEV);
+        return append(new Instruction(Opcodes.WRITE).overrideLenField(2).addUnsignedBe16(val));
+    }
+
+    /**
+     * Add an instruction to the end of the program to write 4 bytes value to output buffer.
+     */
+    public ApfGenerator addWrite4(long val) throws IllegalInstructionException {
+        requireApfVersion(MIN_APF_VERSION_IN_DEV);
+        return append(new Instruction(Opcodes.WRITE).overrideLenField(4).addUnsignedBe32(val));
+    }
 
     // TODO: add back when support EWRITE opcode
 //    /**

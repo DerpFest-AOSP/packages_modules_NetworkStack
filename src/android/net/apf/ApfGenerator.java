@@ -68,7 +68,12 @@ public class ApfGenerator {
         OR(11),    // Or, e.g. "or R0,5"
         SH(12),    // Left shift, e.g, "sh R0, 5" or "sh R0, -5" (shifts right)
         LI(13),    // Load immediate, e.g. "li R0,5" (immediate encoded as signed value)
-        JMP(14),   // Jump, e.g. "jmp label"
+        // Jump, e.g. "jmp label"
+        // In APFv6, we use JMP(R=1) to encode the DATA instruction. DATA is executed as a jump.
+        // It tells how many bytes of the program regions are used to store the data and followed
+        // by the actual data bytes.
+        // "e.g. data 5, abcde"
+        JMP(14),
         JEQ(15),   // Compare equal and branch, e.g. "jeq R0,5,label"
         JNE(16),   // Compare not equal and branch, e.g. "jne R0,5,label"
         JGT(17),   // Compare greater than and branch, e.g. "jgt R0,5,label"
@@ -372,9 +377,6 @@ public class ApfGenerator {
         }
 
         Instruction setBytesImm(byte[] bytes) {
-            if (mOpcode != Opcodes.JNEBS.value) {
-                throw new IllegalStateException("adding compare bytes to non-JNEBS instruction");
-            }
             mBytesImm = bytes;
             return this;
         }
@@ -988,6 +990,19 @@ public class ApfGenerator {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
         // R1 means the extra be16 immediate is present
         return append(new Instruction(ExtendedOpcodes.ALLOCATE, R1).addUnsignedBe16(size));
+    }
+
+    /**
+     * Add an instruction to the beginning of the program to reserve the data region.
+     * @param data the actual data byte
+     */
+    public ApfGenerator addData(byte[] data) throws IllegalInstructionException {
+        requireApfVersion(MIN_APF_VERSION_IN_DEV);
+        if (!mInstructions.isEmpty()) {
+            throw new IllegalInstructionException("data instruction has to come first");
+        }
+        return append(new Instruction(Opcodes.JMP, R1).addUnsignedIndeterminate(
+                data.length).setBytesImm(data));
     }
 
     /**

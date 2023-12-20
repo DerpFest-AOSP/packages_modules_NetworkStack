@@ -285,7 +285,7 @@ public class ApfGenerator {
         Instruction(ExtendedOpcodes extendedOpcodes, int slot, Register register)
                 throws IllegalInstructionException {
             this(Opcodes.EXT, register);
-            if (slot < 0 || slot > (MEMORY_SLOTS - 1)) {
+            if (slot < 0 || slot >= MEMORY_SLOTS) {
                 throw new IllegalInstructionException("illegal memory slot number: " + slot);
             }
             addUnsignedIndeterminate(extendedOpcodes.value + slot);

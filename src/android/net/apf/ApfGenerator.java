@@ -219,6 +219,8 @@ public class ApfGenerator {
         }
 
         public static IntImmediate newTwosComplementSignedIndeterminate(long imm) {
+            checkRange("Signed Indeterminate IMM", imm, Integer.MIN_VALUE,
+                    4294967295L /* upperBound */);
             return new IntImmediate((int) imm, IntImmediateType.INDETERMINATE_SIZE_SIGNED);
         }
 

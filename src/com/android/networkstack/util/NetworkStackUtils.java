@@ -236,6 +236,10 @@ public class NetworkStackUtils {
      */
     public static final String APF_NEW_RA_FILTER_VERSION = "apf_new_ra_filter_version";
     /**
+     * Experiment flag to enable the feature of polling counters in Apf.
+     */
+    public static final String APF_POLLING_COUNTERS_VERSION = "apf_polling_counters_version";
+    /**
      * Experiment flag to enable the feature of ignoring any individual RA section with lifetime
      * below accept_ra_min_lft sysctl.
      */
@@ -256,12 +260,6 @@ public class NetworkStackUtils {
      */
     public static final String APF_HANDLE_LIGHT_DOZE_FORCE_DISABLE =
             "apf_handle_light_doze_force_disable";
-
-    /**
-     * Kill switch flag to disable the feature of polling counters in Apf.
-     */
-    public static final String APF_POLLING_COUNTERS_FORCE_DISABLE =
-            "apf_polling_counters_force_disable";
 
     /**
      * Kill switch flag to disable the feature of skipping Tcp socket info polling when light

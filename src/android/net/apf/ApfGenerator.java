@@ -301,28 +301,55 @@ public class ApfGenerator {
             this(extendedOpcodes, R0);
         }
 
-        Instruction addUnsignedIndeterminate(int imm) {
-            mIntImms.add(IntImmediate.newUnsignedIndeterminate(imm));
-            return this;
-        }
-
         Instruction addSignedIndeterminate(int imm) {
             mIntImms.add(IntImmediate.newSignedIndeterminate(imm));
             return this;
         }
 
-        Instruction addUnsignedBe16Imm(int imm) {
-            mIntImms.add(IntImmediate.newUnsignedBe16(imm));
+        Instruction addUnsignedIndeterminate(int imm) {
+            mIntImms.add(IntImmediate.newUnsignedIndeterminate(imm));
             return this;
         }
+
+
+        Instruction addTwosCompSignedIndeterminate(int imm) {
+            mIntImms.add(IntImmediate.newTwosComplementSignedIndeterminate(imm));
+            return this;
+        }
+
 
         Instruction addTwosCompUnsignedIndeterminate(int imm) {
             mIntImms.add(IntImmediate.newTwosComplementUnsignedIndeterminate(imm));
             return this;
         }
 
-        Instruction addTwosCompSignedIndeterminate(int imm) {
-            mIntImms.add(IntImmediate.newTwosComplementSignedIndeterminate(imm));
+        Instruction addSigned8(byte imm) {
+            mIntImms.add(IntImmediate.newSigned8(imm));
+            return this;
+        }
+
+        Instruction addUnsigned8(int imm) {
+            mIntImms.add(IntImmediate.newUnsigned8(imm));
+            return this;
+        }
+
+        Instruction addSignedBe16(short imm) {
+            mIntImms.add(IntImmediate.newSignedBe16(imm));
+            return this;
+        }
+
+        Instruction addUnsignedBe16(int imm) {
+            mIntImms.add(IntImmediate.newUnsignedBe16(imm));
+            return this;
+        }
+
+        Instruction addSignedBe32(int imm) {
+            mIntImms.add(IntImmediate.newSignedBe32(imm));
+            return this;
+        }
+
+        Instruction addUnsignedBe32(long imm) {
+            mIntImms.add(IntImmediate.newUnsignedBe32(imm));
             return this;
         }
 
@@ -960,7 +987,7 @@ public class ApfGenerator {
     public ApfGenerator addAllocate(int size) throws IllegalInstructionException {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
         // R1 means the extra be16 immediate is present
-        return append(new Instruction(ExtendedOpcodes.ALLOCATE, R1).addUnsignedBe16Imm(size));
+        return append(new Instruction(ExtendedOpcodes.ALLOCATE, R1).addUnsignedBe16(size));
     }
 
     /**

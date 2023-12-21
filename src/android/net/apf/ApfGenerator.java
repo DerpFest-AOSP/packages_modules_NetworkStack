@@ -1051,8 +1051,7 @@ public class ApfGenerator {
      */
     public ApfGenerator addWrite1(int val) throws IllegalInstructionException {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        append(new Instruction(Opcodes.WRITE).overrideLenField(1).addUnsigned8(val));
-        return this;
+        return append(new Instruction(Opcodes.WRITE).overrideLenField(1).addUnsigned8(val));
     }
 
     /**

@@ -32,7 +32,6 @@ import com.android.net.module.util.structs.IaPrefixOption;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -96,7 +95,6 @@ public class Dhcp6Packet {
      */
     public static final byte DHCP6_STATUS_CODE = 13;
     protected short mStatusCode;
-    protected String mStatusMsg;
 
     public static final short STATUS_SUCCESS           = 0;
     public static final short STATUS_UNSPEC_FAIL       = 1;
@@ -374,35 +372,6 @@ public class Dhcp6Packet {
     }
 
     /**
-     * Reads a string of specified length from the buffer.
-     *
-     * TODO: move to a common place which can be shared with DhcpClient.
-     */
-    private static String readAsciiString(@NonNull final ByteBuffer buf, int byteCount,
-            boolean isNullOk) {
-        final byte[] bytes = new byte[byteCount];
-        buf.get(bytes);
-        return readAsciiString(bytes, isNullOk);
-    }
-
-    private static String readAsciiString(@NonNull final byte[] payload, boolean isNullOk) {
-        final byte[] bytes = payload;
-        int length = bytes.length;
-        if (!isNullOk) {
-            // Stop at the first null byte. This is because some DHCP options (e.g., the domain
-            // name) are passed to netd via FrameworkListener, which refuses arguments containing
-            // null bytes. We don't do this by default because vendorInfo is an opaque string which
-            // could in theory contain null bytes.
-            for (length = 0; length < bytes.length; length++) {
-                if (bytes[length] == 0) {
-                    break;
-                }
-            }
-        }
-        return new String(bytes, 0, length, StandardCharsets.US_ASCII);
-    }
-
-    /**
      * Creates a concrete Dhcp6Packet from the supplied ByteBuffer.
      *
      * The buffer only starts with a UDP encapsulation (i.e. DHCPv6 message). A subset of the
@@ -426,7 +395,6 @@ public class Dhcp6Packet {
         byte[] serverDuid = null;
         byte[] clientDuid = null;
         short statusCode = STATUS_SUCCESS;
-        String statusMsg = null;
         boolean rapidCommit = false;
         int solMaxRt = 0;
         PrefixDelegation pd = null;
@@ -487,7 +455,12 @@ public class Dhcp6Packet {
                     case DHCP6_STATUS_CODE:
                         expectedLen = optionLen;
                         statusCode = packet.getShort();
-                        statusMsg = readAsciiString(packet, expectedLen - 2, false /* isNullOk */);
+                        // Skip the status message (if any), which is a UTF-8 encoded text string
+                        // suitable for display to the end user, but is not useful for Dhcp6Client
+                        // to decide how to properly handle the status code.
+                        if (optionLen - 2 > 0) {
+                            packet.position(packet.position() + (optionLen - 2));
+                        }
                         break;
                     case DHCP6_SOL_MAX_RT:
                         expectedLen = 4;
@@ -545,7 +518,6 @@ public class Dhcp6Packet {
             throw new ParseException("Missing IA_PD option");
         }
         newPacket.mStatusCode = statusCode;
-        newPacket.mStatusMsg = statusMsg;
         newPacket.mRapidCommit = rapidCommit;
         newPacket.mSolMaxRt =
                 (solMaxRt >= 60 && solMaxRt <= 86400)

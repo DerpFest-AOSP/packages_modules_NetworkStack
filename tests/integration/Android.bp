@@ -68,6 +68,9 @@ android_library {
     static_libs: [
         "NetworkStackApiStableLib",
     ],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 // Network stack integration tests.
@@ -84,6 +87,9 @@ android_test {
     jarjar_rules: ":NetworkStackJarJarRules",
     host_required: ["net-tests-utils-host-common"],
     test_config_template: "AndroidTestTemplate_Integration.xml",
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 // Network stack next integration tests.
@@ -107,6 +113,9 @@ android_test {
     jarjar_rules: ":NetworkStackJarJarRules",
     host_required: ["net-tests-utils-host-common"],
     test_config_template: "AndroidTestTemplate_Integration.xml",
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 // Network stack integration root tests.
@@ -124,12 +133,18 @@ android_test {
         "NetworkStackApiStableLib",
     ],
     platform_apis: true,
-    test_suites: ["general-tests", "mts-networking"],
+    test_suites: [
+        "general-tests",
+        "mts-networking",
+    ],
     compile_multilib: "both",
     manifest: "AndroidManifest_root.xml",
     jarjar_rules: ":NetworkStackJarJarRules",
     host_required: ["net-tests-utils-host-common"],
     test_config_template: "AndroidTestTemplate_Integration.xml",
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 // Special version of the network stack tests that includes all tests necessary for code coverage
@@ -138,7 +153,10 @@ android_test {
     name: "NetworkStackCoverageTests",
     certificate: "networkstack",
     platform_apis: true,
-    test_suites: ["device-tests", "mts-networking"],
+    test_suites: [
+        "device-tests",
+        "mts-networking",
+    ],
     test_config: "AndroidTest_Coverage.xml",
     defaults: [
         "NetworkStackReleaseTargetSdk",
@@ -154,4 +172,7 @@ android_test {
     compile_multilib: "both",
     manifest: "AndroidManifest_coverage.xml",
     jarjar_rules: ":NetworkStackJarJarRules",
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }

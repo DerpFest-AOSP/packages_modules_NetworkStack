@@ -58,6 +58,7 @@ java_defaults {
     name: "NetworkStackNextEnableDefaults",
     enabled: true,
 }
+
 // This is a placeholder comment to avoid merge conflicts
 // as the above target may have different "enabled" values
 // depending on the branch
@@ -72,7 +73,7 @@ java_defaults {
         "framework-connectivity-t",
         "framework-statsd",
         "framework-wifi",
-    ]
+    ],
 }
 
 // Common defaults for NetworkStack integration tests, root tests and coverage tests
@@ -85,7 +86,7 @@ java_defaults {
 
 java_defaults {
     name: "NetworkStackReleaseApiLevel",
-    defaults:["NetworkStackReleaseTargetSdk"],
+    defaults: ["NetworkStackReleaseTargetSdk"],
     sdk_version: module_34_version,
     libs: [
         "framework-configinfrastructure",
@@ -93,7 +94,7 @@ java_defaults {
         "framework-connectivity-t",
         "framework-statsd",
         "framework-wifi",
-    ]
+    ],
 }
 
 // Libraries for the API shims
@@ -103,12 +104,12 @@ java_defaults {
         "androidx.annotation_annotation",
         "networkstack-aidl-latest",
     ],
-    static_libs : [
-        "modules-utils-build_system"
+    static_libs: [
+        "modules-utils-build_system",
     ],
     apex_available: [
         "com.android.tethering",
-        "//apex_available:platform",  // For InProcessNetworkStack
+        "//apex_available:platform", // For InProcessNetworkStack
     ],
     min_sdk_version: "30",
 }
@@ -124,6 +125,9 @@ java_library {
     srcs: ["apishim/common/**/*.java"],
     sdk_version: "system_current",
     visibility: ["//visibility:private"],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 // Each level of the shims (29, 30, ...) is its own java_library compiled against the corresponding
@@ -137,6 +141,9 @@ java_library {
     ],
     sdk_version: "system_29",
     visibility: ["//visibility:private"],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 java_library {
@@ -153,6 +160,7 @@ java_library {
     visibility: ["//visibility:private"],
     lint: {
         strict_updatability_linting: true,
+        baseline_filename: "lint-baseline.xml",
     },
 }
 
@@ -176,6 +184,9 @@ java_library {
     ],
     sdk_version: "module_31",
     visibility: ["//visibility:private"],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 java_library {
@@ -196,6 +207,9 @@ java_library {
     ],
     sdk_version: "module_33",
     visibility: ["//visibility:private"],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 java_library {
@@ -217,6 +231,9 @@ java_library {
     ],
     sdk_version: module_34_version,
     visibility: ["//visibility:private"],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 // Shims for APIs being added to the current development version of Android. These APIs are not
@@ -228,7 +245,10 @@ java_library {
 // are part of the stable shims and scanned when generating jarjar rules.
 java_library {
     name: "NetworkStackApi35Shims",
-    defaults: ["NetworkStackShimsDefaults", "ConnectivityNextEnableDefaults"],
+    defaults: [
+        "NetworkStackShimsDefaults",
+        "ConnectivityNextEnableDefaults",
+    ],
     srcs: [
         "apishim/35/**/*.java",
     ],
@@ -243,10 +263,13 @@ java_library {
         "framework-connectivity",
         "framework-connectivity-t.stubs.module_lib",
         "framework-tethering",
-        "android.net.ipsec.ike.stubs.module_lib"
+        "android.net.ipsec.ike.stubs.module_lib",
     ],
     sdk_version: "module_current",
     visibility: ["//visibility:private"],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 // API current uses the API current shims directly.
@@ -274,6 +297,9 @@ java_library {
         "//packages/modules/Connectivity/service-t",
         "//packages/modules/Connectivity/tests:__subpackages__",
     ],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 // API stable uses jarjar to rename the latest stable apishim package from
@@ -281,7 +307,10 @@ java_library {
 // the networkstack code.
 java_library {
     name: "NetworkStackApiStableShims",
-    defaults: ["NetworkStackShimsDefaults", "NetworkStackReleaseApiLevel"],
+    defaults: [
+        "NetworkStackShimsDefaults",
+        "NetworkStackReleaseApiLevel",
+    ],
     static_libs: [
         "NetworkStackShimsCommon",
         "NetworkStackApi29Shims",
@@ -297,6 +326,9 @@ java_library {
         "//packages/modules/Connectivity/service-t",
         "//packages/modules/Connectivity/tests:__subpackages__",
     ],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 // Common defaults for android libraries containing network stack code, used to compile variants of
@@ -336,7 +368,7 @@ android_library {
     ],
     srcs: [
         "src/**/*.java",
-        ":statslog-networkstack-java-gen-current"
+        ":statslog-networkstack-java-gen-current",
     ],
     static_libs: [
         "NetworkStackApiCurrentShims",
@@ -348,12 +380,18 @@ android_library {
         "//packages/modules/NetworkStack/tests/unit",
         "//packages/modules/NetworkStack/tests/integration",
     ],
-    lint: { strict_updatability_linting: true },
+    lint: {
+        strict_updatability_linting: true,
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 android_library {
     name: "NetworkStackApiStableLib",
-    defaults: ["NetworkStackReleaseApiLevel", "NetworkStackAndroidLibraryDefaults"],
+    defaults: [
+        "NetworkStackReleaseApiLevel",
+        "NetworkStackAndroidLibraryDefaults",
+    ],
     srcs: [
         "src/**/*.java",
         ":statslog-networkstack-java-gen-stable",
@@ -370,7 +408,10 @@ android_library {
         "//packages/modules/NetworkStack/tests/unit",
         "//packages/modules/NetworkStack/tests/integration",
     ],
-    lint: { strict_updatability_linting: true },
+    lint: {
+        strict_updatability_linting: true,
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 java_library {
@@ -396,6 +437,9 @@ java_library {
         "//packages/modules/Connectivity/Tethering/tests/integration",
         "//packages/modules/Connectivity/tests/cts/net",
     ],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 java_genrule {
@@ -455,12 +499,18 @@ android_app {
     certificate: "platform",
     manifest: "AndroidManifest_InProcess.xml",
     // InProcessNetworkStack is a replacement for NetworkStack
-    overrides: ["NetworkStack", "NetworkStackNext"],
+    overrides: [
+        "NetworkStack",
+        "NetworkStackNext",
+    ],
     // The InProcessNetworkStack goes together with the PlatformCaptivePortalLogin, which replaces
     // the default CaptivePortalLogin.
     required: [
         "PlatformCaptivePortalLogin",
     ],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 // Pre-merge the AndroidManifest for NetworkStackNext, so that its manifest can be merged on top
@@ -472,7 +522,10 @@ android_library {
         "ConnectivityNextEnableDefaults",
     ],
     static_libs: ["NetworkStackApiCurrentLib"],
-    manifest: "AndroidManifest.xml"
+    manifest: "AndroidManifest.xml",
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 // NetworkStack build targeting the current API release, for testing on in-development SDK
@@ -490,13 +543,19 @@ android_app {
         "privapp_whitelist_com.android.networkstack",
     ],
     updatable: true,
-    lint: { strict_updatability_linting: true },
+    lint: {
+        strict_updatability_linting: true,
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 // Updatable network stack for finalized API
 android_app {
     name: "NetworkStack",
-    defaults: ["NetworkStackAppDefaults", "NetworkStackReleaseApiLevel"],
+    defaults: [
+        "NetworkStackAppDefaults",
+        "NetworkStackReleaseApiLevel",
+    ],
     static_libs: ["NetworkStackApiStableLib"],
     certificate: "networkstack",
     manifest: "AndroidManifest.xml",
@@ -504,13 +563,16 @@ android_app {
         "privapp_whitelist_com.android.networkstack",
     ],
     updatable: true,
-    lint: { strict_updatability_linting: true },
+    lint: {
+        strict_updatability_linting: true,
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 cc_library_shared {
     name: "libnetworkstackutilsjni",
     srcs: [
-        "jni/network_stack_utils_jni.cpp"
+        "jni/network_stack_utils_jni.cpp",
     ],
     header_libs: [
         "bpf_headers",
@@ -548,8 +610,8 @@ genrule {
     name: "statslog-networkstack-java-gen-current",
     tools: ["stats-log-api-gen"],
     cmd: "$(location stats-log-api-gen) --java $(out) --module network_stack" +
-         " --javaPackage com.android.networkstack.metrics --javaClass NetworkStackStatsLog" +
-         " --minApiLevel 30",
+        " --javaPackage com.android.networkstack.metrics --javaClass NetworkStackStatsLog" +
+        " --minApiLevel 30",
     out: ["com/android/networkstack/metrics/NetworkStackStatsLog.java"],
 }
 
@@ -557,11 +619,10 @@ genrule {
     name: "statslog-networkstack-java-gen-stable",
     tools: ["stats-log-api-gen"],
     cmd: "$(location stats-log-api-gen) --java $(out) --module network_stack" +
-         " --javaPackage com.android.networkstack.metrics --javaClass NetworkStackStatsLog" +
-         " --minApiLevel 30 --compileApiLevel 30",
+        " --javaPackage com.android.networkstack.metrics --javaClass NetworkStackStatsLog" +
+        " --minApiLevel 30 --compileApiLevel 30",
     out: ["com/android/networkstack/metrics/NetworkStackStatsLog.java"],
 }
-
 
 version_code_networkstack_next = "300000000"
 version_code_networkstack_test = "999999999"
@@ -570,21 +631,27 @@ genrule {
     name: "NetworkStackTestAndroidManifest",
     srcs: ["AndroidManifest.xml"],
     out: ["TestAndroidManifest.xml"],
-    cmd: "sed -E 's/versionCode=\"[0-9]+\"/versionCode=\""
-        + version_code_networkstack_test
-        + "\"/' $(in) > $(out)",
+    cmd: "sed -E 's/versionCode=\"[0-9]+\"/versionCode=\"" +
+        version_code_networkstack_test +
+        "\"/' $(in) > $(out)",
     visibility: ["//visibility:private"],
 }
 
 android_app {
     name: "TestNetworkStack",
-    defaults: ["NetworkStackAppDefaults", "NetworkStackReleaseApiLevel"],
+    defaults: [
+        "NetworkStackAppDefaults",
+        "NetworkStackReleaseApiLevel",
+    ],
     static_libs: ["NetworkStackApiStableLib"],
     certificate: "networkstack",
     manifest: ":NetworkStackTestAndroidManifest",
     required: [
         "privapp_whitelist_com.android.networkstack",
     ],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 // When adding or modifying protos, the jarjar rules and possibly proguard rules need
@@ -601,4 +668,7 @@ java_library_static {
         "networkstackprotos",
     ],
     defaults: ["NetworkStackReleaseApiLevel"],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }

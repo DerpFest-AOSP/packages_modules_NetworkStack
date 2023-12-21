@@ -21,7 +21,10 @@ package {
 java_defaults {
     name: "NetworkStackTestsDefaults",
     platform_apis: true,
-    srcs: ["src/**/*.java", "src/**/*.kt"],
+    srcs: [
+        "src/**/*.java",
+        "src/**/*.kt",
+    ],
     resource_dirs: ["res"],
     static_libs: [
         "androidx.test.ext.junit",
@@ -39,7 +42,7 @@ java_defaults {
     ],
     defaults: [
         "framework-connectivity-test-defaults",
-        "libnetworkstackutilsjni_deps"
+        "libnetworkstackutilsjni_deps",
     ],
     jni_libs: [
         // For mockito extended
@@ -66,6 +69,9 @@ android_test {
     static_libs: ["NetworkStackApiCurrentLib"],
     compile_multilib: "both", // Workaround for b/147785146 for mainline-presubmit
     jarjar_rules: ":NetworkStackJarJarRules",
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 // Library containing the unit tests. This is used by the coverage test target to pull in the
@@ -76,18 +82,24 @@ android_library {
     min_sdk_version: "30",
     defaults: ["NetworkStackTestsDefaults"],
     static_libs: ["NetworkStackApiStableLib"],
-    lint: { test: true },
+    lint: {
+        test: true,
+        baseline_filename: "lint-baseline.xml",
+    },
     visibility: [
         "//packages/modules/NetworkStack/tests/integration",
         "//packages/modules/Connectivity/tests:__subpackages__",
         "//packages/modules/Connectivity/Tethering/tests:__subpackages__",
-    ]
+    ],
 }
 
 android_test {
     name: "NetworkStackTests",
     min_sdk_version: "30",
-    test_suites: ["general-tests", "mts"],
+    test_suites: [
+        "general-tests",
+        "mts",
+    ],
     defaults: [
         "NetworkStackTestsDefaults",
         "connectivity-mainline-presubmit-java-defaults",
@@ -95,6 +107,9 @@ android_test {
     static_libs: ["NetworkStackApiStableLib"],
     compile_multilib: "both",
     jarjar_rules: ":NetworkStackJarJarRules",
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 // Additional dependencies of libnetworkstackutilsjni that are not provided by the system when

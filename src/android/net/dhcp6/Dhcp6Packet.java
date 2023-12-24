@@ -94,6 +94,7 @@ public class Dhcp6Packet {
      * DHCPv6 Optional Type: Status Code.
      */
     public static final byte DHCP6_STATUS_CODE = 13;
+    private static final byte MIN_STATUS_CODE_OPT_LEN = 6;
     protected short mStatusCode;
 
     public static final short STATUS_SUCCESS           = 0;
@@ -209,6 +210,7 @@ public class Dhcp6Packet {
         public final List<IaPrefixOption> ipos;
         public final short statusCode;
 
+        @VisibleForTesting
         public PrefixDelegation(int iaid, int t1, int t2,
                 @NonNull final List<IaPrefixOption> ipos, short statusCode) {
             Objects.requireNonNull(ipos);
@@ -293,15 +295,25 @@ public class Dhcp6Packet {
 
         /**
          * Build an IA_PD option from given specific parameters, including IA_PREFIX options.
+         *
+         * Per RFC8415 section 21.13 if the Status Code option does not appear in a message in
+         * which the option could appear, the status of the message is assumed to be Success. So
+         * only put the Status Code option in IA_PD when the status code is not Success.
          */
         public ByteBuffer build(@NonNull final List<IaPrefixOption> input) {
             final ByteBuffer iapd = ByteBuffer.allocate(IaPdOption.LENGTH
-                    + Struct.getSize(IaPrefixOption.class) * input.size());
+                    + Struct.getSize(IaPrefixOption.class) * input.size()
+                    + (statusCode != STATUS_SUCCESS ? MIN_STATUS_CODE_OPT_LEN : 0));
             iapd.putInt(iaid);
             iapd.putInt(t1);
             iapd.putInt(t2);
             for (IaPrefixOption ipo : input) {
                 ipo.writeToByteBuffer(iapd);
+            }
+            if (statusCode != STATUS_SUCCESS) {
+                iapd.putShort(DHCP6_STATUS_CODE);
+                iapd.putShort((short) 2);
+                iapd.putShort(statusCode);
             }
             iapd.flip();
             return iapd;

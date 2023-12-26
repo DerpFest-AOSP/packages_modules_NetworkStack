@@ -1748,19 +1748,26 @@ public class IpClient extends StateMachine {
         // Check if any link address update from netlink.
         final CompareResult<LinkAddress> results =
                 LinkPropertiesUtils.compareAddresses(mLinkProperties, newLp);
-        for (LinkAddress la : results.added) {
-            if (mDhcp6PrefixDelegationEnabled && isIpv6StableDelegatedAddress(la)) {
-                final IpPrefix prefix = new IpPrefix(la.getAddress(), RFC7421_PREFIX_LENGTH);
-                mDelegatedPrefixes.add(prefix);
-            }
-        }
-
+        // In the case that there are multiple netlink update events about a global IPv6 address
+        // derived from the delegated prefix, a flag-only change event(e.g. due to the duplicate
+        // address detection) will cause an identical IP address to be put into both Added and
+        // Removed list based on the CompareResult implementation. To prevent a prefix from being
+        // mistakenly removed from the delegate prefix list, it is better to always check the
+        // removed list before checking the added list(e.g. anyway we can add the removed prefix
+        // back again).
         for (LinkAddress la : results.removed) {
             if (mDhcp6PrefixDelegationEnabled && isIpv6StableDelegatedAddress(la)) {
                 final IpPrefix prefix = new IpPrefix(la.getAddress(), RFC7421_PREFIX_LENGTH);
                 mDelegatedPrefixes.remove(prefix);
             }
             // TODO: remove onIpv6AddressRemoved callback.
+        }
+
+        for (LinkAddress la : results.added) {
+            if (mDhcp6PrefixDelegationEnabled && isIpv6StableDelegatedAddress(la)) {
+                final IpPrefix prefix = new IpPrefix(la.getAddress(), RFC7421_PREFIX_LENGTH);
+                mDelegatedPrefixes.add(prefix);
+            }
         }
 
         // [3] Add in data from DHCPv4, if available.

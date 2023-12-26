@@ -960,6 +960,23 @@ public class IpClient extends StateMachine {
                     }
 
                     @Override
+                    public void onIpv6AddressRemoved(final Inet6Address address) {
+                        // The update of Gratuitous NA target addresses set or unsolicited
+                        // multicast NS source addresses set should be only accessed from the
+                        // handler thread of IpClient StateMachine, keeping the behaviour
+                        // consistent with relying on the non-blocking NetworkObserver callbacks,
+                        // see {@link registerObserverForNonblockingCallback}. This can be done
+                        // by either sending a message to StateMachine or posting a handler.
+                        if (address.isLinkLocalAddress()) return;
+                        getHandler().post(() -> {
+                            mLog.log("Remove IPv6 GUA " + address
+                                    + " from both Gratuituous NA and Multicast NS sets");
+                            mGratuitousNaTargetAddresses.remove(address);
+                            mMulticastNsSourceAddresses.remove(address);
+                        });
+                    }
+
+                    @Override
                     public void onClatInterfaceStateUpdate(boolean add) {
                         // TODO: when clat interface was removed, consider sending a message to
                         // the IpClient main StateMachine thread, in case "NDO enabled" state
@@ -1743,18 +1760,7 @@ public class IpClient extends StateMachine {
                 final IpPrefix prefix = new IpPrefix(la.getAddress(), RFC7421_PREFIX_LENGTH);
                 mDelegatedPrefixes.remove(prefix);
             }
-            // Also remove the global IPv6 address from the Gratuitous NA target addresses set or
-            // unsolicited multicast NS source addresses set if the address is present.
-            if (la.isIpv6()) {
-                final Inet6Address address = (Inet6Address) la.getAddress();
-                if (address.isLinkLocalAddress()) continue;
-                if (DBG) {
-                    mLog.log("Remove IPv6 GUA " + address
-                            + " from Gratuituous NA and Multicast NS sets");
-                }
-                mGratuitousNaTargetAddresses.remove(address);
-                mMulticastNsSourceAddresses.remove(address);
-            }
+            // TODO: remove onIpv6AddressRemoved callback.
         }
 
         // [3] Add in data from DHCPv4, if available.

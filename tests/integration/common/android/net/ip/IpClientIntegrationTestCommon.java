@@ -5397,7 +5397,6 @@ public abstract class IpClientIntegrationTestCommon {
                 mNetd.getProcSysNet(INetd.IPV6, INetd.CONF, mIfaceName, "accept_ra_defrtr"));
         assertEquals(1, acceptRaDefRtr);
     }
-
     private void runDhcpDomainSearchListOptionTest(final String domainName,
             final List<String> domainSearchList, final String expectedDomain) throws Exception {
         when(mResources.getBoolean(R.bool.config_dhcp_client_domain_search_list)).thenReturn(true);

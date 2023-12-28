@@ -779,6 +779,8 @@ public abstract class IpClientIntegrationTestCommon {
             enableRealAlarm("DhcpClient." + mIfaceName + ".KICK");
             // Enable alarm for IPv6 autoconf via SLAAC in IpClient.
             enableRealAlarm("IpClient." + mIfaceName + ".EVENT_IPV6_AUTOCONF_TIMEOUT");
+            // Enable packet retransmit alarm in Dhcp6Client.
+            enableRealAlarm("Dhcp6Client." + mIfaceName + ".KICK");
         }
 
         mIIpClient = makeIIpClient(mIfaceName, mCb);
@@ -5338,6 +5340,41 @@ public abstract class IpClientIntegrationTestCommon {
         assertTrue(hasRouteTo(lp, prefix1.toString(), RTN_UNREACHABLE));
         assertTrue(hasRouteTo(lp, prefix2.toString(), RTN_UNREACHABLE));
         assertFalse(hasRouteTo(lp, prefix3.toString(), RTN_UNREACHABLE));
+    }
+
+    private void runDhcp6PacketWithNoPrefixAvailStatusCodeTest(boolean shouldReplyWithAdvertise)
+            throws Exception {
+        prepareDhcp6PdTest();
+        Dhcp6Packet packet = getNextDhcp6Packet(PACKET_TIMEOUT_MS);
+        assertTrue(packet instanceof Dhcp6SolicitPacket);
+
+        final PrefixDelegation pd = new PrefixDelegation(packet.getIaId(), 0 /* t1 */, 0 /* t2 */,
+                new ArrayList<IaPrefixOption>() /* ipos */, Dhcp6Packet.STATUS_NO_PREFIX_AVAI);
+        final ByteBuffer iapd = pd.build();
+        if (shouldReplyWithAdvertise) {
+            mPacketReader.sendResponse(buildDhcp6Advertise(packet, iapd.array(), mClientMac,
+                    (Inet6Address) mClientIpAddress));
+        } else {
+            mPacketReader.sendResponse(buildDhcp6Reply(packet, iapd.array(), mClientMac,
+                    (Inet6Address) mClientIpAddress, true /* rapidCommit */));
+        }
+
+        // Check if client will ignore Advertise or Reply for Rapid Commit Solicit and
+        // retransmit Solicit.
+        packet = getNextDhcp6Packet(PACKET_TIMEOUT_MS);
+        assertTrue(packet instanceof Dhcp6SolicitPacket);
+    }
+
+    @Test
+    public void testDhcp6AdvertiseWithNoPrefixAvailStatusCode() throws Exception {
+        // Advertise
+        runDhcp6PacketWithNoPrefixAvailStatusCodeTest(true /* shouldReplyWithAdvertise */);
+    }
+
+    @Test
+    public void testDhcp6ReplyForRapidCommitSolicitWithNoPrefixAvailStatusCode() throws Exception {
+        // Reply
+        runDhcp6PacketWithNoPrefixAvailStatusCodeTest(false /* shouldReplyWithAdvertise */);
     }
 
     @Test

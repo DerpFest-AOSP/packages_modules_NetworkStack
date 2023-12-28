@@ -594,6 +594,11 @@ public class Dhcp6Client extends StateMachine {
         protected void receivePacket(Dhcp6Packet packet) {
             if (!(packet instanceof Dhcp6ReplyPacket)) return;
             final PrefixDelegation pd = packet.mPrefixDelegation;
+            if (pd.statusCode == Dhcp6Packet.STATUS_NO_PREFIX_AVAI) {
+                Log.w(TAG, "Server responded to Request without available prefix, restart Solicit");
+                transitionTo(mSolicitState);
+                return;
+            }
             Log.d(TAG, "Get prefix delegation option from Reply: " + pd);
             mReply = pd;
             mSolMaxRtMs = packet.getSolMaxRtMs().orElse(mSolMaxRtMs);
@@ -672,8 +677,8 @@ public class Dhcp6Client extends StateMachine {
      *   That forces previous delegated prefixes to expire in a natural way, and client should
      *   also stop trying to extend the lifetime for them. That being said, the global IPv6 address
      *   lifetime won't be updated in BoundState if corresponding prefix doesn't appear in Reply
-     *   message, resulting in these global IPv6 addresses eventually and IpClient obtains these
-     *   updates via netlink message and remove the delegated prefix(es) from LinkProperties.
+     *   message, resulting in these global IPv6 addresses expire eventually and IpClient obtains
+     *   these updates via netlink message and remove the delegated prefix(es) from LinkProperties.
      * - If some binding IA_PDs were absent in Reply message, client should still stay at RenewState
      *   or RebindState and retransmit Renew/Rebind messages to see if it can get all later. So far
      *   we only support one IA_PD option per interface, if the received Reply message doesn't take

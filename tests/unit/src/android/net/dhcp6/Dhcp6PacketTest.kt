@@ -248,7 +248,7 @@ class Dhcp6PacketTest {
         assertEquals(0, packet.mPrefixDelegation.iaid)
         assertEquals(0, packet.mPrefixDelegation.t1)
         assertEquals(0, packet.mPrefixDelegation.t2)
-        assertEquals(Dhcp6Packet.STATUS_NO_PREFIX_AVAI, packet.mStatusCode)
+        assertEquals(Dhcp6Packet.STATUS_NO_PREFIX_AVAIL, packet.mStatusCode)
     }
 
     @Test
@@ -276,7 +276,7 @@ class Dhcp6PacketTest {
         assertEquals(0, packet.mPrefixDelegation.iaid)
         assertEquals(0, packet.mPrefixDelegation.t1)
         assertEquals(0, packet.mPrefixDelegation.t2)
-        assertEquals(Dhcp6Packet.STATUS_NO_PREFIX_AVAI, packet.mStatusCode)
+        assertEquals(Dhcp6Packet.STATUS_NO_PREFIX_AVAIL, packet.mStatusCode)
     }
 
     @Test
@@ -304,7 +304,7 @@ class Dhcp6PacketTest {
         assertEquals(0, packet.mPrefixDelegation.iaid)
         assertEquals(0, packet.mPrefixDelegation.t1)
         assertEquals(0, packet.mPrefixDelegation.t2)
-        assertEquals(Dhcp6Packet.STATUS_NO_PREFIX_AVAI, packet.mPrefixDelegation.statusCode)
+        assertEquals(Dhcp6Packet.STATUS_NO_PREFIX_AVAIL, packet.mPrefixDelegation.statusCode)
     }
 
     @Test
@@ -330,6 +330,6 @@ class Dhcp6PacketTest {
         assertEquals(0, packet.mPrefixDelegation.iaid)
         assertEquals(0, packet.mPrefixDelegation.t1)
         assertEquals(0, packet.mPrefixDelegation.t2)
-        assertEquals(Dhcp6Packet.STATUS_NO_PREFIX_AVAI, packet.mPrefixDelegation.statusCode)
+        assertEquals(Dhcp6Packet.STATUS_NO_PREFIX_AVAIL, packet.mPrefixDelegation.statusCode)
     }
 }

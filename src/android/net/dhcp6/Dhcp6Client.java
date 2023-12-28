@@ -545,10 +545,15 @@ public class Dhcp6Client extends StateMachine {
             return sendSolicitPacket(transId, elapsedTimeMs, pd.build());
         }
 
-        // TODO: support multiple prefixes.
         @Override
         protected void receivePacket(Dhcp6Packet packet) {
             final PrefixDelegation pd = packet.mPrefixDelegation;
+            // Ignore any Advertise or Reply for Solicit(with Rapid Commit) with NoPrefixAvail
+            // status code, retransmit Solicit to see if any valid response from other Servers.
+            if (pd.statusCode == Dhcp6Packet.STATUS_NO_PREFIX_AVAI) {
+                Log.w(TAG, "Server responded to Solicit without available prefix, ignoring");
+                return;
+            }
             if (packet instanceof Dhcp6AdvertisePacket) {
                 Log.d(TAG, "Get prefix delegation option from Advertise: " + pd);
                 mAdvertise = pd;

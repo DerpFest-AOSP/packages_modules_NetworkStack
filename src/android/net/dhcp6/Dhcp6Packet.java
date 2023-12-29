@@ -99,11 +99,11 @@ public class Dhcp6Packet {
 
     public static final short STATUS_SUCCESS           = 0;
     public static final short STATUS_UNSPEC_FAIL       = 1;
-    public static final short STATUS_NO_ADDR_AVAI      = 2;
+    public static final short STATUS_NO_ADDRS_AVAIL    = 2;
     public static final short STATUS_NO_BINDING        = 3;
-    public static final short STATUS_PREFIX_NOT_ONLINK = 4;
+    public static final short STATUS_NOT_ONLINK        = 4;
     public static final short STATUS_USE_MULTICAST     = 5;
-    public static final short STATUS_NO_PREFIX_AVAI    = 6;
+    public static final short STATUS_NO_PREFIX_AVAIL   = 6;
 
     /**
      * DHCPv6 zero-length Optional Type: Rapid Commit. Per RFC4039, both DHCPDISCOVER and DHCPACK
@@ -396,15 +396,15 @@ public class Dhcp6Packet {
                 return "Success";
             case STATUS_UNSPEC_FAIL:
                 return "UnspecFail";
-            case STATUS_NO_ADDR_AVAI:
+            case STATUS_NO_ADDRS_AVAIL:
                 return "NoAddrsAvail";
             case STATUS_NO_BINDING:
                 return "NoBinding";
-            case STATUS_PREFIX_NOT_ONLINK:
+            case STATUS_NOT_ONLINK:
                 return "NotOnLink";
             case STATUS_USE_MULTICAST:
                 return "UseMulticast";
-            case STATUS_NO_PREFIX_AVAI:
+            case STATUS_NO_PREFIX_AVAIL:
                 return "NoPrefixAvail";
             default:
                 return "Unknown";

@@ -550,7 +550,7 @@ public class Dhcp6Client extends StateMachine {
             final PrefixDelegation pd = packet.mPrefixDelegation;
             // Ignore any Advertise or Reply for Solicit(with Rapid Commit) with NoPrefixAvail
             // status code, retransmit Solicit to see if any valid response from other Servers.
-            if (pd.statusCode == Dhcp6Packet.STATUS_NO_PREFIX_AVAI) {
+            if (pd.statusCode == Dhcp6Packet.STATUS_NO_PREFIX_AVAIL) {
                 Log.w(TAG, "Server responded to Solicit without available prefix, ignoring");
                 return;
             }
@@ -594,7 +594,7 @@ public class Dhcp6Client extends StateMachine {
         protected void receivePacket(Dhcp6Packet packet) {
             if (!(packet instanceof Dhcp6ReplyPacket)) return;
             final PrefixDelegation pd = packet.mPrefixDelegation;
-            if (pd.statusCode == Dhcp6Packet.STATUS_NO_PREFIX_AVAI) {
+            if (pd.statusCode == Dhcp6Packet.STATUS_NO_PREFIX_AVAIL) {
                 Log.w(TAG, "Server responded to Request without available prefix, restart Solicit");
                 transitionTo(mSolicitState);
                 return;
@@ -701,7 +701,7 @@ public class Dhcp6Client extends StateMachine {
             final PrefixDelegation pd = packet.mPrefixDelegation;
             // Stay at Renew/Rebind state if the Reply message takes NoPrefixAvail status code,
             // retransmit Renew/Rebind message to server, to retry obtaining the prefixes.
-            if (pd.statusCode == Dhcp6Packet.STATUS_NO_PREFIX_AVAI) {
+            if (pd.statusCode == Dhcp6Packet.STATUS_NO_PREFIX_AVAIL) {
                 Log.w(TAG, "Server responded to Renew/Rebind without available prefix, ignoring");
                 return;
             }

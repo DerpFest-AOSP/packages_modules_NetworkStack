@@ -5350,7 +5350,7 @@ public abstract class IpClientIntegrationTestCommon {
         assertTrue(packet instanceof Dhcp6SolicitPacket);
 
         final PrefixDelegation pd = new PrefixDelegation(packet.getIaId(), 0 /* t1 */, 0 /* t2 */,
-                new ArrayList<IaPrefixOption>() /* ipos */, Dhcp6Packet.STATUS_NO_PREFIX_AVAI);
+                new ArrayList<IaPrefixOption>() /* ipos */, Dhcp6Packet.STATUS_NO_PREFIX_AVAIL);
         final ByteBuffer iapd = pd.build();
         if (shouldReplyWithAdvertise) {
             mPacketReader.sendResponse(buildDhcp6Advertise(packet, iapd.array(), mClientMac,
@@ -5399,7 +5399,7 @@ public abstract class IpClientIntegrationTestCommon {
         // Reply for Request with NoPrefixAvail status code. Not sure if this is reasonable in
         // practice, but Server can do everything it wants.
         pd = new PrefixDelegation(packet.getIaId(), 0 /* t1 */, 0 /* t2 */,
-                new ArrayList<IaPrefixOption>() /* ipos */, Dhcp6Packet.STATUS_NO_PREFIX_AVAI);
+                new ArrayList<IaPrefixOption>() /* ipos */, Dhcp6Packet.STATUS_NO_PREFIX_AVAIL);
         iapd = pd.build();
         mPacketReader.sendResponse(buildDhcp6Reply(packet, iapd.array(), mClientMac,
                 (Inet6Address) mClientIpAddress, false /* rapidCommit */));
@@ -5446,7 +5446,7 @@ public abstract class IpClientIntegrationTestCommon {
         // Reply for Renew with NoPrefixAvail status code, check if client will retransmit the
         // Renew message.
         pd = new PrefixDelegation(packet.getIaId(), 3600 /* t1 */, 4500 /* t2 */,
-                new ArrayList<IaPrefixOption>(0) /* ipos */, Dhcp6Packet.STATUS_NO_PREFIX_AVAI);
+                new ArrayList<IaPrefixOption>(0) /* ipos */, Dhcp6Packet.STATUS_NO_PREFIX_AVAIL);
         iapd = pd.build();
         mPacketReader.sendResponse(buildDhcp6Reply(packet, iapd.array(), mClientMac,
                 (Inet6Address) mClientIpAddress, false /* rapidCommit */));
@@ -5505,7 +5505,7 @@ public abstract class IpClientIntegrationTestCommon {
         // Rebind message.
         pd = new PrefixDelegation(packet.getIaId(), 3600 /* t1 */,
                 4500 /* t2 */, new ArrayList<IaPrefixOption>(0) /* ipos */,
-                Dhcp6Packet.STATUS_NO_PREFIX_AVAI);
+                Dhcp6Packet.STATUS_NO_PREFIX_AVAIL);
         iapd = pd.build();
         mPacketReader.sendResponse(buildDhcp6Reply(packet, iapd.array(), mClientMac,
                 (Inet6Address) mClientIpAddress, false /* rapidCommit */));

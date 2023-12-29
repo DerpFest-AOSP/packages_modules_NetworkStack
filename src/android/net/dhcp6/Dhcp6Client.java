@@ -698,9 +698,15 @@ public class Dhcp6Client extends StateMachine {
         @Override
         protected void receivePacket(Dhcp6Packet packet) {
             if (!(packet instanceof Dhcp6ReplyPacket)) return;
+            final PrefixDelegation pd = packet.mPrefixDelegation;
+            // Stay at Renew/Rebind state if the Reply message takes NoPrefixAvail status code,
+            // retransmit Renew/Rebind message to server, to retry obtaining the prefixes.
+            if (pd.statusCode == Dhcp6Packet.STATUS_NO_PREFIX_AVAI) {
+                Log.w(TAG, "Server responded to Renew/Rebind without available prefix, ignoring");
+                return;
+            }
             // TODO: send a Request message to the server that responded if any of the IA_PDs in
             // Reply message contain NoBinding status code.
-            final PrefixDelegation pd = packet.mPrefixDelegation;
             Log.d(TAG, "Get prefix delegation option from Reply as response to Renew/Rebind " + pd);
             if (pd.ipos.isEmpty()) return;
             mReply = pd;

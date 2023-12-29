@@ -272,6 +272,7 @@ public class Dhcp6Packet {
                             break;
                         case DHCP6_STATUS_CODE:
                             statusCode = buffer.getShort();
+                            // Skip the status message if any.
                             if (optionLen > 2) {
                                 buffer.position(buffer.position() + (optionLen - 2));
                             }

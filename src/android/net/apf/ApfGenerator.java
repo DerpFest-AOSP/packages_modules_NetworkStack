@@ -86,11 +86,12 @@ public class ApfGenerator {
         // Write 1, 2 or 4 bytes immediate to the output buffer and auto-increment the pointer to
         // write. e.g. "write 5"
         WRITE(24),
-        // Copy the data from input packet or APF data region to output buffer. Register bit is
-        // used to specify the source of data copy: R=0 means copy from packet, R=1 means copy
-        // from APF data region. The source offset is encoded in the first imm and the copy length
-        // is encoded in the second imm. "e.g. MEMCOPY(R=0), 5, 5"
-        MEMCOPY(25);
+        // Copy memory region from input packet/APF program/data region to output buffer and
+        // auto-increment the output buffer pointer.
+        // Register bit is used to specify the source of data copy.  R=0 means copy from packet,
+        // R=1 means copy from APF program/data region.
+        // e.g. "pktdatacopy 5, 5"
+        PKTDATACOPY(25);
 
         final int value;
 
@@ -1099,53 +1100,38 @@ public class ApfGenerator {
 //        return this;
 //    }
 
-    // TODO: add back when support PKTCOPY/DATACOPY opcode
-//    /**
-//     * Add an instruction to the end of the program to copy data from APF data region to output
-//     * buffer.
-//     *
-//     * @param srcOffset the offset inside the APF data region for where to start copy
-//     * @param length the length of bytes needed to be copied, only <= 255 bytes can be copied at
-//     *               one time.
-//     * @return the ApfGenerator object
-//     * @throws IllegalInstructionException throws when imm size is incorrectly set.
-//     */
-//    public ApfGenerator addDataCopy(int srcOffset, int length)
-//            throws IllegalInstructionException {
-//        return addMemCopy(srcOffset, length, Register.R1);
-//    }
-//
-//    /**
-//     * Add an instruction to the end of the program to copy data from input packet to output
-//     buffer.
-//     *
-//     * @param srcOffset the offset inside the input packet for where to start copy
-//     * @param length the length of bytes needed to be copied, only <= 255 bytes can be copied at
-//     *               one time.
-//     * @return the ApfGenerator object
-//     * @throws IllegalInstructionException throws when imm size is incorrectly set.
-//     */
-//    public ApfGenerator addPacketCopy(int srcOffset, int length)
-//            throws IllegalInstructionException {
-//        return addMemCopy(srcOffset, length, Register.R0);
-//    }
-//
-//    private ApfGenerator addMemCopy(int srcOffset, int length, Register register)
-//            throws IllegalInstructionException {
-//        requireApfVersion(5);
-//        checkCopyLength(length);
-//        checkCopyOffset(srcOffset);
-//        Instruction instruction = new Instruction(Opcodes.MEMCOPY, register);
-//        // if the offset == 0, it should still be encoded with 1 byte size.
-//        if (srcOffset == 0) {
-//            instruction.addUnsignedImm(srcOffset, (byte) 1 /* size */);
-//        } else {
-//            instruction.addUnsignedImm(srcOffset);
-//        }
-//        instruction.addUnsignedImm(length, (byte) 1 /* size */);
-//        addInstruction(instruction);
-//        return this;
-//    }
+    /**
+     * Add an instruction to the end of the program to copy data from APF program/data region to
+     * output buffer and auto-increment the output buffer pointer.
+     *
+     * @param src the offset inside the APF program/data region for where to start copy.
+     * @param len the length of bytes needed to be copied, only <= 255 bytes can be copied at
+     *               one time.
+     * @return the ApfGenerator object
+     */
+    public ApfGenerator addDataCopy(int src, int len)
+            throws IllegalInstructionException {
+        requireApfVersion(MIN_APF_VERSION_IN_DEV);
+        return append(new Instruction(Opcodes.PKTDATACOPY, R1).addUnsignedIndeterminate(
+                src).addUnsigned8(len));
+    }
+
+    /**
+     * Add an instruction to the end of the program to copy data from input packet to output
+     * buffer and auto-increment the output buffer pointer.
+     *
+     * @param src the offset inside the input packet for where to start copy.
+     * @param len the length of bytes needed to be copied, only <= 255 bytes can be copied at
+     *               one time.
+     * @return the ApfGenerator object
+     */
+    public ApfGenerator addPacketCopy(int src, int len)
+            throws IllegalInstructionException {
+        requireApfVersion(MIN_APF_VERSION_IN_DEV);
+        return append(new Instruction(Opcodes.PKTDATACOPY, R0).addUnsignedIndeterminate(
+                src).addUnsigned8(len));
+    }
+
 //    TODO: add back when support EPKTCOPY/EDATACOPY opcode
 //    /**
 //     * Add an instruction to the end of the program to copy data from APF data region to output

@@ -45,6 +45,8 @@ class ApfV5Test {
         assertFailsWith<IllegalInstructionException> { gen.addWrite1(100) }
         assertFailsWith<IllegalInstructionException> { gen.addWrite2(100) }
         assertFailsWith<IllegalInstructionException> { gen.addWrite4(100) }
+        assertFailsWith<IllegalInstructionException> { gen.addPacketCopy(100, 100) }
+        assertFailsWith<IllegalInstructionException> { gen.addDataCopy(100, 100) }
     }
 
     @Test
@@ -59,6 +61,12 @@ class ApfV5Test {
         var gen = ApfGenerator(ApfGenerator.MIN_APF_VERSION_IN_DEV)
         assertFailsWith<IllegalArgumentException> { gen.addAllocate(65536) }
         assertFailsWith<IllegalArgumentException> { gen.addAllocate(-1) }
+        assertFailsWith<IllegalArgumentException> { gen.addDataCopy(-1, 1) }
+        assertFailsWith<IllegalArgumentException> { gen.addPacketCopy(-1, 1) }
+        assertFailsWith<IllegalArgumentException> { gen.addDataCopy(1, 256) }
+        assertFailsWith<IllegalArgumentException> { gen.addPacketCopy(1, 256) }
+        assertFailsWith<IllegalArgumentException> { gen.addDataCopy(1, -1) }
+        assertFailsWith<IllegalArgumentException> { gen.addPacketCopy(1, -1) }
     }
 
     @Test
@@ -179,20 +187,23 @@ class ApfV5Test {
 //                "       2: write r0, 2",
 //                "       4: write r0, 4"), ApfJniUtils.disassembleApf(program))
 
-        // TODO: add back the following test case when implementing EPKTCOPY, EDATACOPY opcodes.
-//        gen = ApfGenerator(ApfGenerator.MIN_APF_VERSION_IN_DEV)
-//        gen.addDataCopy(1, 5)
-//        gen.addPacketCopy(1000, 255)
-//        program = gen.generate()
-//        assertContentEquals(byteArrayOf(
-//                encodeInstruction(25, 1, 1), 1, 5,
-//                encodeInstruction(25, 2, 0),
-//                0x03.toByte(), 0xe8.toByte(), 0xff.toByte(),
-//        ), program)
+        gen = ApfGenerator(ApfGenerator.MIN_APF_VERSION_IN_DEV)
+        gen.addDataCopy(0, 10)
+        gen.addDataCopy(1, 5)
+        gen.addPacketCopy(1000, 255)
+        program = gen.generate()
+        assertContentEquals(byteArrayOf(
+                encodeInstruction(25, 0, 1), 10,
+                encodeInstruction(25, 1, 1), 1, 5,
+                encodeInstruction(25, 2, 0),
+                0x03.toByte(), 0xe8.toByte(), 0xff.toByte(),
+        ), program)
+        // TODO: add back disassembling test check after we update the apf_disassembler
 //        assertContentEquals(arrayOf(
-//                "       0: dcopy 1, 5",
+//                "       0: dcopy 0, 5",
 //                "       3: pcopy 1000, 255"), ApfJniUtils.disassembleApf(program))
-//
+
+        // TODO: add back the following test case when implementing EPKTCOPY, EDATACOPY opcodes.
 //        gen = ApfGenerator(ApfGenerator.MIN_APF_VERSION_IN_DEV)
 //        gen.addDataCopy(ApfGenerator.Register.R1, 0, 5)
 //        gen.addPacketCopy(ApfGenerator.Register.R0, 1000, 255)

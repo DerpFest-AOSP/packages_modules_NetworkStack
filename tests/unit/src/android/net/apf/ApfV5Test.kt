@@ -16,6 +16,8 @@
 package android.net.apf
 
 import android.net.apf.ApfGenerator.IllegalInstructionException
+import android.net.apf.ApfGenerator.Register.R0
+import android.net.apf.ApfGenerator.Register.R1
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
 import java.lang.IllegalArgumentException
@@ -47,6 +49,12 @@ class ApfV5Test {
         assertFailsWith<IllegalInstructionException> { gen.addWrite4(100) }
         assertFailsWith<IllegalInstructionException> { gen.addPacketCopy(100, 100) }
         assertFailsWith<IllegalInstructionException> { gen.addDataCopy(100, 100) }
+        assertFailsWith<IllegalInstructionException> { gen.addWriteU8(R0) }
+        assertFailsWith<IllegalInstructionException> { gen.addWriteU16(R0) }
+        assertFailsWith<IllegalInstructionException> { gen.addWriteU32(R0) }
+        assertFailsWith<IllegalInstructionException> { gen.addWriteU8(R1) }
+        assertFailsWith<IllegalInstructionException> { gen.addWriteU16(R1) }
+        assertFailsWith<IllegalInstructionException> { gen.addWriteU32(R1) }
     }
 
     @Test
@@ -171,21 +179,31 @@ class ApfV5Test {
                 "      20: write 0x00000000",
                 "      25: write 0x80000000"),
         ApfJniUtils.disassembleApf(program))
-        // TODO: add back the following test case when implementing EWRITE opcodes.
-//        gen = ApfGenerator(ApfGenerator.MIN_APF_VERSION_IN_DEV)
-//        gen.addWrite(ApfGenerator.Register.R0, 1)
-//        gen.addWrite(ApfGenerator.Register.R0, 2)
-//        gen.addWrite(ApfGenerator.Register.R0, 4)
-//        program = gen.generate()
-//        assertContentEquals(byteArrayOf(
-//                encodeInstruction(21, 1, 0), 38,
-//                encodeInstruction(21, 1, 0), 39,
-//                encodeInstruction(21, 1, 0), 40
-//        ), program)
+
+        gen = ApfGenerator(ApfGenerator.MIN_APF_VERSION_IN_DEV)
+        gen.addWriteU8(R0)
+        gen.addWriteU16(R0)
+        gen.addWriteU32(R0)
+        gen.addWriteU8(R1)
+        gen.addWriteU16(R1)
+        gen.addWriteU32(R1)
+        program = gen.generate()
+        assertContentEquals(byteArrayOf(
+                encodeInstruction(21, 1, 0), 38,
+                encodeInstruction(21, 1, 0), 39,
+                encodeInstruction(21, 1, 0), 40,
+                encodeInstruction(21, 1, 1), 38,
+                encodeInstruction(21, 1, 1), 39,
+                encodeInstruction(21, 1, 1), 40
+        ), program)
+        // TODO: add back disassembling test check after we update the apf_disassembler
 //        assertContentEquals(arrayOf(
-//                "       0: write r0, 1",
-//                "       2: write r0, 2",
-//                "       4: write r0, 4"), ApfJniUtils.disassembleApf(program))
+//                "       0: ewrite1 r0",
+//                "       2: ewrite2 r0",
+//                "       4: ewrite4 r0",
+//                "       6: ewrite1 r1",
+//                "       8: ewrite2 r1",
+//                "      10: ewrite4 r1"), ApfJniUtils.disassembleApf(program))
 
         gen = ApfGenerator(ApfGenerator.MIN_APF_VERSION_IN_DEV)
         gen.addDataCopy(0, 10)

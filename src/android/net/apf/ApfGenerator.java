@@ -119,9 +119,12 @@ public class ApfGenerator {
         // "e.g. discard"
         TRANSMIT(37),
         DISCARD(37),
-        EWRITE1(38), // Write 1 byte from register to the output buffer, e.g. "EWRITE1 R0"
-        EWRITE2(39), // Write 2 bytes from register to the output buffer, e.g. "EWRITE2 R0"
-        EWRITE4(40), // Write 4 bytes from register to the output buffer, e.g. "EWRITE4 R0"
+        // Write 1, 2 or 4 byte value from register to the output buffer and auto-increment the
+        // output buffer pointer.
+        // e.g. "ewrite1 r0"
+        EWRITE1(38),
+        EWRITE2(39),
+        EWRITE4(40),
         // Copy the data from input packet to output buffer. The source offset is encoded as [Rx
         // + second imm]. The copy length is encoded in the third imm. "e.g. EPKTCOPY [R0 + 5], 5"
         EPKTCOPY(41),
@@ -1065,34 +1068,32 @@ public class ApfGenerator {
         return append(new Instruction(Opcodes.WRITE).overrideLenField(4).addU32(val));
     }
 
-    // TODO: add back when support EWRITE opcode
-//    /**
-//     * Add an instruction to the end of the program to write 1, 2 or 4 bytes value from register
-//     * to output buffer.
-//     *
-//     * @param register the register contains the value to be written
-//     * @param size the size of the value
-//     * @return the ApfGenerator object
-//     * @throws IllegalInstructionException throws when size is not 1, 2 or 4
-//     */
-//    public ApfGenerator addWrite(Register register, byte size)
-//            throws IllegalInstructionException {
-//        requireApfVersion(5);
-//        if (!(size == 1 || size == 2 || size == 4)) {
-//            throw new IllegalInstructionException(
-//                    "length field must be 1, 2 or 4");
-//        }
-//        Instruction instruction = new Instruction(Opcodes.EXT, register);
-//        if (size == 1) {
-//            instruction.addUnsignedImm(ExtendedOpcodes.EWRITE1.value);
-//        } else if (size == 2) {
-//            instruction.addUnsignedImm(ExtendedOpcodes.EWRITE2.value);
-//        } else {
-//            instruction.addUnsignedImm(ExtendedOpcodes.EWRITE4.value);
-//        }
-//        addInstruction(instruction);
-//        return this;
-//    }
+    /**
+     * Add an instruction to the end of the program to write 1 byte value from register to output
+     * buffer.
+     */
+    public ApfGenerator addWriteU8(Register reg) throws IllegalInstructionException {
+        requireApfVersion(MIN_APF_VERSION_IN_DEV);
+        return append(new Instruction(ExtendedOpcodes.EWRITE1, reg));
+    }
+
+    /**
+     * Add an instruction to the end of the program to write 2 byte value from register to output
+     * buffer.
+     */
+    public ApfGenerator addWriteU16(Register reg) throws IllegalInstructionException {
+        requireApfVersion(MIN_APF_VERSION_IN_DEV);
+        return append(new Instruction(ExtendedOpcodes.EWRITE2, reg));
+    }
+
+    /**
+     * Add an instruction to the end of the program to write 4 byte value from register to output
+     * buffer.
+     */
+    public ApfGenerator addWriteU32(Register reg) throws IllegalInstructionException {
+        requireApfVersion(MIN_APF_VERSION_IN_DEV);
+        return append(new Instruction(ExtendedOpcodes.EWRITE4, reg));
+    }
 
     /**
      * Add an instruction to the end of the program to copy data from APF program/data region to

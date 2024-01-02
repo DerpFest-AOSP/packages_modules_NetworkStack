@@ -86,11 +86,13 @@ public class ApfGenerator {
         // Write 1, 2 or 4 bytes immediate to the output buffer and auto-increment the pointer to
         // write. e.g. "write 5"
         WRITE(24),
-        // Copy memory region from input packet/APF program/data region to output buffer and
+        // Copy bytes from input packet/APF program/data region to output buffer and
         // auto-increment the output buffer pointer.
-        // Register bit is used to specify the source of data copy.  R=0 means copy from packet,
+        // Register bit is used to specify the source of data copy.
+        // R=0 means copy from packet.
         // R=1 means copy from APF program/data region.
-        // e.g. "pktdatacopy 5, 5"
+        // The copy length is stored in (u8)imm2.
+        // e.g. "pktcopy 5, 5" "datacopy 5, 5"
         PKTDATACOPY(25);
 
         final int value;
@@ -130,7 +132,7 @@ public class ApfGenerator {
         // The copy src offset is stored in R0.
         // when R=0, the copy length is stored in (u8)imm2.
         // when R=1, the copy length is stored in R1.
-        // e.g. "pktcopy r0, 5", "pktcopy r0, r1"
+        // e.g. "pktcopy r0, 5", "pktcopy r0, r1", "datacopy r0, 5", "datacopy r0, r1"
         EPKTCOPY(41),
         EDATACOPY(42);
 
@@ -1132,7 +1134,7 @@ public class ApfGenerator {
      * output buffer and auto-increment the output buffer pointer.
      * Source offset is stored in R0.
      *
-     * @param len the number of bytes needed to be copied, only <= 255 bytes can be copied at once.
+     * @param len the number of bytes to be copied, only <= 255 bytes can be copied at once.
      * @return the ApfGenerator object
      */
     public ApfGenerator addDataCopyFromR0(int len) throws IllegalInstructionException {
@@ -1145,7 +1147,7 @@ public class ApfGenerator {
      * buffer and auto-increment the output buffer pointer.
      * Source offset is stored in R0.
      *
-     * @param len the number of bytes needed to be copied, only <= 255 bytes can be copied at once.
+     * @param len the number of bytes to be copied, only <= 255 bytes can be copied at once.
      * @return the ApfGenerator object
      */
     public ApfGenerator addPacketCopyFromR0(int len) throws IllegalInstructionException {

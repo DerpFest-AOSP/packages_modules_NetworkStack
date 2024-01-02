@@ -1179,20 +1179,6 @@ public class ApfGenerator {
         return append(new Instruction(ExtendedOpcodes.EPKTCOPY, R1));
     }
 
-    private void checkCopyLength(int length) {
-        if (length < 0 || length > 255) {
-            throw new IllegalArgumentException(
-                    "copy length must between 0 to 255, length: " + length);
-        }
-    }
-
-    private void checkCopyOffset(int offset) {
-        if (offset < 0) {
-            throw new IllegalArgumentException(
-                    "offset must be non less than zero, offset: " + offset);
-        }
-    }
-
     private static void checkRange(@NonNull String variableName, long value, long lowerBound,
             long upperBound) {
         if (value >= lowerBound && value <= upperBound) {

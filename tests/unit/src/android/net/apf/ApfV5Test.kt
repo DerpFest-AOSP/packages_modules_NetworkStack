@@ -55,6 +55,10 @@ class ApfV5Test {
         assertFailsWith<IllegalInstructionException> { gen.addWriteU8(R1) }
         assertFailsWith<IllegalInstructionException> { gen.addWriteU16(R1) }
         assertFailsWith<IllegalInstructionException> { gen.addWriteU32(R1) }
+        assertFailsWith<IllegalInstructionException> { gen.addPacketCopyFromR0LenR1() }
+        assertFailsWith<IllegalInstructionException> { gen.addDataCopyFromR0LenR1() }
+        assertFailsWith<IllegalInstructionException> { gen.addPacketCopyFromR0(10) }
+        assertFailsWith<IllegalInstructionException> { gen.addDataCopyFromR0(10) }
     }
 
     @Test
@@ -75,6 +79,8 @@ class ApfV5Test {
         assertFailsWith<IllegalArgumentException> { gen.addPacketCopy(1, 256) }
         assertFailsWith<IllegalArgumentException> { gen.addDataCopy(1, -1) }
         assertFailsWith<IllegalArgumentException> { gen.addPacketCopy(1, -1) }
+        assertFailsWith<IllegalArgumentException> { gen.addPacketCopyFromR0(256) }
+        assertFailsWith<IllegalArgumentException> { gen.addDataCopyFromR0(256) }
     }
 
     @Test
@@ -221,16 +227,19 @@ class ApfV5Test {
 //                "       0: dcopy 0, 5",
 //                "       3: pcopy 1000, 255"), ApfJniUtils.disassembleApf(program))
 
+        gen = ApfGenerator(ApfGenerator.MIN_APF_VERSION_IN_DEV)
+        gen.addPacketCopyFromR0LenR1()
+        gen.addPacketCopyFromR0(5)
+        gen.addDataCopyFromR0LenR1()
+        gen.addDataCopyFromR0(5)
+        program = gen.generate()
+        assertContentEquals(byteArrayOf(
+                encodeInstruction(21, 1, 1), 41,
+                encodeInstruction(21, 1, 0), 41, 5,
+                encodeInstruction(21, 1, 1), 42,
+                encodeInstruction(21, 1, 0), 42, 5,
+        ), program)
         // TODO: add back the following test case when implementing EPKTCOPY, EDATACOPY opcodes.
-//        gen = ApfGenerator(ApfGenerator.MIN_APF_VERSION_IN_DEV)
-//        gen.addDataCopy(ApfGenerator.Register.R1, 0, 5)
-//        gen.addPacketCopy(ApfGenerator.Register.R0, 1000, 255)
-//        program = gen.generate()
-//        assertContentEquals(byteArrayOf(
-//                encodeInstruction(21, 1, 1), 42, 0, 5,
-//                encodeInstruction(21, 2, 0),
-//                0, 41, 0x03.toByte(), 0xe8.toByte(), 0xff.toByte()
-//        ), program)
 //        assertContentEquals(arrayOf(
 //                "       0: dcopy [r1+0], 5",
 //                "       4: pcopy [r0+1000], 255"), ApfJniUtils.disassembleApf(program))

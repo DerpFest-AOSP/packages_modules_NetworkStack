@@ -44,9 +44,9 @@ class ApfV5Test {
         assertFailsWith<IllegalInstructionException> { gen.addAllocateR0() }
         assertFailsWith<IllegalInstructionException> { gen.addAllocate(100) }
         assertFailsWith<IllegalInstructionException> { gen.addData(ByteArray(3) { 0x01 }) }
-        assertFailsWith<IllegalInstructionException> { gen.addWrite1(100) }
-        assertFailsWith<IllegalInstructionException> { gen.addWrite2(100) }
-        assertFailsWith<IllegalInstructionException> { gen.addWrite4(100) }
+        assertFailsWith<IllegalInstructionException> { gen.addWriteU8(100) }
+        assertFailsWith<IllegalInstructionException> { gen.addWriteU16(100) }
+        assertFailsWith<IllegalInstructionException> { gen.addWriteU32(100) }
         assertFailsWith<IllegalInstructionException> { gen.addPacketCopy(100, 100) }
         assertFailsWith<IllegalInstructionException> { gen.addDataCopy(100, 100) }
         assertFailsWith<IllegalInstructionException> { gen.addWriteU8(R0) }
@@ -153,15 +153,15 @@ class ApfV5Test {
                 largeByteArray, program)
 
         gen = ApfGenerator(ApfGenerator.MIN_APF_VERSION_IN_DEV)
-        gen.addWrite1(0x01)
-        gen.addWrite2(0x0102)
-        gen.addWrite4(0x01020304)
-        gen.addWrite1(0x00)
-        gen.addWrite1(0x80)
-        gen.addWrite2(0x0000)
-        gen.addWrite2(0x8000)
-        gen.addWrite4(0x00000000)
-        gen.addWrite4(0x80000000)
+        gen.addWriteU8(0x01)
+        gen.addWriteU16(0x0102)
+        gen.addWriteU32(0x01020304)
+        gen.addWriteU8(0x00)
+        gen.addWriteU8(0x80)
+        gen.addWriteU16(0x0000)
+        gen.addWriteU16(0x8000)
+        gen.addWriteU32(0x00000000)
+        gen.addWriteU32(0x80000000)
         program = gen.generate()
         assertContentEquals(byteArrayOf(
                 encodeInstruction(24, 1, 0), 0x01,

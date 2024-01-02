@@ -1049,7 +1049,7 @@ public class ApfGenerator {
     /**
      * Add an instruction to the end of the program to write 1 byte value to output buffer.
      */
-    public ApfGenerator addWrite1(int val) throws IllegalInstructionException {
+    public ApfGenerator addWriteU8(int val) throws IllegalInstructionException {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
         return append(new Instruction(Opcodes.WRITE).overrideLenField(1).addU8(val));
     }
@@ -1057,7 +1057,7 @@ public class ApfGenerator {
     /**
      * Add an instruction to the end of the program to write 2 bytes value to output buffer.
      */
-    public ApfGenerator addWrite2(int val) throws IllegalInstructionException {
+    public ApfGenerator addWriteU16(int val) throws IllegalInstructionException {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
         return append(new Instruction(Opcodes.WRITE).overrideLenField(2).addU16(val));
     }
@@ -1065,7 +1065,7 @@ public class ApfGenerator {
     /**
      * Add an instruction to the end of the program to write 4 bytes value to output buffer.
      */
-    public ApfGenerator addWrite4(long val) throws IllegalInstructionException {
+    public ApfGenerator addWriteU32(long val) throws IllegalInstructionException {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
         return append(new Instruction(Opcodes.WRITE).overrideLenField(4).addU32(val));
     }

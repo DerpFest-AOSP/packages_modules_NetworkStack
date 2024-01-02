@@ -81,6 +81,8 @@ class ApfV5Test {
         assertFailsWith<IllegalArgumentException> { gen.addPacketCopy(1, -1) }
         assertFailsWith<IllegalArgumentException> { gen.addPacketCopyFromR0(256) }
         assertFailsWith<IllegalArgumentException> { gen.addDataCopyFromR0(256) }
+        assertFailsWith<IllegalArgumentException> { gen.addPacketCopyFromR0(-1) }
+        assertFailsWith<IllegalArgumentException> { gen.addDataCopyFromR0(-1) }
     }
 
     @Test

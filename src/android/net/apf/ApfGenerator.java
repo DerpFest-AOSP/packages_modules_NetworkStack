@@ -22,6 +22,7 @@ import static android.net.apf.ApfGenerator.Register.R1;
 import androidx.annotation.NonNull;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.net.module.util.HexDump;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -134,7 +135,16 @@ public class ApfGenerator {
         // when R=1, the copy length is stored in R1.
         // e.g. "pktcopy r0, 5", "pktcopy r0, r1", "datacopy r0, 5", "datacopy r0, r1"
         EPKTCOPY(41),
-        EDATACOPY(42);
+        EDATACOPY(42),
+        // Jumps if the UDP payload content (starting at R0) does not contain the specified QNAME,
+        // applying MDNS case insensitivity.
+        // R0: Offset to UDP payload content
+        // imm1: Opcode
+        // imm2: Label offset
+        // imm3(u8): Question type (PTR/SRV/TXT/A/AAAA)
+        // imm4(bytes): TLV-encoded QNAME list (null-terminated)
+        // e.g.: "jdnsqmatch R0,label,0x0c,\002aa\005local\0\0"
+        JDNSQMATCH(43);
 
         final int value;
 
@@ -1192,6 +1202,73 @@ public class ApfGenerator {
     public ApfGenerator addPacketCopyFromR0LenR1() throws IllegalInstructionException {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
         return append(new Instruction(ExtendedOpcodes.EPKTCOPY, R1));
+    }
+
+    /**
+     * Check if the byte is valid dns character: A-Z,0-9,-,_
+     */
+    private static boolean isValidDnsCharacter(byte c) {
+        return (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_';
+    }
+
+    private static void validateQnames(@NonNull byte[] qnames) {
+        final int len = qnames.length;
+        if (len < 4) {
+            throw new IllegalArgumentException("qnames must have at least length 4");
+        }
+        final String errorMessage = "qname: " + HexDump.toHexString(qnames)
+                + "is not null-terminated list of TLV-encoded names";
+        int i = 0;
+        while (i < len - 1) {
+            int label_len = qnames[i++];
+            if (label_len < 1 || label_len > 63) {
+                throw new IllegalArgumentException(
+                        "label len: " + label_len + " must be between 1 and 63");
+            }
+            if (i + label_len >= len - 1) {
+                throw new IllegalArgumentException(errorMessage);
+            }
+            while (label_len-- > 0) {
+                if (!isValidDnsCharacter(qnames[i++])) {
+                    throw new IllegalArgumentException("qname: " + HexDump.toHexString(qnames)
+                            + " contains invalid character");
+                }
+            }
+            if (qnames[i] == 0) {
+                i++; // skip null terminator.
+            }
+        }
+        if (qnames[len - 1] != 0) {
+            throw new IllegalArgumentException(errorMessage);
+        }
+    }
+
+    /**
+     * Appends a conditional jump instruction to the program: Jumps to {@code tgt} if the UDP
+     * payload's DNS questions do NOT contain the QNAME specified in {@code qnames} and qtype
+     * equals {@code qtype}. Examines the payload starting at the offset in R0.
+     * R = 0 means check for "does not contain".
+     */
+    public ApfGenerator addJumpIfPktAtR0DoesNotContainDnsQ(@NonNull byte[] qnames, int qtype,
+            @NonNull String tgt) throws IllegalInstructionException {
+        requireApfVersion(MIN_APF_VERSION_IN_DEV);
+        validateQnames(qnames);
+        return append(new Instruction(ExtendedOpcodes.JDNSQMATCH).setTargetLabel(tgt).addU8(
+                qtype).setBytesImm(qnames));
+    }
+
+    /**
+     * Appends a conditional jump instruction to the program: Jumps to {@code tgt} if the UDP
+     * payload's DNS questions contain the QNAME specified in {@code qnames} and qtype
+     * equals {@code qtype}. Examines the payload starting at the offset in R0.
+     * R = 1 means check for "contain".
+     */
+    public ApfGenerator addJumpIfPktAtR0ContainDnsQ(@NonNull byte[] qnames, int qtype,
+            @NonNull String tgt) throws IllegalInstructionException {
+        requireApfVersion(MIN_APF_VERSION_IN_DEV);
+        validateQnames(qnames);
+        return append(new Instruction(ExtendedOpcodes.JDNSQMATCH, R1).setTargetLabel(tgt).addU8(
+                qtype).setBytesImm(qnames));
     }
 
     private static void checkRange(@NonNull String variableName, long value, long lowerBound,

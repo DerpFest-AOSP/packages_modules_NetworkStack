@@ -274,7 +274,7 @@ public class Dhcp6Packet {
                             statusCode = buffer.getShort();
                             // Skip the status message if any.
                             if (optionLen > 2) {
-                                buffer.position(buffer.position() + (optionLen - 2));
+                                skipOption(buffer, optionLen - 2);
                             }
                             break;
                         default:
@@ -506,7 +506,7 @@ public class Dhcp6Packet {
                         // suitable for display to the end user, but is not useful for Dhcp6Client
                         // to decide how to properly handle the status code.
                         if (optionLen - 2 > 0) {
-                            packet.position(packet.position() + (optionLen - 2));
+                            skipOption(packet, optionLen - 2);
                         }
                         break;
                     case DHCP6_SOL_MAX_RT:

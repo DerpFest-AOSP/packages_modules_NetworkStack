@@ -332,4 +332,56 @@ class Dhcp6PacketTest {
         assertEquals(0, packet.mPrefixDelegation.t2)
         assertEquals(Dhcp6Packet.STATUS_NO_PREFIX_AVAIL, packet.mPrefixDelegation.statusCode)
     }
+
+    @Test
+    fun testStatusCodeOptionWithTruncatedStatusMessage() {
+        val replyHex =
+            // Reply, Transaction ID
+            "07000A47" +
+            // server identifier option(option_len=10)
+            "0002000A0003000186C9B26AED4D" +
+            // client identifier option(option_len=12)
+            "0001000C0003001B02FBBAFFFEB7BC71" +
+            // SOL_MAX_RT (don't support this option yet)
+            "005200040000003c" +
+            // Rapid Commit
+            "000e0000" +
+            // DNS recursive server (don't support this opton yet)
+            "00170010fdfd9ed6795000000000000000000001" +
+            // Status code option: len=21, status code=NoPrefixAvail
+            "000d00150006" +
+            // Status code option: truncated status message="no prefix available"
+            "6e6f2070726566697820617661696c6162"
+        val bytes = HexDump.hexStringToByteArray(replyHex)
+        assertThrows(Dhcp6Packet.ParseException::class.java) {
+            Dhcp6Packet.decode(bytes, bytes.size)
+        }
+    }
+
+    @Test
+    fun testStatusCodeOptionInIaPdWithTruncatedStatusMessage() {
+        val replyHex =
+            // Reply, Transaction ID
+            "07000A47" +
+            // server identifier option(option_len=10)
+            "0002000A0003000186C9B26AED4D" +
+            // client identifier option(option_len=12)
+            "0001000C0003001B02FBBAFFFEB7BC71" +
+            // SOL_MAX_RT (don't support this option yet)
+            "005200040000003c" +
+            // Rapid Commit
+            "000e0000" +
+            // DNS recursive server (don't support this opton yet)
+            "00170010fdfd9ed6795000000000000000000001" +
+            // IA_PD option (t1=t2=0, empty prefix)
+            "00190025000000000000000000000000" +
+            // Status code option: len=21, status code=NoPrefixAvail
+            "000d00150006" +
+            // truncated status message="no prefix available")
+            "6e6f2070726566697820617661696c6162"
+        val bytes = HexDump.hexStringToByteArray(replyHex)
+        assertThrows(Dhcp6Packet.ParseException::class.java) {
+            Dhcp6Packet.decode(bytes, bytes.size)
+        }
+    }
 }

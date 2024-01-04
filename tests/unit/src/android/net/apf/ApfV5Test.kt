@@ -59,6 +59,8 @@ class ApfV5Test {
         assertFailsWith<IllegalInstructionException> { gen.addDataCopyFromR0LenR1() }
         assertFailsWith<IllegalInstructionException> { gen.addPacketCopyFromR0(10) }
         assertFailsWith<IllegalInstructionException> { gen.addDataCopyFromR0(10) }
+        assertFailsWith<IllegalInstructionException> {
+            gen.addJumpIfBytesAtR0Equal(byteArrayOf('a'.code.toByte()), ApfGenerator.DROP_LABEL) }
     }
 
     @Test
@@ -245,6 +247,13 @@ class ApfV5Test {
 //        assertContentEquals(arrayOf(
 //                "       0: dcopy [r1+0], 5",
 //                "       4: pcopy [r0+1000], 255"), ApfJniUtils.disassembleApf(program))
+
+        gen = ApfGenerator(ApfGenerator.MIN_APF_VERSION_IN_DEV)
+        gen.addJumpIfBytesAtR0Equal(byteArrayOf('a'.code.toByte()), ApfGenerator.DROP_LABEL)
+        program = gen.generate()
+        assertContentEquals(
+                byteArrayOf(encodeInstruction(opcode = 20, immLength = 1, register = 1),
+                        1, 1, 'a'.code.toByte()), program)
     }
 
     private fun encodeInstruction(opcode: Int, immLength: Int, register: Int): Byte {

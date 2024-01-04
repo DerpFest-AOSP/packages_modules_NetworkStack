@@ -902,11 +902,24 @@ public class ApfGenerator {
     }
 
     /**
-     * Add an instruction to the end of the program to jump to {@code target} if the bytes of the
+     * Add an instruction to the end of the program to jump to {@code tgt} if the bytes of the
      * packet at an offset specified by {@code register} don't match {@code bytes}
+     * R=0 means check for not equal
      */
     public ApfGenerator addJumpIfBytesAtR0NotEqual(byte[] bytes, String tgt) {
         return append(new Instruction(Opcodes.JNEBS).addUnsigned(
+                bytes.length).setTargetLabel(tgt).setBytesImm(bytes));
+    }
+
+    /**
+     * Add an instruction to the end of the program to jump to {@code tgt} if the bytes of the
+     * packet at an offset specified by {@code register} match {@code bytes}
+     * R=1 means check for equal.
+     */
+    public ApfGenerator addJumpIfBytesAtR0Equal(byte[] bytes, String tgt)
+            throws IllegalInstructionException {
+        requireApfVersion(MIN_APF_VERSION_IN_DEV);
+        return append(new Instruction(Opcodes.JNEBS, R1).addUnsigned(
                 bytes.length).setTargetLabel(tgt).setBytesImm(bytes));
     }
 

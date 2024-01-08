@@ -503,12 +503,19 @@ public class ApfGenerator {
             int writingOffset = offset;
             bytecode[writingOffset++] = generateInstructionByte();
             int indeterminateSize = calculateRequiredIndeterminateSize();
+            int startOffset = 0;
+            if (mOpcode == Opcodes.EXT.value) {
+                // For extend opcode, always write the actual opcode first.
+                writingOffset = mIntImms.get(startOffset++).writeValue(bytecode, writingOffset,
+                        indeterminateSize);
+            }
             if (mTargetLabel != null) {
                 writingOffset = writeValue(calculateTargetLabelOffset(), bytecode, writingOffset,
                         indeterminateSize);
             }
-            for (IntImmediate imm : mIntImms) {
-                writingOffset = imm.writeValue(bytecode, writingOffset, indeterminateSize);
+            for (int i = startOffset; i < mIntImms.size(); ++i) {
+                writingOffset = mIntImms.get(i).writeValue(bytecode, writingOffset,
+                        indeterminateSize);
             }
             if (mBytesImm != null) {
                 System.arraycopy(mBytesImm, 0, bytecode, writingOffset, mBytesImm.length);

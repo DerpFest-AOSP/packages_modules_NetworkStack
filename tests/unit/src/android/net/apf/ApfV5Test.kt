@@ -65,6 +65,10 @@ class ApfV5Test {
                 byteArrayOf(1, 'A'.code.toByte()), 0x0c, ApfGenerator.DROP_LABEL) }
         assertFailsWith<IllegalInstructionException> { gen.addJumpIfPktAtR0ContainDnsQ(
                 byteArrayOf(1, 'A'.code.toByte()), 0x0c, ApfGenerator.DROP_LABEL) }
+        assertFailsWith<IllegalInstructionException> { gen.addJumpIfPktAtR0DoesNotContainDnsA(
+                byteArrayOf(1, 'A'.code.toByte()), ApfGenerator.DROP_LABEL) }
+        assertFailsWith<IllegalInstructionException> { gen.addJumpIfPktAtR0ContainDnsA(
+                byteArrayOf(1, 'A'.code.toByte()), ApfGenerator.DROP_LABEL) }
     }
 
     @Test
@@ -127,6 +131,40 @@ class ApfV5Test {
         assertFailsWith<IllegalArgumentException> { gen.addJumpIfPktAtR0ContainDnsQ(
                 byteArrayOf(1, 'A'.code.toByte(), 1, 'B'.code.toByte()),
                 0xc0, ApfGenerator.DROP_LABEL) }
+        assertFailsWith<IllegalArgumentException> { gen.addJumpIfPktAtR0DoesNotContainDnsA(
+                byteArrayOf(1, 'a'.code.toByte(), 0, 0), ApfGenerator.DROP_LABEL) }
+        assertFailsWith<IllegalArgumentException> { gen.addJumpIfPktAtR0DoesNotContainDnsA(
+                byteArrayOf(1, '.'.code.toByte(), 0, 0), ApfGenerator.DROP_LABEL) }
+        assertFailsWith<IllegalArgumentException> { gen.addJumpIfPktAtR0DoesNotContainDnsA(
+                byteArrayOf(0, 0), ApfGenerator.DROP_LABEL) }
+        assertFailsWith<IllegalArgumentException> { gen.addJumpIfPktAtR0DoesNotContainDnsA(
+                byteArrayOf(1, 'A'.code.toByte()), ApfGenerator.DROP_LABEL) }
+        assertFailsWith<IllegalArgumentException> { gen.addJumpIfPktAtR0DoesNotContainDnsA(
+                byteArrayOf(64) + ByteArray(64) { 'A'.code.toByte() } + byteArrayOf(0, 0),
+                 ApfGenerator.DROP_LABEL) }
+        assertFailsWith<IllegalArgumentException> { gen.addJumpIfPktAtR0DoesNotContainDnsA(
+                byteArrayOf(1, 'A'.code.toByte(), 1, 'B'.code.toByte(), 0),
+                ApfGenerator.DROP_LABEL) }
+        assertFailsWith<IllegalArgumentException> { gen.addJumpIfPktAtR0DoesNotContainDnsA(
+                byteArrayOf(1, 'A'.code.toByte(), 1, 'B'.code.toByte()),
+                ApfGenerator.DROP_LABEL) }
+        assertFailsWith<IllegalArgumentException> { gen.addJumpIfPktAtR0ContainDnsA(
+                byteArrayOf(1, 'a'.code.toByte(), 0, 0), ApfGenerator.DROP_LABEL) }
+        assertFailsWith<IllegalArgumentException> { gen.addJumpIfPktAtR0ContainDnsA(
+                byteArrayOf(1, '.'.code.toByte(), 0, 0), ApfGenerator.DROP_LABEL) }
+        assertFailsWith<IllegalArgumentException> { gen.addJumpIfPktAtR0ContainDnsA(
+                byteArrayOf(0, 0), ApfGenerator.DROP_LABEL) }
+        assertFailsWith<IllegalArgumentException> { gen.addJumpIfPktAtR0ContainDnsA(
+                byteArrayOf(1, 'A'.code.toByte()), ApfGenerator.DROP_LABEL) }
+        assertFailsWith<IllegalArgumentException> { gen.addJumpIfPktAtR0ContainDnsA(
+                byteArrayOf(64) + ByteArray(64) { 'A'.code.toByte() } + byteArrayOf(0, 0),
+                ApfGenerator.DROP_LABEL) }
+        assertFailsWith<IllegalArgumentException> { gen.addJumpIfPktAtR0ContainDnsA(
+                byteArrayOf(1, 'A'.code.toByte(), 1, 'B'.code.toByte(), 0),
+                ApfGenerator.DROP_LABEL) }
+        assertFailsWith<IllegalArgumentException> { gen.addJumpIfPktAtR0ContainDnsA(
+                byteArrayOf(1, 'A'.code.toByte(), 1, 'B'.code.toByte()),
+                ApfGenerator.DROP_LABEL) }
     }
 
     @Test
@@ -306,6 +344,16 @@ class ApfV5Test {
                 encodeInstruction(21, 1, 0), 43, 11, 0x0c.toByte(),
         ) + qnames + byteArrayOf(
                 encodeInstruction(21, 1, 1), 43, 1, 0x0c.toByte(),
+        ) + qnames, program)
+
+        gen = ApfGenerator(ApfGenerator.MIN_APF_VERSION_IN_DEV)
+        gen.addJumpIfPktAtR0DoesNotContainDnsA(qnames, ApfGenerator.DROP_LABEL)
+        gen.addJumpIfPktAtR0ContainDnsA(qnames, ApfGenerator.DROP_LABEL)
+        program = gen.generate()
+        assertContentEquals(byteArrayOf(
+                encodeInstruction(21, 1, 0), 44, 10,
+        ) + qnames + byteArrayOf(
+                encodeInstruction(21, 1, 1), 44, 1,
         ) + qnames, program)
     }
 

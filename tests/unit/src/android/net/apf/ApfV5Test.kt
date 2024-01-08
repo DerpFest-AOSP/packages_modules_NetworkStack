@@ -303,9 +303,9 @@ class ApfV5Test {
         gen.addJumpIfPktAtR0ContainDnsQ(qnames, 0x0c, ApfGenerator.DROP_LABEL)
         program = gen.generate()
         assertContentEquals(byteArrayOf(
-                encodeInstruction(21, 1, 0), 11, 43, 0x0c.toByte(),
+                encodeInstruction(21, 1, 0), 43, 11, 0x0c.toByte(),
         ) + qnames + byteArrayOf(
-                encodeInstruction(21, 1, 1), 1, 43, 0x0c.toByte(),
+                encodeInstruction(21, 1, 1), 43, 1, 0x0c.toByte(),
         ) + qnames, program)
     }
 

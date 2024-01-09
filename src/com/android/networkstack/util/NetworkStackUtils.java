@@ -246,6 +246,12 @@ public class NetworkStackUtils {
     public static final String IPCLIENT_IGNORE_LOW_RA_LIFETIME_VERSION =
             "ipclient_ignore_low_ra_lifetime_version";
 
+    /**
+     * Feature flag to send private DNS resolution queries and probes on a background thread.
+     */
+    public static final String NETWORKMONITOR_ASYNC_PRIVDNS_RESOLUTION =
+            "networkmonitor_async_privdns_resolution";
+
     /**** BEGIN Feature Kill Switch Flags ****/
 
     /**

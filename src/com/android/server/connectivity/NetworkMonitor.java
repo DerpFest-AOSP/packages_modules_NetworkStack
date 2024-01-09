@@ -23,6 +23,9 @@ import static android.net.CaptivePortal.APP_RETURN_WANTED_AS_IS;
 import static android.net.ConnectivityManager.EXTRA_CAPTIVE_PORTAL_PROBE_SPEC;
 import static android.net.ConnectivityManager.EXTRA_CAPTIVE_PORTAL_URL;
 import static android.net.DnsResolver.FLAG_EMPTY;
+import static android.net.DnsResolver.FLAG_NO_CACHE_LOOKUP;
+import static android.net.DnsResolver.TYPE_A;
+import static android.net.DnsResolver.TYPE_AAAA;
 import static android.net.INetworkMonitor.NETWORK_TEST_RESULT_INVALID;
 import static android.net.INetworkMonitor.NETWORK_TEST_RESULT_PARTIAL_CONNECTIVITY;
 import static android.net.INetworkMonitor.NETWORK_TEST_RESULT_VALID;
@@ -122,6 +125,7 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.CancellationSignal;
 import android.os.Message;
 import android.os.Process;
 import android.os.RemoteException;
@@ -140,7 +144,9 @@ import android.telephony.CellSignalStrength;
 import android.telephony.SignalStrength;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
+import android.util.ArraySet;
 import android.util.Log;
+import android.util.Pair;
 import android.util.SparseArray;
 
 import androidx.annotation.ArrayRes;
@@ -234,6 +240,10 @@ public class NetworkMonitor extends StateMachine {
     @VisibleForTesting
     static final String CONFIG_CAPTIVE_PORTAL_DNS_PROBE_TIMEOUT =
             "captive_portal_dns_probe_timeout";
+    @VisibleForTesting
+    static final String CONFIG_ASYNC_PRIVDNS_PROBE_TIMEOUT_MS =
+            "async_privdns_probe_timeout_ms";
+    private static final int DEFAULT_PRIVDNS_PROBE_TIMEOUT_MS = 10_000;
 
     private static final int SOCKET_TIMEOUT_MS = 10000;
     private static final int PROBE_TIMEOUT_MS  = 3000;
@@ -404,6 +414,32 @@ public class NetworkMonitor extends StateMachine {
      */
     private static final int EVENT_RESOURCE_CONFIG_CHANGED = 25;
 
+    /**
+     * Message to self to notify that private DNS strict mode hostname resolution has finished.
+     *
+     * <p>arg2 = Last DNS rcode.
+     * obj = Pair&lt;List&lt;InetAddress&gt;, DnsCallback&gt;: query results and DnsCallback used.
+     */
+    private static final int CMD_STRICT_MODE_RESOLUTION_COMPLETED = 26;
+
+    /**
+     * Message to self to notify that the private DNS probe has finished.
+     *
+     * <p>arg2 = Last DNS rcode.
+     * obj = Pair&lt;List&lt;InetAddress&gt;, DnsCallback&gt;: query results and DnsCallback used.
+     */
+    private static final int CMD_PRIVATE_DNS_PROBE_COMPLETED = 27;
+
+    /**
+     * Message to self to notify that private DNS hostname resolution or probing has failed.
+     */
+    private static final int CMD_PRIVATE_DNS_EVALUATION_FAILED = 28;
+
+    /**
+     * Message to self to notify that a DNS query has timed out.
+     */
+    private static final int CMD_DNS_TIMEOUT = 29;
+
     // Start mReevaluateDelayMs at this value and double.
     @VisibleForTesting
     static final int INITIAL_REEVALUATE_DELAY_MS = 1000;
@@ -504,6 +540,10 @@ public class NetworkMonitor extends StateMachine {
     private final State mEvaluatingState = new EvaluatingState();
     private final State mCaptivePortalState = new CaptivePortalState();
     private final State mEvaluatingPrivateDnsState = new EvaluatingPrivateDnsState();
+    private final State mStartingPrivateDnsEvaluation = new StartingPrivateDnsEvaluation();
+    private final State mResolvingPrivateDnsState = new ResolvingPrivateDnsState();
+    private final State mProbingForPrivateDnsState = new ProbingForPrivateDnsState();
+
     private final State mProbingState = new ProbingState();
     private final State mWaitingForNextProbeState = new WaitingForNextProbeState();
     private final State mEvaluatingBandwidthState = new EvaluatingBandwidthState();
@@ -544,6 +584,8 @@ public class NetworkMonitor extends StateMachine {
 
     private final boolean mMetricsEnabled;
     private final boolean mReevaluateWhenResumeEnabled;
+    private final boolean mAsyncPrivdnsResolutionEnabled;
+
     @NonNull
     private final NetworkInformationShim mInfoShim = NetworkInformationShimImpl.newInstance();
 
@@ -614,6 +656,9 @@ public class NetworkMonitor extends StateMachine {
                 addState(mWaitingForNextProbeState, mEvaluatingState);
             addState(mCaptivePortalState, mMaybeNotifyState);
         addState(mEvaluatingPrivateDnsState, mDefaultState);
+            addState(mStartingPrivateDnsEvaluation, mEvaluatingPrivateDnsState);
+            addState(mResolvingPrivateDnsState, mEvaluatingPrivateDnsState);
+            addState(mProbingForPrivateDnsState, mEvaluatingPrivateDnsState);
         addState(mEvaluatingBandwidthState, mDefaultState);
         addState(mValidatedState, mDefaultState);
         setInitialState(mDefaultState);
@@ -632,6 +677,8 @@ public class NetworkMonitor extends StateMachine {
                 NetworkStackUtils.VALIDATION_METRICS_VERSION);
         mReevaluateWhenResumeEnabled = deps.isFeatureEnabled(
                 context, NetworkStackUtils.REEVALUATE_WHEN_RESUME);
+        mAsyncPrivdnsResolutionEnabled = deps.isFeatureEnabled(context,
+                NetworkStackUtils.NETWORKMONITOR_ASYNC_PRIVDNS_RESOLUTION);
         mUseHttps = getUseHttpsValidation();
         mCaptivePortalUserAgent = getCaptivePortalUserAgent();
         mCaptivePortalFallbackSpecs =
@@ -1048,6 +1095,13 @@ public class NetworkMonitor extends StateMachine {
                         mPrivateDnsProviderHostname = "";
                         if (tst != null) {
                             tst.setOpportunisticMode(cfg.inOpportunisticMode());
+                        }
+                        if (mAsyncPrivdnsResolutionEnabled) {
+                            // When using async privdns validation, reevaluate on any change of
+                            // configuration (even if turning it off), as this will handle
+                            // cancelling current attempts and transitioning to validated state.
+                            removeMessages(CMD_EVALUATE_PRIVATE_DNS);
+                            sendMessage(CMD_EVALUATE_PRIVATE_DNS);
                         }
                         break;
                     }
@@ -1599,13 +1653,28 @@ public class NetworkMonitor extends StateMachine {
         @Override
         public boolean processMessage(Message msg) {
             switch (msg.what) {
-                case CMD_EVALUATE_PRIVATE_DNS:
+                case CMD_EVALUATE_PRIVATE_DNS: {
+                    if (mAsyncPrivdnsResolutionEnabled) {
+                        // Cancel any previously scheduled retry attempt
+                        removeMessages(CMD_EVALUATE_PRIVATE_DNS);
+
+                        if (inStrictMode()) {
+                            // Note this may happen even in the case where the current state is
+                            // resolve or probe: private DNS evaluation would then restart.
+                            transitionTo(mStartingPrivateDnsEvaluation);
+                        } else {
+                            mEvaluationState.removeProbeResult(NETWORK_VALIDATION_PROBE_PRIVDNS);
+                            transitionToPrivateDnsEvaluationSuccessState();
+                        }
+                        break;
+                    }
+
                     if (inStrictMode()) {
-                        if (!isStrictModeHostnameResolved()) {
+                        if (!isStrictModeHostnameResolved(mPrivateDnsConfig)) {
                             resolveStrictModeHostname();
 
-                            if (isStrictModeHostnameResolved()) {
-                                notifyPrivateDnsConfigResolved();
+                            if (isStrictModeHostnameResolved(mPrivateDnsConfig)) {
+                                notifyPrivateDnsConfigResolved(mPrivateDnsConfig);
                             } else {
                                 handlePrivateDnsEvaluationFailure();
                                 // The private DNS probe fails-fast if the server hostname cannot
@@ -1630,23 +1699,24 @@ public class NetworkMonitor extends StateMachine {
                             handlePrivateDnsEvaluationFailure();
                             break;
                         }
-                        handlePrivateDnsEvaluationSuccess();
+                        mEvaluationState.noteProbeResult(NETWORK_VALIDATION_PROBE_PRIVDNS,
+                                true /* succeeded */);
                     } else {
                         mEvaluationState.removeProbeResult(NETWORK_VALIDATION_PROBE_PRIVDNS);
                     }
-
-                    if (needEvaluatingBandwidth()) {
-                        transitionTo(mEvaluatingBandwidthState);
-                    } else {
-                        // All good!
-                        transitionTo(mValidatedState);
-                    }
+                    transitionToPrivateDnsEvaluationSuccessState();
                     break;
-                case CMD_PRIVATE_DNS_SETTINGS_CHANGED:
+                }
+                case CMD_PRIVATE_DNS_SETTINGS_CHANGED: {
                     // When settings change the reevaluation timer must be reset.
                     mPrivateDnsReevalDelayMs = INITIAL_REEVALUATE_DELAY_MS;
                     // Let the message bubble up and be handled by parent states as usual.
                     return NOT_HANDLED;
+                }
+                // Only used with mAsyncPrivdnsResolutionEnabled
+                case CMD_PRIVATE_DNS_EVALUATION_FAILED: {
+                    reschedulePrivateDnsEvaluation();
+                }
                 default:
                     return NOT_HANDLED;
             }
@@ -1655,12 +1725,6 @@ public class NetworkMonitor extends StateMachine {
 
         private boolean inStrictMode() {
             return !TextUtils.isEmpty(mPrivateDnsProviderHostname);
-        }
-
-        private boolean isStrictModeHostnameResolved() {
-            return (mPrivateDnsConfig != null)
-                    && mPrivateDnsConfig.hostname.equals(mPrivateDnsProviderHostname)
-                    && (mPrivateDnsConfig.ips.length > 0);
         }
 
         private void resolveStrictModeHostname() {
@@ -1675,24 +1739,15 @@ public class NetworkMonitor extends StateMachine {
             }
         }
 
-        private void notifyPrivateDnsConfigResolved() {
-            try {
-                mCallback.notifyPrivateDnsConfigResolved(mPrivateDnsConfig.toParcel());
-            } catch (RemoteException e) {
-                Log.e(TAG, "Error sending private DNS config resolved notification", e);
-            }
-        }
-
-        private void handlePrivateDnsEvaluationSuccess() {
-            mEvaluationState.noteProbeResult(NETWORK_VALIDATION_PROBE_PRIVDNS,
-                    true /* succeeded */);
-        }
-
         private void handlePrivateDnsEvaluationFailure() {
             mEvaluationState.noteProbeResult(NETWORK_VALIDATION_PROBE_PRIVDNS,
                     false /* succeeded */);
             mEvaluationState.reportEvaluationResult(NETWORK_VALIDATION_RESULT_INVALID,
                     null /* redirectUrl */);
+            reschedulePrivateDnsEvaluation();
+        }
+
+        private void reschedulePrivateDnsEvaluation() {
             // Queue up a re-evaluation with backoff.
             //
             // TODO: Consider abandoning this state after a few attempts and
@@ -1727,6 +1782,285 @@ public class NetworkMonitor extends StateMachine {
                     ProbeResult.PR_FAILURE, null /* capportData */);
             logValidationProbe(time, PROBE_PRIVDNS, success ? DNS_SUCCESS : DNS_FAILURE);
             return success;
+        }
+    }
+
+    private void transitionToPrivateDnsEvaluationSuccessState() {
+        if (needEvaluatingBandwidth()) {
+            transitionTo(mEvaluatingBandwidthState);
+        } else {
+            // All good!
+            transitionTo(mValidatedState);
+        }
+    }
+
+    private class StartingPrivateDnsEvaluation extends State {
+        @Override
+        public void enter() {
+            transitionTo(mResolvingPrivateDnsState);
+        }
+    }
+
+    private class DnsCallback implements DnsResolver.Callback<List<InetAddress>> {
+        private final int mReplyMessage;
+        final CancellationSignal mCancellationSignal;
+        final boolean mHighPriorityResults;
+
+        DnsCallback(int replyMessage, boolean highPriorityResults) {
+            mReplyMessage = replyMessage;
+            mCancellationSignal = new CancellationSignal();
+            mHighPriorityResults = highPriorityResults;
+        }
+
+        @Override
+        public void onAnswer(List<InetAddress> answer, int rcode) {
+            sendMessage(mReplyMessage, 0, rcode, new Pair<>(answer, this));
+        }
+
+        @Override
+        public void onError(DnsResolver.DnsException error) {
+            sendMessage(mReplyMessage, 0, error.code, new Pair<>(null, this));
+        }
+    }
+
+    /**
+     * Base class for a state that is sending a DNS query, cancelled if the state is exited.
+     */
+    private abstract class DnsQueryState extends State {
+        private static final int ERROR_TIMEOUT = -1;
+        private final int mCompletedCommand;
+        private final ArraySet<DnsCallback> mPendingQueries = new ArraySet<>(2);
+        private final List<InetAddress> mResults = new ArrayList<>();
+        private String mQueryName;
+        private long mStartTime;
+
+        private DnsQueryState(int completedCommand) {
+            mCompletedCommand = completedCommand;
+        }
+
+        @Override
+        public void enter() {
+            mPendingQueries.clear();
+            mResults.clear();
+            mStartTime = SystemClock.elapsedRealtimeNanos();
+
+            mQueryName = getQueryName();
+            if (TextUtils.isEmpty(mQueryName)) {
+                // No query necessary (in particular not in strict mode): skip DNS query states
+                mEvaluationState.removeProbeResult(NETWORK_VALIDATION_PROBE_PRIVDNS);
+                transitionToPrivateDnsEvaluationSuccessState();
+                return;
+            }
+
+            final DnsResolver resolver = mDependencies.getDnsResolver();
+            mPendingQueries.addAll(sendQueries(mQueryName, resolver));
+            sendMessageDelayed(CMD_DNS_TIMEOUT, getTimeoutMs());
+        }
+
+        @Override
+        public void exit() {
+            removeMessages(CMD_DNS_TIMEOUT);
+            cancelAllQueries();
+        }
+
+        @Override
+        public boolean processMessage(Message msg) {
+            if (msg.what == mCompletedCommand) {
+                final Pair<List<InetAddress>, DnsCallback> result =
+                        (Pair<List<InetAddress>, DnsCallback>) msg.obj;
+                if (!mPendingQueries.remove(result.second)) {
+                    // Ignore previous queries if the state was exited and re-entered. This state
+                    // calls cancelAllQueries on exit, but this may still happen if results were
+                    // already posted when the querier processed the cancel request.
+                    return HANDLED;
+                }
+
+                if (result.first != null) {
+                    if (result.second.mHighPriorityResults) {
+                        mResults.addAll(0, result.first);
+                    } else {
+                        mResults.addAll(result.first);
+                    }
+                }
+
+                if (mPendingQueries.isEmpty()) {
+                    removeMessages(CMD_DNS_TIMEOUT);
+                    final long time = SystemClock.elapsedRealtimeNanos() - mStartTime;
+                    onQueryDone(mQueryName, mResults, msg.arg2 /* lastRCode */, time);
+                }
+                return HANDLED;
+            } else if (msg.what == CMD_DNS_TIMEOUT) {
+                cancelAllQueries();
+                // If some queries were successful, onQueryDone will still proceed, even if
+                // lastRCode is not a success code.
+                onQueryDone(mQueryName, mResults, ERROR_TIMEOUT /* lastRCode */,
+                        SystemClock.elapsedRealtimeNanos() - mStartTime);
+                return HANDLED;
+            }
+            return NOT_HANDLED;
+        }
+
+        private void cancelAllQueries() {
+            for (int i = 0; i < mPendingQueries.size(); i++) {
+                mPendingQueries.valueAt(i).mCancellationSignal.cancel();
+            }
+            mPendingQueries.clear();
+        }
+
+        abstract void onQueryDone(@NonNull String queryName, @NonNull List<InetAddress> answer,
+                int lastRCode, long elapsedNanos);
+
+        @NonNull
+        abstract String getQueryName();
+
+        abstract List<DnsCallback> sendQueries(@NonNull String queryName,
+                @NonNull DnsResolver resolver);
+
+        abstract long getTimeoutMs();
+    }
+
+    private class ResolvingPrivateDnsState extends DnsQueryState {
+        private ResolvingPrivateDnsState() {
+            super(CMD_STRICT_MODE_RESOLUTION_COMPLETED);
+        }
+
+        @Override
+        List<DnsCallback> sendQueries(@NonNull String queryName, @NonNull DnsResolver resolver) {
+            // Follow legacy behavior that sent AAAA and A queries synchronously in sequence: AAAA
+            // is marked as highPriorityResults, so they are placed first in the resulting list.
+            final DnsCallback v6Cb = new DnsCallback(CMD_STRICT_MODE_RESOLUTION_COMPLETED,
+                    true /* highPriorityResults */);
+            final DnsCallback v4Cb = new DnsCallback(CMD_STRICT_MODE_RESOLUTION_COMPLETED,
+                    false /* highPriorityResults */);
+
+            resolver.query(mCleartextDnsNetwork, queryName, TYPE_AAAA, FLAG_NO_CACHE_LOOKUP,
+                    Runnable::run, v6Cb.mCancellationSignal, v6Cb);
+            resolver.query(mCleartextDnsNetwork, queryName, TYPE_A, FLAG_NO_CACHE_LOOKUP,
+                    Runnable::run, v4Cb.mCancellationSignal, v4Cb);
+
+            return List.of(v6Cb, v4Cb);
+        }
+
+        @Override
+        void onQueryDone(@NonNull String queryName, @NonNull List<InetAddress> answer,
+                int lastRCode, long elapsedNanos) {
+            if (!Objects.equals(queryName, mPrivateDnsProviderHostname)) {
+                validationLog("Ignoring stale private DNS resolve answers for " + queryName
+                        + " (now \"" + mPrivateDnsProviderHostname + "\"): " + answer);
+                // This may happen if mPrivateDnsProviderHostname was changed, in which case
+                // reevaluation must have been queued (CMD_EVALUATE_PRIVATE_DNS), but results for
+                // the first evaluation are received before the reevaluation command gets processed.
+                // Just ignore the results and wait for reevaluation to be processed.
+                // More generally, reevaluation is scheduled every time the hostname changes, so
+                // IP addresses matching the hostname are eventually received, but intermediate
+                // results should be ignored to avoid reporting a PrivateDnsConfig with IP addresses
+                // that don't match mPrivateDnsProviderHostname.
+                return;
+            }
+
+            if (!answer.isEmpty()) {
+                final InetAddress[] ips = answer.toArray(new InetAddress[0]);
+                final PrivateDnsConfig config =
+                        new PrivateDnsConfig(mPrivateDnsProviderHostname, ips);
+                notifyPrivateDnsConfigResolved(config);
+
+                validationLog("Strict mode hostname resolution " + elapsedNanos + "ns OK "
+                        + answer + " for " + mPrivateDnsProviderHostname);
+                transitionTo(mProbingForPrivateDnsState);
+            } else {
+                mEvaluationState.noteProbeResult(NETWORK_VALIDATION_PROBE_PRIVDNS,
+                        false /* succeeded */);
+                mEvaluationState.reportEvaluationResult(NETWORK_VALIDATION_RESULT_INVALID,
+                        null /* redirectUrl */);
+
+                validationLog("Strict mode hostname resolution " + elapsedNanos + "ns FAIL "
+                        + "lastRCode " + lastRCode + " for " + mPrivateDnsProviderHostname);
+                sendMessage(CMD_PRIVATE_DNS_EVALUATION_FAILED);
+
+                // The private DNS probe fails-fast if the server hostname cannot
+                // be resolved. Record it as a failure with zero latency.
+                recordProbeEventMetrics(ProbeType.PT_PRIVDNS, 0 /* latency */,
+                        ProbeResult.PR_FAILURE, null /* capportData */);
+            }
+        }
+
+        @NonNull
+        @Override
+        String getQueryName() {
+            return mPrivateDnsProviderHostname;
+        }
+
+        @Override
+        long getTimeoutMs() {
+            return getDnsProbeTimeout();
+        }
+    }
+
+    private class ProbingForPrivateDnsState extends DnsQueryState {
+        private ProbingForPrivateDnsState() {
+            super(CMD_PRIVATE_DNS_PROBE_COMPLETED);
+        }
+
+        @Override
+        public void enter() {
+            super.enter();
+        }
+
+        @Override
+        List<DnsCallback> sendQueries(@NonNull String queryName, @NonNull DnsResolver resolver) {
+            final DnsCallback cb = new DnsCallback(CMD_PRIVATE_DNS_PROBE_COMPLETED,
+                    false /* highPriorityResults */);
+            resolver.query(mNetwork, queryName, FLAG_EMPTY, Runnable::run, cb.mCancellationSignal,
+                    cb);
+            return Collections.singletonList(cb);
+        }
+
+        @Override
+        void onQueryDone(@NonNull String queryName, @NonNull List<InetAddress> answer,
+                int lastRCode, long elapsedNanos) {
+            final boolean success = !answer.isEmpty();
+            recordProbeEventMetrics(ProbeType.PT_PRIVDNS, elapsedNanos,
+                    success ? ProbeResult.PR_SUCCESS :
+                            ProbeResult.PR_FAILURE, null /* capportData */);
+            logValidationProbe(elapsedNanos, PROBE_PRIVDNS, success ? DNS_SUCCESS : DNS_FAILURE);
+
+            final String strIps = Objects.toString(answer);
+            validationLog(PROBE_PRIVDNS, queryName,
+                    String.format("%dus: %s", elapsedNanos / 1000, strIps));
+
+            mEvaluationState.noteProbeResult(NETWORK_VALIDATION_PROBE_PRIVDNS, success);
+            if (success) {
+                transitionToPrivateDnsEvaluationSuccessState();
+            } else {
+                mEvaluationState.reportEvaluationResult(NETWORK_VALIDATION_RESULT_INVALID,
+                        null /* redirectUrl */);
+                sendMessage(CMD_PRIVATE_DNS_EVALUATION_FAILED);
+            }
+        }
+
+        @Override
+        long getTimeoutMs() {
+            return getAsyncPrivateDnsProbeTimeout();
+        }
+
+        @NonNull
+        @Override
+        String getQueryName() {
+            return UUID.randomUUID().toString().substring(0, 8) + PRIVATE_DNS_PROBE_HOST_SUFFIX;
+        }
+    }
+
+    private boolean isStrictModeHostnameResolved(PrivateDnsConfig config) {
+        return (config != null)
+                && config.hostname.equals(mPrivateDnsProviderHostname)
+                && (config.ips.length > 0);
+    }
+
+    private void notifyPrivateDnsConfigResolved(@NonNull PrivateDnsConfig config) {
+        try {
+            mCallback.notifyPrivateDnsConfigResolved(config.toParcel());
+        } catch (RemoteException e) {
+            Log.e(TAG, "Error sending private DNS config resolved notification", e);
         }
     }
 
@@ -2184,6 +2518,11 @@ public class NetworkMonitor extends StateMachine {
     private int getDnsProbeTimeout() {
         return getIntSetting(mContext, R.integer.config_captive_portal_dns_probe_timeout,
                 CONFIG_CAPTIVE_PORTAL_DNS_PROBE_TIMEOUT, DEFAULT_CAPTIVE_PORTAL_DNS_PROBE_TIMEOUT);
+    }
+
+    private int getAsyncPrivateDnsProbeTimeout() {
+        return mDependencies.getDeviceConfigPropertyInt(NAMESPACE_CONNECTIVITY,
+                CONFIG_ASYNC_PRIVDNS_PROBE_TIMEOUT_MS, DEFAULT_PRIVDNS_PROBE_TIMEOUT_MS);
     }
 
     /**

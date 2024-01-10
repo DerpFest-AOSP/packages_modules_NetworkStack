@@ -99,7 +99,7 @@ class NetworkStatsIntegrationTest {
     private val inst = InstrumentationRegistry.getInstrumentation()
     private val context = inst.getContext()
     private val packetBridge = runAsShell(MANAGE_TEST_NETWORKS) {
-        PacketBridge(context, LOCAL_V6ADDR, REMOTE_V6ADDR.address)
+        PacketBridge(context, listOf(LOCAL_V6ADDR), REMOTE_V6ADDR.address)
     }
     private val cm = context.getSystemService(ConnectivityManager::class.java)!!
 

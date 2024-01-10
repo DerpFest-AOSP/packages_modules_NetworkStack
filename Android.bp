@@ -125,9 +125,6 @@ java_library {
     srcs: ["apishim/common/**/*.java"],
     sdk_version: "system_current",
     visibility: ["//visibility:private"],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 // Each level of the shims (29, 30, ...) is its own java_library compiled against the corresponding
@@ -141,9 +138,6 @@ java_library {
     ],
     sdk_version: "system_29",
     visibility: ["//visibility:private"],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 java_library {
@@ -160,7 +154,7 @@ java_library {
     visibility: ["//visibility:private"],
     lint: {
         strict_updatability_linting: true,
-        baseline_filename: "lint-baseline.xml",
+
     },
 }
 
@@ -184,9 +178,6 @@ java_library {
     ],
     sdk_version: "module_31",
     visibility: ["//visibility:private"],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 java_library {
@@ -207,9 +198,6 @@ java_library {
     ],
     sdk_version: "module_33",
     visibility: ["//visibility:private"],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 java_library {
@@ -231,9 +219,6 @@ java_library {
     ],
     sdk_version: module_34_version,
     visibility: ["//visibility:private"],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 // Shims for APIs being added to the current development version of Android. These APIs are not
@@ -267,9 +252,6 @@ java_library {
     ],
     sdk_version: "module_current",
     visibility: ["//visibility:private"],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 // API current uses the API current shims directly.
@@ -297,9 +279,6 @@ java_library {
         "//packages/modules/Connectivity/service-t",
         "//packages/modules/Connectivity/tests:__subpackages__",
     ],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 // API stable uses jarjar to rename the latest stable apishim package from
@@ -326,9 +305,6 @@ java_library {
         "//packages/modules/Connectivity/service-t",
         "//packages/modules/Connectivity/tests:__subpackages__",
     ],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 // Common defaults for android libraries containing network stack code, used to compile variants of
@@ -382,7 +358,7 @@ android_library {
     ],
     lint: {
         strict_updatability_linting: true,
-        baseline_filename: "lint-baseline.xml",
+
     },
 }
 
@@ -410,7 +386,7 @@ android_library {
     ],
     lint: {
         strict_updatability_linting: true,
-        baseline_filename: "lint-baseline.xml",
+
     },
 }
 
@@ -437,9 +413,6 @@ java_library {
         "//packages/modules/Connectivity/Tethering/tests/integration",
         "//packages/modules/Connectivity/tests/cts/net",
     ],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 java_genrule {
@@ -508,9 +481,6 @@ android_app {
     required: [
         "PlatformCaptivePortalLogin",
     ],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 // Pre-merge the AndroidManifest for NetworkStackNext, so that its manifest can be merged on top
@@ -523,9 +493,6 @@ android_library {
     ],
     static_libs: ["NetworkStackApiCurrentLib"],
     manifest: "AndroidManifest.xml",
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 // NetworkStack build targeting the current API release, for testing on in-development SDK
@@ -545,7 +512,7 @@ android_app {
     updatable: true,
     lint: {
         strict_updatability_linting: true,
-        baseline_filename: "lint-baseline.xml",
+
     },
 }
 
@@ -565,7 +532,7 @@ android_app {
     updatable: true,
     lint: {
         strict_updatability_linting: true,
-        baseline_filename: "lint-baseline.xml",
+
     },
 }
 
@@ -649,9 +616,6 @@ android_app {
     required: [
         "privapp_whitelist_com.android.networkstack",
     ],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 // When adding or modifying protos, the jarjar rules and possibly proguard rules need
@@ -668,7 +632,4 @@ java_library_static {
         "networkstackprotos",
     ],
     defaults: ["NetworkStackReleaseApiLevel"],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }

@@ -151,11 +151,6 @@ public class NetworkStackUtils {
             new String [] {"https://www.google.com/generate_204"};
 
     /**
-     * Minimum module version at which to enable the DHCP INIT-REBOOT state.
-     */
-    public static final String DHCP_INIT_REBOOT_VERSION = "dhcp_init_reboot_version";
-
-    /**
      * Minimum module version at which to enable the DHCP Rapid Commit option.
      */
     public static final String DHCP_RAPID_COMMIT_VERSION = "dhcp_rapid_commit_version";

@@ -53,7 +53,6 @@ import static com.android.net.module.util.NetworkStackConstants.IPV4_ADDR_ANY;
 import static com.android.net.module.util.NetworkStackConstants.IPV4_CONFLICT_ANNOUNCE_NUM;
 import static com.android.net.module.util.NetworkStackConstants.IPV4_CONFLICT_PROBE_NUM;
 import static com.android.net.module.util.SocketUtils.closeSocketQuietly;
-import static com.android.networkstack.util.NetworkStackUtils.DHCP_INIT_REBOOT_VERSION;
 import static com.android.networkstack.util.NetworkStackUtils.DHCP_IP_CONFLICT_DETECT_VERSION;
 import static com.android.networkstack.util.NetworkStackUtils.DHCP_RAPID_COMMIT_VERSION;
 import static com.android.networkstack.util.NetworkStackUtils.DHCP_SLOW_RETRANSMISSION_VERSION;
@@ -555,13 +554,6 @@ public class DhcpClient extends StateMachine {
     }
 
     /**
-     * check whether or not to support caching the last lease info and INIT-REBOOT state.
-     */
-    public boolean isDhcpLeaseCacheEnabled() {
-        return mDependencies.isFeatureNotChickenedOut(mContext, DHCP_INIT_REBOOT_VERSION);
-    }
-
-    /**
      * check whether or not to support DHCP Rapid Commit option.
      */
     public boolean isDhcpRapidCommitEnabled() {
@@ -584,7 +576,7 @@ public class DhcpClient extends StateMachine {
     }
 
     private void recordMetricEnabledFeatures() {
-        if (isDhcpLeaseCacheEnabled()) mMetrics.setDhcpEnabledFeature(DhcpFeature.DF_INITREBOOT);
+        mMetrics.setDhcpEnabledFeature(DhcpFeature.DF_INITREBOOT);
         if (isDhcpRapidCommitEnabled()) mMetrics.setDhcpEnabledFeature(DhcpFeature.DF_RAPIDCOMMIT);
         if (isDhcpIpConflictDetectEnabled()) mMetrics.setDhcpEnabledFeature(DhcpFeature.DF_DAD);
         if (mConfiguration.isPreconnectionEnabled) {
@@ -855,17 +847,13 @@ public class DhcpClient extends StateMachine {
     }
 
     private void notifySuccess() {
-        if (isDhcpLeaseCacheEnabled()) {
-            maybeSaveLeaseToIpMemoryStore();
-        }
+        maybeSaveLeaseToIpMemoryStore();
         mController.sendMessage(
                 CMD_POST_DHCP_ACTION, DHCP_SUCCESS, 0, new DhcpResults(mDhcpLease));
     }
 
     private void notifyFailure(int arg) {
-        if (isDhcpLeaseCacheEnabled()) {
-            setLeaseExpiredToIpMemoryStore();
-        }
+        setLeaseExpiredToIpMemoryStore();
         mController.sendMessage(CMD_POST_DHCP_ACTION, arg, 0, null);
     }
 
@@ -1028,7 +1016,7 @@ public class DhcpClient extends StateMachine {
                     if (mConfiguration.isPreconnectionEnabled) {
                         transitionTo(mDhcpPreconnectingState);
                     } else {
-                        startInitRebootOrInit();
+                        startInitReboot();
                     }
                     recordMetricEnabledFeatures();
                     return HANDLED;
@@ -1354,13 +1342,8 @@ public class DhcpClient extends StateMachine {
         }
     }
 
-    private void startInitRebootOrInit() {
-        if (isDhcpLeaseCacheEnabled()) {
-            preDhcpTransitionTo(mWaitBeforeObtainingConfigurationState,
-                    mObtainingConfigurationState);
-        } else {
-            preDhcpTransitionTo(mWaitBeforeStartState, mDhcpInitState);
-        }
+    private void startInitReboot() {
+        preDhcpTransitionTo(mWaitBeforeObtainingConfigurationState, mObtainingConfigurationState);
     }
 
     class DhcpPreconnectingState extends TimeoutState {
@@ -1392,7 +1375,7 @@ public class DhcpClient extends StateMachine {
                             mConfiguration.isPreconnectionEnabled);
                     return HANDLED;
                 case CMD_ABORT_PRECONNECTION:
-                    startInitRebootOrInit();
+                    startInitReboot();
                     return HANDLED;
                 default:
                     return NOT_HANDLED;
@@ -1410,7 +1393,7 @@ public class DhcpClient extends StateMachine {
         //   and send a DISCOVER.
         @Override
         public void timeout() {
-            startInitRebootOrInit();
+            startInitReboot();
         }
 
         private void sendPreconnectionPacket() {
@@ -2083,7 +2066,7 @@ public class DhcpClient extends StateMachine {
         }
 
         protected void timeout() {
-            startInitRebootOrInit();
+            startInitReboot();
         }
     }
 

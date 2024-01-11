@@ -4905,7 +4905,25 @@ public abstract class IpClientIntegrationTestCommon {
         handleDhcp6Packets(prefix, true /* shouldReplyRapidCommit */);
         final ArgumentCaptor<LinkProperties> captor = ArgumentCaptor.forClass(LinkProperties.class);
         verify(mCb, timeout(TEST_TIMEOUT_MS)).onProvisioningSuccess(captor.capture());
-        assertTrue(hasIpv6AddressPrefixedWith(captor.getValue(), prefix));
+        final LinkProperties lp = captor.getValue();
+        assertTrue(hasIpv6AddressPrefixedWith(lp, prefix));
+
+        // Only run the test when the flag of parsing netlink events is enabled, where the
+        // deprecationTime and expirationTime is set.
+        if (mIsNetlinkEventParseEnabled) {
+            final long now = SystemClock.elapsedRealtime();
+            long when = 0;
+            for (LinkAddress la : lp.getLinkAddresses()) {
+                if (la.getAddress().isLinkLocalAddress()) {
+                    assertLinkAddressPermanentLifetime(la);
+                } else if (la.isGlobalPreferred()) {
+                    when = now + 4500 * 1000; // preferred=4500s
+                    assertLinkAddressDeprecationTime(la, when);
+                    when = now + 7200 * 1000; // valid=7200s
+                    assertLinkAddressExpirationTime(la, when);
+                }
+            }
+        }
     }
 
     @Test

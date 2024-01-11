@@ -307,6 +307,10 @@ public abstract class IpClientIntegrationTestCommon {
     protected static final long TEST_TIMEOUT_MS = 2_000L;
     private static final long TEST_WAIT_ENOBUFS_TIMEOUT_MS = 30_000L;
     private static final long TEST_WAIT_RENEW_REBIND_RETRANSMIT_MS = 15_000L;
+    // To prevent the flakiness about deprecationTime and expirationTime check, +/- 2s tolerance
+    // should be enough between the timestamp when the IP provisioning completes successfully and
+    // when IpClientLinkObserver sees the RTM_NEWADDR netlink events.
+    private static final long TEST_LIFETIME_TOLERANCE_MS = 2_000L;
 
     @Rule
     public final DevSdkIgnoreRule mIgnoreRule = new DevSdkIgnoreRule();
@@ -5599,6 +5603,7 @@ public abstract class IpClientIntegrationTestCommon {
                 mNetd.getProcSysNet(INetd.IPV6, INetd.CONF, mIfaceName, "accept_ra_defrtr"));
         assertEquals(1, acceptRaDefRtr);
     }
+
     private void runDhcpDomainSearchListOptionTest(final String domainName,
             final List<String> domainSearchList, final String expectedDomain) throws Exception {
         when(mResources.getBoolean(R.bool.config_dhcp_client_domain_search_list)).thenReturn(true);
@@ -5645,5 +5650,51 @@ public abstract class IpClientIntegrationTestCommon {
         final String expectedDomain = "google.com example.com";
         runDhcpDomainSearchListOptionTest(null /* domainName */, searchList,
                 expectedDomain);
+    }
+
+    private void assertLinkAddressDeprecationTime(final LinkAddress la, final long when) {
+        assertTrue(la.getDeprecationTime() != LinkAddress.LIFETIME_UNKNOWN);
+        // Allow +/- 2 seconds to prevent flaky tests
+        assertTrue(la.getDeprecationTime() < when + TEST_LIFETIME_TOLERANCE_MS);
+        assertTrue(la.getDeprecationTime() > when - TEST_LIFETIME_TOLERANCE_MS);
+    }
+
+    private void assertLinkAddressExpirationTime(final LinkAddress la, final long when) {
+        assertTrue(la.getExpirationTime() != LinkAddress.LIFETIME_UNKNOWN);
+        // Allow +/- 2 seconds to prevent flaky tests
+        assertTrue(la.getExpirationTime() < when + TEST_LIFETIME_TOLERANCE_MS);
+        assertTrue(la.getExpirationTime() > when - TEST_LIFETIME_TOLERANCE_MS);
+    }
+
+    private void assertLinkAddressPermanentLifetime(final LinkAddress la) {
+        assertEquals(LinkAddress.LIFETIME_PERMANENT, la.getDeprecationTime());
+        assertEquals(LinkAddress.LIFETIME_PERMANENT, la.getExpirationTime());
+    }
+
+    @Test
+    public void testPopulateLinkAddressLifetime() throws Exception {
+        // Only run the test when the flag of parsing netlink events is enabled to verify the
+        // code of setting deprecationTime/expirationTime added when IpClientLinkObserver sees
+        // the RTM_NEWADDR, and we are going to delete the dead old code path completely soon.
+        assumeTrue(mIsNetlinkEventParseEnabled);
+
+        final LinkProperties lp = doDualStackProvisioning();
+        final long now = SystemClock.elapsedRealtime();
+        long when = 0;
+        for (LinkAddress la : lp.getLinkAddresses()) {
+            if (la.isIpv4()) {
+                // TODO: assert the deprecationTime and expirationTime for IPv4 address
+                // once we populate the correct lifetime with dhcp lease(3600s) for IPv4
+                // link address.
+                assertLinkAddressPermanentLifetime(la);
+            } else if (la.isIpv6() && la.getAddress().isLinkLocalAddress()) {
+                assertLinkAddressPermanentLifetime(la);
+            } else if (la.isIpv6() && la.isGlobalPreferred()) {
+                when = now + 1800 * 1000; // preferred=1800s
+                assertLinkAddressDeprecationTime(la, when);
+                when = now + 3600 * 1000; // valid=3600s
+                assertLinkAddressExpirationTime(la, when);
+            }
+        }
     }
 }

@@ -136,19 +136,20 @@ public class ApfGenerator {
         // e.g. "pktcopy r0, 5", "pktcopy r0, r1", "datacopy r0, 5", "datacopy r0, r1"
         EPKTCOPY(41),
         EDATACOPY(42),
-        // Jumps if the UDP payload content (starting at R0) does not contain ont
-        // of the specified QNAME, applying case insensitivity.
+        // Jumps if the UDP payload content (starting at R0) does not contain one
+        // of the specified QNAMEs, applying case insensitivity.
         // R0: Offset to UDP payload content
-        // R=0/1 meanining 'does not match' vs 'matches'
+        // R=0/1 meaning 'does not match'/'matches'
         // imm1: Opcode
         // imm2: Label offset
         // imm3(u8): Question type (PTR/SRV/TXT/A/AAAA)
         // imm4(bytes): TLV-encoded QNAME list (null-terminated)
         // e.g.: "jdnsqmatch R0,label,0x0c,\002aa\005local\0\0"
-        JDNSQMATCH(43), // Jumps if the UDP payload content (starting at R0) does not contain one
-        // of the specified NAME in answers/authority/additional records, applying
+        JDNSQMATCH(43),
+        // Jumps if the UDP payload content (starting at R0) does not contain one
+        // of the specified NAMEs in answers/authority/additional records, applying
         // case insensitivity.
-        // R=0/1 meanining 'does not match' vs 'matches'
+        // R=0/1 meaning 'does not match'/'matches'
         // R0: Offset to UDP payload content
         // imm1: Opcode
         // imm2: Label offset
@@ -1262,7 +1263,7 @@ public class ApfGenerator {
 
     /**
      * Appends a conditional jump instruction to the program: Jumps to {@code tgt} if the UDP
-     * payload's DNS questions do NOT contain the QNAME specified in {@code qnames} and qtype
+     * payload's DNS questions do NOT contain the QNAMEs specified in {@code qnames} and qtype
      * equals {@code qtype}. Examines the payload starting at the offset in R0.
      * R = 0 means check for "does not contain".
      */
@@ -1276,7 +1277,7 @@ public class ApfGenerator {
 
     /**
      * Appends a conditional jump instruction to the program: Jumps to {@code tgt} if the UDP
-     * payload's DNS questions contain the QNAME specified in {@code qnames} and qtype
+     * payload's DNS questions contain the QNAMEs specified in {@code qnames} and qtype
      * equals {@code qtype}. Examines the payload starting at the offset in R0.
      * R = 1 means check for "contain".
      */
@@ -1290,7 +1291,7 @@ public class ApfGenerator {
 
     /**
      * Appends a conditional jump instruction to the program: Jumps to {@code tgt} if the UDP
-     * payload's DNS answers/authority/additional records do NOT contain the NAME
+     * payload's DNS answers/authority/additional records do NOT contain the NAMEs
      * specified in {@code Names}. Examines the payload starting at the offset in R0.
      * R = 0 means check for "does not contain".
      */
@@ -1304,7 +1305,7 @@ public class ApfGenerator {
 
     /**
      * Appends a conditional jump instruction to the program: Jumps to {@code tgt} if the UDP
-     * payload's DNS answers/authority/additional records contain the NAME
+     * payload's DNS answers/authority/additional records contain the NAMEs
      * specified in {@code Names}. Examines the payload starting at the offset in R0.
      * R = 1 means check for "contain".
      */

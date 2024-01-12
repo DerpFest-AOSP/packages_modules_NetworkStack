@@ -16,7 +16,7 @@
 
 package android.net.apf;
 
-import static android.net.apf.ApfGenerator.Register.R0;
+import static android.net.apf.ApfV4Generator.Register.R0;
 
 import androidx.annotation.NonNull;
 
@@ -34,8 +34,8 @@ import java.util.Objects;
  * At compile time, any code that calls a subroutine must:
  *
  * <ul>
- * <li>Define a label (via {@link ApfGenerator#defineLabel}) immediately after the code that invokes
- *     the subroutine.
+ * <li>Define a label (via {@link ApfV4Generator#defineLabel}) immediately after the code that
+ *     invokes the subroutine.
  * <li>Add the label to the jump table using {@link #addLabel}.
  * <li>Generate the jump table in the program.
  * </ul>
@@ -88,7 +88,7 @@ public class JumpTable {
         Objects.requireNonNull(startLabel);
         mStartLabel = startLabel;
         if (returnAddressMemorySlot < 0
-                || returnAddressMemorySlot >= ApfGenerator.FIRST_PREFILLED_MEMORY_SLOT) {
+                || returnAddressMemorySlot >= ApfV4Generator.FIRST_PREFILLED_MEMORY_SLOT) {
             throw new IllegalArgumentException("Invalid memory slot " + returnAddressMemorySlot);
         }
         mReturnAddressMemorySlot = returnAddressMemorySlot;
@@ -122,8 +122,8 @@ public class JumpTable {
     }
 
     /** Generates APF code for this jump table */
-    public void generate(@NonNull ApfGenerator gen)
-            throws ApfGenerator.IllegalInstructionException {
+    public void generate(@NonNull ApfV4Generator gen)
+            throws ApfV4Generator.IllegalInstructionException {
         gen.defineLabel(mStartLabel);
         gen.addLoadFromMemory(R0, mReturnAddressMemorySlot);
         for (Map.Entry<String, Integer> e : mJumpLabels.entrySet()) {
@@ -131,6 +131,6 @@ public class JumpTable {
         }
         // Cannot happen unless the program is malformed (i.e., the APF code loads an invalid return
         // label index before jumping to the subroutine.
-        gen.addJump(ApfGenerator.PASS_LABEL);
+        gen.addJump(ApfV4Generator.PASS_LABEL);
     }
 }

@@ -34,7 +34,7 @@ import org.mockito.MockitoAnnotations
 class JumpTableTest {
 
     @Mock
-    lateinit var gen: ApfGenerator
+    lateinit var gen: ApfV4Generator
 
     @Before
     fun setUp() {
@@ -94,11 +94,11 @@ class JumpTableTest {
         j.generate(gen)
 
         inOrder.verify(gen).defineLabel(name)
-        inOrder.verify(gen).addLoadFromMemory(ApfGenerator.Register.R0, slot)
+        inOrder.verify(gen).addLoadFromMemory(ApfV4Generator.Register.R0, slot)
         inOrder.verify(gen).addJumpIfR0Equals(0, "foo")
         inOrder.verify(gen).addJumpIfR0Equals(1, "bar")
         inOrder.verify(gen).addJumpIfR0Equals(2, "baz")
-        inOrder.verify(gen).addJump(ApfGenerator.PASS_LABEL)
+        inOrder.verify(gen).addJump(ApfV4Generator.PASS_LABEL)
         inOrder.verifyNoMoreInteractions()
     }
 }

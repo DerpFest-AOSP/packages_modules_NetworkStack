@@ -221,9 +221,6 @@ java_library {
         "com.android.tethering",
         "com.android.wifi",
     ],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 java_library {
@@ -268,7 +265,4 @@ java_library {
         "com.android.tethering",
         "com.android.wifi",
     ],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }

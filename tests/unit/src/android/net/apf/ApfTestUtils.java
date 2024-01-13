@@ -28,7 +28,7 @@ import static org.mockito.Mockito.mock;
 import android.content.Context;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
-import android.net.apf.ApfGenerator.IllegalInstructionException;
+import android.net.apf.ApfV4Generator.IllegalInstructionException;
 import android.net.ip.IIpClientCallbacks;
 import android.net.ip.IpClient;
 import android.net.metrics.IpConnectivityLog;
@@ -155,7 +155,7 @@ public class ApfTestUtils {
      */
     public static void assertDataMemoryContents(int apfVersion, int expected, byte[] program,
             byte[] packet, byte[] data, byte[] expectedData)
-            throws ApfGenerator.IllegalInstructionException, Exception {
+            throws ApfV4Generator.IllegalInstructionException, Exception {
         assertReturnCodesEqual(expected,
                 apfSimulate(apfVersion, program, packet, data, 0 /* filterAge */));
 
@@ -176,8 +176,8 @@ public class ApfTestUtils {
                 apfSimulate(apfVersion, program, packet, data, 0 /* filterAge */));
     }
 
-    private static void assertVerdict(int apfVersion, int expected, ApfGenerator gen, byte[] packet,
-            int filterAge) throws ApfGenerator.IllegalInstructionException {
+    private static void assertVerdict(int apfVersion, int expected, ApfV4Generator gen,
+            byte[] packet, int filterAge) throws ApfV4Generator.IllegalInstructionException {
         assertReturnCodesEqual(expected,
                 apfSimulate(apfVersion, gen.generate(), packet, null, filterAge));
     }
@@ -185,32 +185,32 @@ public class ApfTestUtils {
     /**
      * Runs the APF program and checks the return code is PASS.
      */
-    public static void assertPass(int apfVersion, ApfGenerator gen, byte[] packet, int filterAge)
-            throws ApfGenerator.IllegalInstructionException {
+    public static void assertPass(int apfVersion, ApfV4Generator gen, byte[] packet, int filterAge)
+            throws ApfV4Generator.IllegalInstructionException {
         assertVerdict(apfVersion, PASS, gen, packet, filterAge);
     }
 
     /**
      * Runs the APF program and checks the return code is DROP.
      */
-    public static void assertDrop(int apfVersion, ApfGenerator gen, byte[] packet, int filterAge)
-            throws ApfGenerator.IllegalInstructionException {
+    public static void assertDrop(int apfVersion, ApfV4Generator gen, byte[] packet, int filterAge)
+            throws ApfV4Generator.IllegalInstructionException {
         assertVerdict(apfVersion, DROP, gen, packet, filterAge);
     }
 
     /**
      * Runs the APF program and checks the return code is PASS.
      */
-    public static void assertPass(int apfVersion, ApfGenerator gen)
-            throws ApfGenerator.IllegalInstructionException {
+    public static void assertPass(int apfVersion, ApfV4Generator gen)
+            throws ApfV4Generator.IllegalInstructionException {
         assertVerdict(apfVersion, PASS, gen, new byte[MIN_PKT_SIZE], 0);
     }
 
     /**
      * Runs the APF program and checks the return code is DROP.
      */
-    public static void assertDrop(int apfVersion, ApfGenerator gen)
-            throws ApfGenerator.IllegalInstructionException {
+    public static void assertDrop(int apfVersion, ApfV4Generator gen)
+            throws ApfV4Generator.IllegalInstructionException {
         assertVerdict(apfVersion, DROP, gen, new byte[MIN_PKT_SIZE], 0);
     }
 
@@ -383,7 +383,7 @@ public class ApfTestUtils {
 
         @Override
         @GuardedBy("this")
-        protected ApfGenerator emitPrologueLocked() throws IllegalInstructionException {
+        protected ApfV4Generator emitPrologueLocked() throws IllegalInstructionException {
             if (mThrowsExceptionWhenGeneratesProgram) {
                 throw new IllegalStateException();
             }
@@ -479,7 +479,7 @@ public class ApfTestUtils {
 
         @Override
         @GuardedBy("this")
-        protected ApfGenerator emitPrologueLocked() throws IllegalInstructionException {
+        protected ApfV4Generator emitPrologueLocked() throws IllegalInstructionException {
             if (mThrowsExceptionWhenGeneratesProgram) {
                 throw new IllegalStateException();
             }

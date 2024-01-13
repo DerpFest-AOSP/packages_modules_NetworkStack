@@ -43,8 +43,8 @@ import android.net.LinkProperties;
 import android.net.NattKeepalivePacketDataParcelable;
 import android.net.TcpKeepalivePacketDataParcelable;
 import android.net.apf.ApfCounterTracker.Counter;
-import android.net.apf.ApfGenerator.IllegalInstructionException;
-import android.net.apf.ApfGenerator.Register;
+import android.net.apf.ApfV4Generator.IllegalInstructionException;
+import android.net.apf.ApfV4Generator.Register;
 import android.net.ip.IpClient.IpClientCallbacksWrapper;
 import android.net.metrics.ApfProgramEvent;
 import android.net.metrics.ApfStats;
@@ -124,7 +124,7 @@ public class LegacyApfFilter implements AndroidPacketFilter {
     /**
      * When APFv4 is supported, loads R1 with the offset of the specified counter.
      */
-    private void maybeSetupCounter(ApfGenerator gen, Counter c) {
+    private void maybeSetupCounter(ApfV4Generator gen, Counter c) {
         if (mApfCapabilities.hasDataAccess()) {
             gen.addLoadImmediate(Register.R1, c.offset());
         }
@@ -408,8 +408,8 @@ public class LegacyApfFilter implements AndroidPacketFilter {
         } else {
             // APFv4 unsupported: turn jumps to the counter trampolines to immediately PASS or DROP,
             // preserving the original pre-APFv4 behavior.
-            mCountAndPassLabel = ApfGenerator.PASS_LABEL;
-            mCountAndDropLabel = ApfGenerator.DROP_LABEL;
+            mCountAndPassLabel = ApfV4Generator.PASS_LABEL;
+            mCountAndDropLabel = ApfV4Generator.DROP_LABEL;
         }
 
         // Now fill the black list from the passed array
@@ -970,7 +970,7 @@ public class LegacyApfFilter implements AndroidPacketFilter {
         // to the smallest generated filter lifetime). Returning Long.MAX_VALUE in the case no
         // filter gets generated makes sure the program lifetime stays unaffected.
         @GuardedBy("ApfFilter.this")
-        long generateFilterLocked(ApfGenerator gen) throws IllegalInstructionException {
+        long generateFilterLocked(ApfV4Generator gen) throws IllegalInstructionException {
             String nextFilterLabel = "Ra" + getUniqueNumberLocked();
             // Skip if packet is not the right size
             gen.addLoadFromMemory(Register.R0, gen.PACKET_SIZE_MEMORY_SLOT);
@@ -1018,7 +1018,7 @@ public class LegacyApfFilter implements AndroidPacketFilter {
         // Append a filter for this keepalive ack to {@code gen}.
         // Jump to drop if it matches the keepalive ack.
         // Jump to the next filter if packet doesn't match the keepalive ack.
-        abstract void generateFilterLocked(ApfGenerator gen) throws IllegalInstructionException;
+        abstract void generateFilterLocked(ApfV4Generator gen) throws IllegalInstructionException;
     }
 
     // A class to hold NAT-T keepalive ack information.
@@ -1061,7 +1061,7 @@ public class LegacyApfFilter implements AndroidPacketFilter {
         }
 
         @Override
-        void generateFilterLocked(ApfGenerator gen) throws IllegalInstructionException {
+        void generateFilterLocked(ApfV4Generator gen) throws IllegalInstructionException {
             final String nextFilterLabel = "natt_keepalive_filter" + getUniqueNumberLocked();
 
             gen.addLoadImmediate(Register.R0, ETH_HEADER_LEN + IPV4_SRC_ADDR_OFFSET);
@@ -1163,7 +1163,7 @@ public class LegacyApfFilter implements AndroidPacketFilter {
         // Append a filter for this keepalive ack to {@code gen}.
         // Jump to drop if it matches the keepalive ack.
         // Jump to the next filter if packet doesn't match the keepalive ack.
-        abstract void generateFilterLocked(ApfGenerator gen) throws IllegalInstructionException;
+        abstract void generateFilterLocked(ApfV4Generator gen) throws IllegalInstructionException;
     }
 
     private class TcpKeepaliveAckV4 extends TcpKeepaliveAck {
@@ -1176,7 +1176,7 @@ public class LegacyApfFilter implements AndroidPacketFilter {
         }
 
         @Override
-        void generateFilterLocked(ApfGenerator gen) throws IllegalInstructionException {
+        void generateFilterLocked(ApfV4Generator gen) throws IllegalInstructionException {
             final String nextFilterLabel = "keepalive_ack" + getUniqueNumberLocked();
 
             gen.addLoadImmediate(Register.R0, ETH_HEADER_LEN + IPV4_SRC_ADDR_OFFSET);
@@ -1219,7 +1219,7 @@ public class LegacyApfFilter implements AndroidPacketFilter {
         }
 
         @Override
-        void generateFilterLocked(ApfGenerator gen) throws IllegalInstructionException {
+        void generateFilterLocked(ApfV4Generator gen) throws IllegalInstructionException {
             throw new UnsupportedOperationException("IPv6 TCP Keepalive is not supported yet");
         }
     }
@@ -1292,7 +1292,7 @@ public class LegacyApfFilter implements AndroidPacketFilter {
      *  - Packet being filtered is ARP
      */
     @GuardedBy("this")
-    private void generateArpFilterLocked(ApfGenerator gen) throws IllegalInstructionException {
+    private void generateArpFilterLocked(ApfV4Generator gen) throws IllegalInstructionException {
         // Here's a basic summary of what the ARP filter program does:
         //
         // if not ARP IPv4
@@ -1360,7 +1360,7 @@ public class LegacyApfFilter implements AndroidPacketFilter {
      *  - Packet being filtered is IPv4
      */
     @GuardedBy("this")
-    private void generateIPv4FilterLocked(ApfGenerator gen) throws IllegalInstructionException {
+    private void generateIPv4FilterLocked(ApfV4Generator gen) throws IllegalInstructionException {
         // Here's a basic summary of what the IPv4 filter program does:
         //
         // if filtering multicast (i.e. multicast lock not held):
@@ -1441,7 +1441,7 @@ public class LegacyApfFilter implements AndroidPacketFilter {
         gen.addJump(mCountAndPassLabel);
     }
 
-    private void generateKeepaliveFilters(ApfGenerator gen, Class<?> filterType, int proto,
+    private void generateKeepaliveFilters(ApfV4Generator gen, Class<?> filterType, int proto,
             int offset, String label) throws IllegalInstructionException {
         final boolean haveKeepaliveResponses = CollectionUtils.any(mKeepalivePackets,
                 ack -> filterType.isInstance(ack));
@@ -1462,12 +1462,12 @@ public class LegacyApfFilter implements AndroidPacketFilter {
         gen.defineLabel(label);
     }
 
-    private void generateV4KeepaliveFilters(ApfGenerator gen) throws IllegalInstructionException {
+    private void generateV4KeepaliveFilters(ApfV4Generator gen) throws IllegalInstructionException {
         generateKeepaliveFilters(gen, TcpKeepaliveAckV4.class, IPPROTO_TCP, IPV4_PROTOCOL_OFFSET,
                 "skip_v4_keepalive_filter");
     }
 
-    private void generateV4NattKeepaliveFilters(ApfGenerator gen)
+    private void generateV4NattKeepaliveFilters(ApfV4Generator gen)
             throws IllegalInstructionException {
         generateKeepaliveFilters(gen, NattKeepaliveResponse.class,
                 IPPROTO_UDP, IPV4_PROTOCOL_OFFSET, "skip_v4_nattkeepalive_filter");
@@ -1480,7 +1480,7 @@ public class LegacyApfFilter implements AndroidPacketFilter {
      *  - Packet being filtered is IPv6
      */
     @GuardedBy("this")
-    private void generateIPv6FilterLocked(ApfGenerator gen) throws IllegalInstructionException {
+    private void generateIPv6FilterLocked(ApfV4Generator gen) throws IllegalInstructionException {
         // Here's a basic summary of what the IPv6 filter program does:
         //
         // if there is a hop-by-hop option present (e.g. MLD query)
@@ -1580,7 +1580,7 @@ public class LegacyApfFilter implements AndroidPacketFilter {
      * or PASS_LABEL if the packet is mDNS packets. Otherwise, skip this check.
      */
     @GuardedBy("this")
-    private void generateMdnsFilterLocked(ApfGenerator gen)
+    private void generateMdnsFilterLocked(ApfV4Generator gen)
             throws IllegalInstructionException {
         final String skipMdnsv4Filter = "skip_mdns_v4_filter";
         final String skipMdnsFilter = "skip_mdns_filter";
@@ -1681,7 +1681,7 @@ public class LegacyApfFilter implements AndroidPacketFilter {
     }
 
 
-    private void generateV6KeepaliveFilters(ApfGenerator gen) throws IllegalInstructionException {
+    private void generateV6KeepaliveFilters(ApfV4Generator gen) throws IllegalInstructionException {
         generateKeepaliveFilters(gen, TcpKeepaliveAckV6.class, IPPROTO_TCP, IPV6_NEXT_HEADER_OFFSET,
                 "skip_v6_keepalive_filter");
     }
@@ -1707,9 +1707,9 @@ public class LegacyApfFilter implements AndroidPacketFilter {
      * </ul>
      */
     @GuardedBy("this")
-    protected ApfGenerator emitPrologueLocked() throws IllegalInstructionException {
+    protected ApfV4Generator emitPrologueLocked() throws IllegalInstructionException {
         // This is guaranteed to succeed because of the check in maybeCreate.
-        ApfGenerator gen = new ApfGenerator(mApfCapabilities.apfVersionSupported);
+        ApfV4Generator gen = new ApfV4Generator(mApfCapabilities.apfVersionSupported);
 
         if (mApfCapabilities.hasDataAccess()) {
             // Increment TOTAL_PACKETS
@@ -1792,7 +1792,7 @@ public class LegacyApfFilter implements AndroidPacketFilter {
      * before jumping to the actual PASS and DROP labels.
      */
     @GuardedBy("this")
-    private void emitEpilogue(ApfGenerator gen) throws IllegalInstructionException {
+    private void emitEpilogue(ApfV4Generator gen) throws IllegalInstructionException {
         // If APFv4 is unsupported, no epilogue is necessary: if execution reached this far, it
         // will just fall-through to the PASS label.
         if (!mApfCapabilities.hasDataAccess()) return;
@@ -1837,7 +1837,7 @@ public class LegacyApfFilter implements AndroidPacketFilter {
         mProgramBaseTime = currentTimeSeconds();
         try {
             // Step 1: Determine how many RA filters we can fit in the program.
-            ApfGenerator gen = emitPrologueLocked();
+            ApfV4Generator gen = emitPrologueLocked();
 
             // The epilogue normally goes after the RA filters, but add it early to include its
             // length when estimating the total.
@@ -2042,7 +2042,7 @@ public class LegacyApfFilter implements AndroidPacketFilter {
         //   1. the program generator will need its offsets adjusted.
         //   2. the packet filter attached to our packet socket will need its offset adjusted.
         if (apfCapabilities.apfPacketFormat != ARPHRD_ETHER) return null;
-        if (!ApfGenerator.supportsVersion(apfCapabilities.apfVersionSupported)) {
+        if (!ApfV4Generator.supportsVersion(apfCapabilities.apfVersionSupported)) {
             Log.e(TAG, "Unsupported APF version: " + apfCapabilities.apfVersionSupported);
             return null;
         }

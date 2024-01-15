@@ -81,6 +81,7 @@ import static com.android.net.module.util.NetworkStackConstants.NEIGHBOR_ADVERTI
 import static com.android.net.module.util.NetworkStackConstants.PIO_FLAG_AUTONOMOUS;
 import static com.android.net.module.util.NetworkStackConstants.PIO_FLAG_ON_LINK;
 import static com.android.net.module.util.NetworkStackConstants.RFC7421_PREFIX_LENGTH;
+import static com.android.networkstack.util.NetworkStackUtils.IP_REACHABILITY_ROUTER_MAC_CHANGE_FAILURE_ONLY_AFTER_ROAM_VERSION;
 import static com.android.testutils.MiscAsserts.assertThrows;
 import static com.android.testutils.ParcelUtils.parcelingRoundTrip;
 import static com.android.testutils.TestPermissionUtil.runAsShell;
@@ -703,7 +704,7 @@ public abstract class IpClientIntegrationTestCommon {
         setDeviceConfigProperty(name, Integer.toString(value));
     }
 
-    private void setFeatureChickenedOut(String name, boolean chickenedOut) {
+    protected void setFeatureChickenedOut(String name, boolean chickenedOut) {
         setDeviceConfigProperty(name, chickenedOut ? "-1" : "0");
     }
 
@@ -4241,9 +4242,80 @@ public abstract class IpClientIntegrationTestCommon {
                 NudEventType.NUD_POST_ROAMING_MAC_ADDRESS_CHANGED);
     }
 
-    private void sendUdpPacketToNetwork(final Network network, final Inet6Address remoteIp,
+    private void doTestIpReachabilityMonitor_replyBroadcastArpRequestWithDiffMacAddresses(
+            boolean disconnect) throws Exception {
+        mNetworkAgentThread =
+                new HandlerThread(IpClientIntegrationTestCommon.class.getSimpleName());
+        mNetworkAgentThread.start();
+
+        ProvisioningConfiguration config = new ProvisioningConfiguration.Builder()
+                .withoutIPv6()
+                .build();
+        setDhcpFeatures(true /* isRapidCommitEnabled */, false /* isDhcpIpConflictDetectEnabled */);
+        startIpClientProvisioning(config);
+
+        // Start IPv4 provisioning and wait until entire provisioning completes.
+        handleDhcpPackets(true /* isSuccessLease */, TEST_LEASE_DURATION_S,
+                true /* shouldReplyRapidCommitAck */, TEST_DEFAULT_MTU, null /* serverSentUrl */);
+        final LinkProperties lp =
+                verifyIPv4OnlyProvisioningSuccess(Collections.singletonList(CLIENT_ADDR));
+
+        runAsShell(MANAGE_TEST_NETWORKS, () -> createTestNetworkAgentAndRegister(lp));
+
+        // Send a UDP packet to IPv4 DNS server to trigger address resolution process for IPv4
+        // on-link DNS server or default router.
+        final Random random = new Random();
+        final byte[] data = new byte[100];
+        random.nextBytes(data);
+        sendUdpPacketToNetwork(mNetworkAgent.getNetwork(), SERVER_ADDR, 1234 /* port */, data);
+
+        // Respond to the broadcast ARP request.
+        final ArpPacket request = getNextArpPacket();
+        assertArpRequest(request, SERVER_ADDR);
+        sendArpReply(request.senderHwAddress.toByteArray() /* dst */, ROUTER_MAC_BYTES /* srcMac */,
+                request.senderIp /* target IP */, SERVER_ADDR /* sender IP */);
+
+        Thread.sleep(1500);
+
+        // Reply with a different MAC address but the same server IP.
+        final MacAddress gateway = MacAddress.fromString("00:11:22:33:44:55");
+        sendArpReply(request.senderHwAddress.toByteArray() /* dst */,
+                gateway.toByteArray() /* srcMac */,
+                request.senderIp /* target IP */, SERVER_ADDR /* sender IP */);
+
+        if (disconnect) {
+            final ArgumentCaptor<ReachabilityLossInfoParcelable> lossInfoCaptor =
+                    ArgumentCaptor.forClass(ReachabilityLossInfoParcelable.class);
+            verify(mCb, timeout(TEST_TIMEOUT_MS)).onReachabilityFailure(lossInfoCaptor.capture());
+            assertEquals(ReachabilityLossReason.ORGANIC, lossInfoCaptor.getValue().reason);
+        } else {
+            verify(mCb, after(100).never()).onReachabilityFailure(any());
+        }
+    }
+
+    @Test
+    @SignatureRequiredTest(reason = "Need to mock the NetworkAgent")
+    public void testIpReachabilityMonitor_macAddressChangedWithoutRoam_ok()
+            throws Exception {
+        setFeatureChickenedOut(IP_REACHABILITY_ROUTER_MAC_CHANGE_FAILURE_ONLY_AFTER_ROAM_VERSION,
+                false);
+        doTestIpReachabilityMonitor_replyBroadcastArpRequestWithDiffMacAddresses(false);
+    }
+
+    @Test
+    @SignatureRequiredTest(reason = "Need to mock the NetworkAgent")
+    public void testIpReachabilityMonitor_macAddressChangedWithoutRoam_disconnect()
+            throws Exception {
+        setFeatureChickenedOut(IP_REACHABILITY_ROUTER_MAC_CHANGE_FAILURE_ONLY_AFTER_ROAM_VERSION,
+                true);
+        doTestIpReachabilityMonitor_replyBroadcastArpRequestWithDiffMacAddresses(true);
+    }
+
+    private void sendUdpPacketToNetwork(final Network network, final InetAddress remoteIp,
             int port, final byte[] data) throws Exception {
-        final DatagramSocket socket = new DatagramSocket(0, (InetAddress) Inet6Address.ANY);
+        final InetAddress laddr =
+                (remoteIp instanceof Inet6Address) ? Inet6Address.ANY : Inet4Address.ANY;
+        final DatagramSocket socket = new DatagramSocket(0, laddr);
         final DatagramPacket pkt = new DatagramPacket(data, data.length, remoteIp, port);
         network.bindSocket(socket);
         socket.send(pkt);

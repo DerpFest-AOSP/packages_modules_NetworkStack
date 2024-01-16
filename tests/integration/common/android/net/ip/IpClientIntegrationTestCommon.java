@@ -17,8 +17,6 @@
 package android.net.ip;
 
 import static android.Manifest.permission.MANAGE_TEST_NETWORKS;
-import static android.Manifest.permission.READ_DEVICE_CONFIG;
-import static android.Manifest.permission.WRITE_DEVICE_CONFIG;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING;
@@ -122,7 +120,6 @@ import static org.mockito.Mockito.when;
 import android.app.AlarmManager;
 import android.app.AlarmManager.OnAlarmListener;
 import android.app.Instrumentation;
-import android.app.UiAutomation;
 import android.app.admin.DevicePolicyManager;
 import android.content.ComponentName;
 import android.content.ContentResolver;
@@ -182,11 +179,9 @@ import android.os.PowerManager;
 import android.os.RemoteException;
 import android.os.SystemClock;
 import android.os.SystemProperties;
-import android.provider.DeviceConfig;
 import android.stats.connectivity.NudEventType;
 import android.system.ErrnoException;
 import android.system.Os;
-import android.util.ArrayMap;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -272,7 +267,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
@@ -482,8 +476,6 @@ public abstract class IpClientIntegrationTestCommon {
     };
 
     protected class Dependencies extends IpClient.Dependencies {
-        // Can't use SparseIntArray, it doesn't have an easy way to know if a key is not present.
-        private HashMap<String, Integer> mIntConfigProperties = new HashMap<>();
         private DhcpClient mDhcpClient;
         private Dhcp6Client mDhcp6Client;
         private boolean mIsHostnameConfigurationEnabled;
@@ -557,12 +549,22 @@ public abstract class IpClientIntegrationTestCommon {
         }
 
         @Override
+        public int getDeviceConfigPropertyInt(String name, int ignoredDefaultValue) {
+            // Default is never used because all device config properties must be mocked by test.
+            try {
+                return Integer.parseInt(getDeviceConfigProperty(name));
+            } catch (NumberFormatException e) {
+                throw new IllegalStateException("Non-mocked device config property " + name);
+            }
+        }
+
+        @Override
         public Dhcp6Client.Dependencies getDhcp6ClientDependencies() {
             return new Dhcp6Client.Dependencies() {
                 @Override
                 public int getDeviceConfigPropertyInt(String name, int defaultValue) {
                     return Dependencies.this.getDeviceConfigPropertyInt(name,
-                            0 /* default value */);
+                            defaultValue);
                 }
             };
         }
@@ -584,7 +586,7 @@ public abstract class IpClientIntegrationTestCommon {
                 @Override
                 public int getIntDeviceConfig(final String name, int minimumValue,
                         int maximumValue, int defaultValue) {
-                    return getDeviceConfigPropertyInt(name, 0 /* default value */);
+                    return Dependencies.this.getDeviceConfigPropertyInt(name, defaultValue);
                 }
 
                 @Override
@@ -634,19 +636,6 @@ public abstract class IpClientIntegrationTestCommon {
         }
 
         @Override
-        public int getDeviceConfigPropertyInt(String name, int defaultValue) {
-            Integer value = mIntConfigProperties.get(name);
-            if (value == null) {
-                throw new IllegalStateException("Non-mocked device config property " + name);
-            }
-            return value;
-        }
-
-        public void setDeviceConfigProperty(String name, int value) {
-            mIntConfigProperties.put(name, value);
-        }
-
-        @Override
         public NetworkQuirkMetrics getNetworkQuirkMetrics() {
             return new NetworkQuirkMetrics(mNetworkQuirkMetricsDeps);
         }
@@ -656,7 +645,26 @@ public abstract class IpClientIntegrationTestCommon {
     protected abstract IIpClient makeIIpClient(
             @NonNull String ifaceName, @NonNull IIpClientCallbacks cb);
 
-    protected abstract void setFeatureEnabled(String name, boolean enabled);
+    // In production. features are enabled if the flag is lower than the package version.
+    // For testing, we can just use 1 for enabled and -1 for disabled or chickened out.
+    static final String FEATURE_ENABLED = "1";
+    static final String FEATURE_DISABLED = "-1";
+
+    final void setFeatureEnabled(String feature, boolean enabled) {
+        setDeviceConfigProperty(feature, enabled ? FEATURE_ENABLED : FEATURE_DISABLED);
+    }
+
+    final void setFeatureChickenedOut(String feature, boolean chickenedOut) {
+        setDeviceConfigProperty(feature, chickenedOut ? FEATURE_DISABLED : FEATURE_ENABLED);
+    }
+
+    final void setDeviceConfigProperty(String name, int value) {
+        setDeviceConfigProperty(name, Integer.toString(value));
+    }
+
+    protected abstract void setDeviceConfigProperty(String name, String value);
+
+    protected abstract String getDeviceConfigProperty(String name);
 
     protected abstract boolean isFeatureEnabled(String name);
 
@@ -681,34 +689,7 @@ public abstract class IpClientIntegrationTestCommon {
         return !useNetworkStackSignature() && mIsSignatureRequiredTest;
     }
 
-    private ArrayMap<String, String> mOriginalPropertyValues = new ArrayMap<>();
-
-    protected void setDeviceConfigProperty(String name, String value) {
-        final UiAutomation am = InstrumentationRegistry.getInstrumentation().getUiAutomation();
-        am.adoptShellPermissionIdentity(READ_DEVICE_CONFIG, WRITE_DEVICE_CONFIG);
-        try {
-            // Do not use computeIfAbsent as it would overwrite null values,
-            // property originally unset.
-            if (!mOriginalPropertyValues.containsKey(name)) {
-                mOriginalPropertyValues.put(name,
-                        DeviceConfig.getProperty(DeviceConfig.NAMESPACE_CONNECTIVITY, name));
-            }
-            DeviceConfig.setProperty(DeviceConfig.NAMESPACE_CONNECTIVITY, name, value,
-                    false /* makeDefault */);
-        } finally {
-            am.dropShellPermissionIdentity();
-        }
-    }
-
-    protected void setDeviceConfigProperty(String name, int value) {
-        setDeviceConfigProperty(name, Integer.toString(value));
-    }
-
-    protected void setFeatureChickenedOut(String name, boolean chickenedOut) {
-        setDeviceConfigProperty(name, chickenedOut ? "-1" : "0");
-    }
-
-    protected void setDhcpFeatures(final boolean isRapidCommitEnabled,
+    private void setDhcpFeatures(final boolean isRapidCommitEnabled,
             final boolean isDhcpIpConflictDetectEnabled) {
         setFeatureEnabled(NetworkStackUtils.DHCP_RAPID_COMMIT_VERSION, isRapidCommitEnabled);
         setFeatureEnabled(NetworkStackUtils.DHCP_IP_CONFLICT_DETECT_VERSION,
@@ -831,28 +812,28 @@ public abstract class IpClientIntegrationTestCommon {
         when(mPackageManager.getPackagesForUid(TEST_DEVICE_OWNER_APP_UID)).thenReturn(
                 new String[] { TEST_DEVICE_OWNER_APP_PACKAGE });
 
-        mDependencies.setDeviceConfigProperty(IpClient.CONFIG_MIN_RDNSS_LIFETIME, 67);
-        mDependencies.setDeviceConfigProperty(DhcpClient.DHCP_RESTART_CONFIG_DELAY, 10);
-        mDependencies.setDeviceConfigProperty(DhcpClient.ARP_FIRST_PROBE_DELAY_MS, 10);
-        mDependencies.setDeviceConfigProperty(DhcpClient.ARP_PROBE_MIN_MS, 10);
-        mDependencies.setDeviceConfigProperty(DhcpClient.ARP_PROBE_MAX_MS, 20);
-        mDependencies.setDeviceConfigProperty(DhcpClient.ARP_FIRST_ANNOUNCE_DELAY_MS, 10);
-        mDependencies.setDeviceConfigProperty(DhcpClient.ARP_ANNOUNCE_INTERVAL_MS, 10);
+        setDeviceConfigProperty(IpClient.CONFIG_MIN_RDNSS_LIFETIME, 67);
+        setDeviceConfigProperty(DhcpClient.DHCP_RESTART_CONFIG_DELAY, 10);
+        setDeviceConfigProperty(DhcpClient.ARP_FIRST_PROBE_DELAY_MS, 10);
+        setDeviceConfigProperty(DhcpClient.ARP_PROBE_MIN_MS, 10);
+        setDeviceConfigProperty(DhcpClient.ARP_PROBE_MAX_MS, 20);
+        setDeviceConfigProperty(DhcpClient.ARP_FIRST_ANNOUNCE_DELAY_MS, 10);
+        setDeviceConfigProperty(DhcpClient.ARP_ANNOUNCE_INTERVAL_MS, 10);
 
         // Set the initial netlink socket receive buffer size to a minimum of 100KB to ensure test
         // cases are still working, meanwhile in order to easily overflow the receive buffer by
         // sending as few RAs as possible for test case where it's used to verify ENOBUFS.
-        mDependencies.setDeviceConfigProperty(CONFIG_SOCKET_RECV_BUFSIZE, 100 * 1024);
+        setDeviceConfigProperty(CONFIG_SOCKET_RECV_BUFSIZE, 100 * 1024);
 
         // Set the timeout to wait IPv6 autoconf to complete.
-        mDependencies.setDeviceConfigProperty(CONFIG_IPV6_AUTOCONF_TIMEOUT, 500);
+        setDeviceConfigProperty(CONFIG_IPV6_AUTOCONF_TIMEOUT, 500);
 
         // Set the minimal RA lifetime value, any RA section with liftime below this value will be
         // ignored.
-        mDependencies.setDeviceConfigProperty(CONFIG_ACCEPT_RA_MIN_LFT, DEFAULT_ACCEPT_RA_MIN_LFT);
+        setDeviceConfigProperty(CONFIG_ACCEPT_RA_MIN_LFT, DEFAULT_ACCEPT_RA_MIN_LFT);
 
         // Set the polling interval to update APF data snapshot.
-        mDependencies.setDeviceConfigProperty(CONFIG_APF_COUNTER_POLLING_INTERVAL_SECS,
+        setDeviceConfigProperty(CONFIG_APF_COUNTER_POLLING_INTERVAL_SECS,
                 DEFAULT_APF_COUNTER_POLLING_INTERVAL_SECS);
     }
 
@@ -873,22 +854,6 @@ public abstract class IpClientIntegrationTestCommon {
         teardownTapInterface();
         mIIpClient.shutdown();
         awaitIpClientShutdown();
-    }
-
-    @After
-    public void tearDownDeviceConfigProperties() {
-        if (testSkipped()) return;
-        final UiAutomation am = InstrumentationRegistry.getInstrumentation().getUiAutomation();
-        am.adoptShellPermissionIdentity(READ_DEVICE_CONFIG, WRITE_DEVICE_CONFIG);
-        try {
-            for (String key : mOriginalPropertyValues.keySet()) {
-                if (key == null) continue;
-                DeviceConfig.setProperty(DeviceConfig.NAMESPACE_CONNECTIVITY, key,
-                        mOriginalPropertyValues.get(key), false /* makeDefault */);
-            }
-        } finally {
-            am.dropShellPermissionIdentity();
-        }
     }
 
     private void setUpTapInterface() throws Exception {
@@ -3900,7 +3865,6 @@ public abstract class IpClientIntegrationTestCommon {
 
         setFeatureEnabled(NetworkStackUtils.IPCLIENT_GRATUITOUS_NA_VERSION,
                 true /* isGratuitousNaEnabled */);
-        assertTrue(isFeatureEnabled(NetworkStackUtils.IPCLIENT_GRATUITOUS_NA_VERSION));
         startIpClientProvisioning(config);
 
         doIpv6OnlyProvisioning();
@@ -3938,13 +3902,10 @@ public abstract class IpClientIntegrationTestCommon {
         // mess up the assert of received NA packets.
         setFeatureEnabled(NetworkStackUtils.IPCLIENT_GRATUITOUS_NA_VERSION,
                 false /* isGratuitousNaEnabled */);
-        assumeFalse(isFeatureEnabled(NetworkStackUtils.IPCLIENT_GRATUITOUS_NA_VERSION));
         if (isGratuitousArpNaRoamingEnabled) {
             setFeatureEnabled(NetworkStackUtils.IPCLIENT_GARP_NA_ROAMING_VERSION, true);
-            assumeTrue(isFeatureEnabled(NetworkStackUtils.IPCLIENT_GARP_NA_ROAMING_VERSION));
         } else {
             setFeatureEnabled(NetworkStackUtils.IPCLIENT_GARP_NA_ROAMING_VERSION, false);
-            assumeFalse(isFeatureEnabled(NetworkStackUtils.IPCLIENT_GARP_NA_ROAMING_VERSION));
         }
         startIpClientProvisioning(prov.build());
     }

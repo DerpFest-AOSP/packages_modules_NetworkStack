@@ -67,10 +67,8 @@ private const val TEST_TAG = 0xF00D
 @IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
 class NetworkStatsIntegrationTest {
     private val TAG = NetworkStatsIntegrationTest::class.java.simpleName
-    private val INTERNAL_V6ADDR =
+    private val LOCAL_V6ADDR =
         LinkAddress(InetAddresses.parseNumericAddress("2001:db8::1234"), 64)
-    private val EXTERNAL_V6ADDR =
-        LinkAddress(InetAddresses.parseNumericAddress("2001:db8::5678"), 64)
 
     // Remote address, both the client and server will have a hallucination that
     // they are talking to this address.
@@ -101,13 +99,13 @@ class NetworkStatsIntegrationTest {
     private val inst = InstrumentationRegistry.getInstrumentation()
     private val context = inst.getContext()
     private val packetBridge = runAsShell(MANAGE_TEST_NETWORKS) {
-        PacketBridge(context, INTERNAL_V6ADDR, EXTERNAL_V6ADDR, REMOTE_V6ADDR.address)
+        PacketBridge(context, listOf(LOCAL_V6ADDR), REMOTE_V6ADDR.address)
     }
     private val cm = context.getSystemService(ConnectivityManager::class.java)!!
 
     // Set up DNS server for testing server and DNS64.
     private val fakeDns = TestDnsServer(
-        packetBridge.externalNetwork, InetSocketAddress(EXTERNAL_V6ADDR.address, DNS_SERVER_PORT)
+        packetBridge.externalNetwork, InetSocketAddress(LOCAL_V6ADDR.address, DNS_SERVER_PORT)
     ).apply {
         start()
         setAnswer(
@@ -118,7 +116,7 @@ class NetworkStatsIntegrationTest {
     }
 
     // Start up test http server.
-    private val httpServer = TestHttpServer(EXTERNAL_V6ADDR.address.hostAddress).apply {
+    private val httpServer = TestHttpServer(LOCAL_V6ADDR.address.hostAddress).apply {
         start()
     }
 

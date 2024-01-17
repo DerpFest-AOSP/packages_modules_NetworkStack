@@ -207,6 +207,13 @@ public class NetworkStackUtils {
             "ipclient_accept_ipv6_link_local_dns_version";
 
     /**
+     * Experiment flag to enable "mcast_resolicit" neighbor parameter in IpReachabilityMonitor,
+     * set it to 3 by default.
+     */
+    public static final String IP_REACHABILITY_MCAST_RESOLICIT_VERSION =
+            "ip_reachability_mcast_resolicit_version";
+
+    /**
      * Experiment flag to attempt to ignore the on-link IPv6 DNS server which fails to respond to
      * address resolution.
      */

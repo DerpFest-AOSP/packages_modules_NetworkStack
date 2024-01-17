@@ -4332,7 +4332,6 @@ public abstract class IpClientIntegrationTestCommon {
     }
 
     @Test
-    @SignatureRequiredTest(reason = "Need to mock the NetworkAgent")
     public void testIpReachabilityMonitor_macAddressChangedWithoutRoam_ok()
             throws Exception {
         setFeatureChickenedOut(IP_REACHABILITY_ROUTER_MAC_CHANGE_FAILURE_ONLY_AFTER_ROAM_VERSION,
@@ -4341,7 +4340,6 @@ public abstract class IpClientIntegrationTestCommon {
     }
 
     @Test
-    @SignatureRequiredTest(reason = "Need to mock the NetworkAgent")
     public void testIpReachabilityMonitor_macAddressChangedWithoutRoam_disconnect()
             throws Exception {
         setFeatureChickenedOut(IP_REACHABILITY_ROUTER_MAC_CHANGE_FAILURE_ONLY_AFTER_ROAM_VERSION,
@@ -4427,7 +4425,6 @@ public abstract class IpClientIntegrationTestCommon {
     }
 
     @Test
-    @SignatureRequiredTest(reason = "Need to mock NetworkAgent")
     public void testIpReachabilityMonitor_incompleteIpv6DnsServerInDualStack() throws Exception {
         final Inet6Address targetIp =
                 (Inet6Address) InetAddresses.parseNumericAddress(IPV6_ON_LINK_DNS_SERVER);
@@ -4438,7 +4435,6 @@ public abstract class IpClientIntegrationTestCommon {
     }
 
     @Test
-    @SignatureRequiredTest(reason = "Need to mock NetworkAgent")
     public void testIpReachabilityMonitor_incompleteIpv6DnsServerInDualStack_flagoff()
             throws Exception {
         final Inet6Address targetIp =
@@ -4450,7 +4446,6 @@ public abstract class IpClientIntegrationTestCommon {
     }
 
     @Test
-    @SignatureRequiredTest(reason = "Need to mock the NetworkAgent")
     public void testIpReachabilityMonitor_incompleteIpv6DefaultRouterInDualStack()
             throws Exception {
         runIpReachabilityMonitorAddressResolutionTest(IPV6_OFF_LINK_DNS_SERVER,
@@ -4461,7 +4456,6 @@ public abstract class IpClientIntegrationTestCommon {
     }
 
     @Test
-    @SignatureRequiredTest(reason = "Need to mock the NetworkAgent")
     public void testIpReachabilityMonitor_incompleteIpv6DefaultRouterInDualStack_flagoff()
             throws Exception {
         runIpReachabilityMonitorAddressResolutionTest(IPV6_OFF_LINK_DNS_SERVER,

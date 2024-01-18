@@ -33,10 +33,14 @@ import org.mockito.Mockito.verify
  * Tests for IpClient, run with signature permissions.
  */
 class IpClientSignatureTest : IpClientIntegrationTestCommon() {
+    companion object {
+        private val TAG = IpClientSignatureTest::class.java.simpleName
+    }
+
     private val DEFAULT_NUD_SOLICIT_NUM_POST_ROAM = 5
     private val DEFAULT_NUD_SOLICIT_NUM_STEADY_STATE = 10
 
-    private val mEnabledFeatures = ArrayMap<String, Boolean>()
+    private val mDeviceConfigProperties = ArrayMap<String, String>()
 
     override fun makeIIpClient(ifaceName: String, cb: IIpClientCallbacks): IIpClient {
         return mIpc.makeConnector()
@@ -45,25 +49,20 @@ class IpClientSignatureTest : IpClientIntegrationTestCommon() {
     override fun useNetworkStackSignature() = true
 
     override fun isFeatureEnabled(name: String): Boolean {
-        return mEnabledFeatures.get(name) ?: false
+        return FEATURE_ENABLED.equals(getDeviceConfigProperty(name))
     }
 
     override fun isFeatureNotChickenedOut(name: String): Boolean {
-        return mEnabledFeatures.get(name) ?: true
+        return !FEATURE_DISABLED.equals(getDeviceConfigProperty(name))
     }
 
-    override fun setFeatureEnabled(name: String, enabled: Boolean) {
-        mEnabledFeatures.put(name, enabled)
+    override fun setDeviceConfigProperty(name: String, value: String) {
+        mDeviceConfigProperties.put(name, value)
     }
 
-    override fun setFeatureChickenedOut(name: String, chickenedOut: Boolean) {
-        mEnabledFeatures.put(name, !chickenedOut)
+    override fun getDeviceConfigProperty(name: String): String? {
+        return mDeviceConfigProperties.get(name)
     }
-
-    override fun setDeviceConfigProperty(name: String, value: Int) {
-        mDependencies.setDeviceConfigProperty(name, value)
-    }
-
     override fun getStoredNetworkAttributes(l2Key: String, timeout: Long): NetworkAttributes {
         val networkAttributesCaptor = ArgumentCaptor.forClass(NetworkAttributes::class.java)
 
@@ -92,4 +91,3 @@ class IpClientSignatureTest : IpClientIntegrationTestCommon() {
         return DEFAULT_NUD_SOLICIT_NUM_POST_ROAM
     }
 }
-

@@ -3258,8 +3258,19 @@ public class IpClient extends StateMachine {
                     break;
 
                 case DhcpClient.CMD_CONFIGURE_LINKADDRESS: {
+                    final int leaseDuration = msg.arg1;
                     final LinkAddress ipAddress = (LinkAddress) msg.obj;
-                    if (mInterfaceCtrl.setIPv4Address(ipAddress)) {
+                    // For IPv4 link addresses, there is no concept of preferred/valid lifetimes.
+                    // Populate the ifa_cacheinfo attribute in the netlink message with the DHCP
+                    // lease duration, which is used by the kernel to maintain the validity of the
+                    // IP addresses.
+                    if (NetlinkUtils.sendRtmNewAddressRequest(mInterfaceParams.index,
+                            ipAddress.getAddress(),
+                            (short) ipAddress.getPrefixLength(),
+                            0 /* flags */,
+                            (byte) RT_SCOPE_UNIVERSE /* scope */,
+                            leaseDuration /* preferred */,
+                            leaseDuration /* valid */)) {
                         // Although it's impossible to happen that DHCP client becomes null in
                         // RunningState and then NPE is thrown when it attempts to send a message
                         // on an null object, sometimes it's found during stress tests. If this

@@ -490,7 +490,6 @@ public class ApfFilter implements AndroidPacketFilter {
         return mUniqueCounter++;
     }
 
-    @GuardedBy("this")
     private static int[] filterEthTypeBlackList(int[] ethTypeBlackList) {
         ArrayList<Integer> bl = new ArrayList<Integer>();
 
@@ -1279,6 +1278,7 @@ public class ApfFilter implements AndroidPacketFilter {
         }
 
         @Override
+        @GuardedBy("ApfFilter.this")
         void generateFilterLocked(ApfV4Generator gen) throws IllegalInstructionException {
             final String nextFilterLabel = "natt_keepalive_filter" + getUniqueNumberLocked();
 
@@ -1394,6 +1394,7 @@ public class ApfFilter implements AndroidPacketFilter {
         }
 
         @Override
+        @GuardedBy("ApfFilter.this")
         void generateFilterLocked(ApfV4Generator gen) throws IllegalInstructionException {
             final String nextFilterLabel = "keepalive_ack" + getUniqueNumberLocked();
 
@@ -1649,6 +1650,7 @@ public class ApfFilter implements AndroidPacketFilter {
         gen.addJump(mCountAndPassLabel);
     }
 
+    @GuardedBy("this")
     private void generateKeepaliveFilters(ApfV4Generator gen, Class<?> filterType, int proto,
             int offset, String label) throws IllegalInstructionException {
         final boolean haveKeepaliveResponses = CollectionUtils.any(mKeepalivePackets,
@@ -1670,11 +1672,13 @@ public class ApfFilter implements AndroidPacketFilter {
         gen.defineLabel(label);
     }
 
+    @GuardedBy("this")
     private void generateV4KeepaliveFilters(ApfV4Generator gen) throws IllegalInstructionException {
         generateKeepaliveFilters(gen, TcpKeepaliveAckV4.class, IPPROTO_TCP, IPV4_PROTOCOL_OFFSET,
                 "skip_v4_keepalive_filter");
     }
 
+    @GuardedBy("this")
     private void generateV4NattKeepaliveFilters(ApfV4Generator gen)
             throws IllegalInstructionException {
         generateKeepaliveFilters(gen, NattKeepaliveResponse.class,
@@ -1925,6 +1929,7 @@ public class ApfFilter implements AndroidPacketFilter {
         gen.defineLabel(skipPort7V4Filter);
     }
 
+    @GuardedBy("this")
     private void generateV6KeepaliveFilters(ApfV4Generator gen) throws IllegalInstructionException {
         generateKeepaliveFilters(gen, TcpKeepaliveAckV6.class, IPPROTO_TCP, IPV6_NEXT_HEADER_OFFSET,
                 "skip_v6_keepalive_filter");
@@ -2067,6 +2072,7 @@ public class ApfFilter implements AndroidPacketFilter {
      * Generate and install a new filter program.
      */
     @GuardedBy("this")
+    @SuppressWarnings("GuardedBy") // errorprone false positive on ra#generateFilterLocked
     @VisibleForTesting
     public void installNewProgramLocked() {
         ArrayList<Ra> rasToFilter = new ArrayList<>();

@@ -204,7 +204,7 @@ public class LegacyApfFilter implements AndroidPacketFilter {
 
         private void logStats() {
             final long nowMs = mClock.elapsedRealtime();
-            synchronized (this) {
+            synchronized (LegacyApfFilter.this) {
                 final ApfStats stats = new ApfStats.Builder()
                         .setReceivedRas(mReceivedRas)
                         .setMatchingRas(mMatchingRas)
@@ -439,7 +439,6 @@ public class LegacyApfFilter implements AndroidPacketFilter {
         return mUniqueCounter++;
     }
 
-    @GuardedBy("this")
     private static int[] filterEthTypeBlackList(int[] ethTypeBlackList) {
         ArrayList<Integer> bl = new ArrayList<Integer>();
 
@@ -952,13 +951,13 @@ public class LegacyApfFilter implements AndroidPacketFilter {
         }
 
         // Filter for a fraction of the lifetime and adjust for the age of the RA.
-        @GuardedBy("ApfFilter.this")
+        @GuardedBy("LegacyApfFilter.this")
         int filterLifetime() {
             return (int) (mMinLifetime / FRACTION_OF_LIFETIME_TO_FILTER)
                     - (int) (mProgramBaseTime - mLastSeen);
         }
 
-        @GuardedBy("ApfFilter.this")
+        @GuardedBy("LegacyApfFilter.this")
         boolean shouldFilter() {
             return filterLifetime() > 0;
         }
@@ -969,7 +968,7 @@ public class LegacyApfFilter implements AndroidPacketFilter {
         // value of this function is used to calculate the program min lifetime (which corresponds
         // to the smallest generated filter lifetime). Returning Long.MAX_VALUE in the case no
         // filter gets generated makes sure the program lifetime stays unaffected.
-        @GuardedBy("ApfFilter.this")
+        @GuardedBy("LegacyApfFilter.this")
         long generateFilterLocked(ApfV4Generator gen) throws IllegalInstructionException {
             String nextFilterLabel = "Ra" + getUniqueNumberLocked();
             // Skip if packet is not the right size
@@ -1061,6 +1060,7 @@ public class LegacyApfFilter implements AndroidPacketFilter {
         }
 
         @Override
+        @GuardedBy("LegacyApfFilter.this")
         void generateFilterLocked(ApfV4Generator gen) throws IllegalInstructionException {
             final String nextFilterLabel = "natt_keepalive_filter" + getUniqueNumberLocked();
 
@@ -1176,6 +1176,7 @@ public class LegacyApfFilter implements AndroidPacketFilter {
         }
 
         @Override
+        @GuardedBy("LegacyApfFilter.this")
         void generateFilterLocked(ApfV4Generator gen) throws IllegalInstructionException {
             final String nextFilterLabel = "keepalive_ack" + getUniqueNumberLocked();
 
@@ -1441,6 +1442,7 @@ public class LegacyApfFilter implements AndroidPacketFilter {
         gen.addJump(mCountAndPassLabel);
     }
 
+    @GuardedBy("this")
     private void generateKeepaliveFilters(ApfV4Generator gen, Class<?> filterType, int proto,
             int offset, String label) throws IllegalInstructionException {
         final boolean haveKeepaliveResponses = CollectionUtils.any(mKeepalivePackets,
@@ -1462,11 +1464,13 @@ public class LegacyApfFilter implements AndroidPacketFilter {
         gen.defineLabel(label);
     }
 
+    @GuardedBy("this")
     private void generateV4KeepaliveFilters(ApfV4Generator gen) throws IllegalInstructionException {
         generateKeepaliveFilters(gen, TcpKeepaliveAckV4.class, IPPROTO_TCP, IPV4_PROTOCOL_OFFSET,
                 "skip_v4_keepalive_filter");
     }
 
+    @GuardedBy("this")
     private void generateV4NattKeepaliveFilters(ApfV4Generator gen)
             throws IllegalInstructionException {
         generateKeepaliveFilters(gen, NattKeepaliveResponse.class,
@@ -1680,7 +1684,7 @@ public class LegacyApfFilter implements AndroidPacketFilter {
         gen.defineLabel(skipMdnsFilter);
     }
 
-
+    @GuardedBy("this")
     private void generateV6KeepaliveFilters(ApfV4Generator gen) throws IllegalInstructionException {
         generateKeepaliveFilters(gen, TcpKeepaliveAckV6.class, IPPROTO_TCP, IPV6_NEXT_HEADER_OFFSET,
                 "skip_v6_keepalive_filter");
@@ -1822,6 +1826,8 @@ public class LegacyApfFilter implements AndroidPacketFilter {
      * Generate and install a new filter program.
      */
     @GuardedBy("this")
+    // errorprone false positive on ra#shouldFilter and ra#generateFilterLocked
+    @SuppressWarnings("GuardedBy")
     @VisibleForTesting
     public void installNewProgramLocked() {
         purgeExpiredRasLocked();
@@ -1914,6 +1920,7 @@ public class LegacyApfFilter implements AndroidPacketFilter {
     /**
      * Returns {@code true} if a new program should be installed because the current one dies soon.
      */
+    @GuardedBy("this")
     private boolean shouldInstallnewProgram() {
         long expiry = mLastTimeInstalledProgram + mLastInstalledProgramMinLifetime;
         return expiry < currentTimeSeconds() + MAX_PROGRAM_LIFETIME_WORTH_REFRESHING;

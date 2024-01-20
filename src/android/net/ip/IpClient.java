@@ -150,7 +150,6 @@ import com.android.networkstack.metrics.NetworkQuirkMetrics;
 import com.android.networkstack.packets.NeighborAdvertisement;
 import com.android.networkstack.packets.NeighborSolicitation;
 import com.android.networkstack.util.NetworkStackUtils;
-import com.android.server.NetworkObserverRegistry;
 import com.android.server.NetworkStackService.NetworkStackServiceManager;
 
 import java.io.File;
@@ -672,7 +671,6 @@ public class IpClient extends StateMachine {
     private final Dependencies mDependencies;
     private final ConnectivityManager mCm;
     private final INetd mNetd;
-    private final NetworkObserverRegistry mObserverRegistry;
     private final IpClientLinkObserver mLinkObserver;
     private final WakeupMessage mProvisioningTimeoutAlarm;
     private final WakeupMessage mDhcpActionTimeoutAlarm;
@@ -897,14 +895,13 @@ public class IpClient extends StateMachine {
     }
 
     public IpClient(Context context, String ifName, IIpClientCallbacks callback,
-            NetworkObserverRegistry observerRegistry, NetworkStackServiceManager nssManager) {
-        this(context, ifName, callback, observerRegistry, nssManager, new Dependencies());
+            NetworkStackServiceManager nssManager) {
+        this(context, ifName, callback, nssManager, new Dependencies());
     }
 
     @VisibleForTesting
     public IpClient(Context context, String ifName, IIpClientCallbacks callback,
-            NetworkObserverRegistry observerRegistry, NetworkStackServiceManager nssManager,
-            Dependencies deps) {
+            NetworkStackServiceManager nssManager, Dependencies deps) {
         super(IpClient.class.getSimpleName() + "." + ifName);
         Objects.requireNonNull(ifName);
         Objects.requireNonNull(callback);
@@ -919,7 +916,6 @@ public class IpClient extends StateMachine {
         mMetricsLog = deps.getIpConnectivityLog();
         mNetworkQuirkMetrics = deps.getNetworkQuirkMetrics();
         mCm = mContext.getSystemService(ConnectivityManager.class);
-        mObserverRegistry = observerRegistry;
         mIpMemoryStore = deps.getIpMemoryStore(context, nssManager);
 
         sSmLogs.putIfAbsent(mInterfaceName, new SharedLog(MAX_LOG_RECORDS, mTag));
@@ -975,10 +971,8 @@ public class IpClient extends StateMachine {
                     public void onIpv6AddressRemoved(final Inet6Address address) {
                         // The update of Gratuitous NA target addresses set or unsolicited
                         // multicast NS source addresses set should be only accessed from the
-                        // handler thread of IpClient StateMachine, keeping the behaviour
-                        // consistent with relying on the non-blocking NetworkObserver callbacks,
-                        // see {@link registerObserverForNonblockingCallback}. This can be done
-                        // by either sending a message to StateMachine or posting a handler.
+                        // handler thread of IpClient StateMachine. This can be done by either
+                        // sending a message to StateMachine or posting a handler.
                         if (address.isLinkLocalAddress()) return;
                         getHandler().post(() -> {
                             mLog.log("Remove IPv6 GUA " + address
@@ -1139,11 +1133,9 @@ public class IpClient extends StateMachine {
     }
 
     private void startStateMachineUpdaters() {
-        mObserverRegistry.registerObserverForNonblockingCallback(mLinkObserver);
     }
 
     private void stopStateMachineUpdaters() {
-        mObserverRegistry.unregisterObserver(mLinkObserver);
         mLinkObserver.clearInterfaceParams();
         mLinkObserver.shutdown();
     }

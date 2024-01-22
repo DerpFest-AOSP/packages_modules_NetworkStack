@@ -3052,14 +3052,20 @@ public class IpClient extends StateMachine {
             }
         }
 
-        private void addInterfaceAddress(@NonNull final Inet6Address address,
+        private void addInterfaceAddress(@Nullable final Inet6Address address,
                 @NonNull final IaPrefixOption ipo) {
             final int flags = IFA_F_NOPREFIXROUTE | IFA_F_MANAGETEMPADDR | IFA_F_NODAD;
             final long now = SystemClock.elapsedRealtime();
             final long deprecationTime = now + ipo.preferred;
             final long expirationTime = now + ipo.valid;
-            final LinkAddress la = new LinkAddress(address, RFC7421_PREFIX_LENGTH, flags,
-                    RT_SCOPE_UNIVERSE /* scope */, deprecationTime, expirationTime);
+            final LinkAddress la;
+            try {
+                la = new LinkAddress(address, RFC7421_PREFIX_LENGTH, flags,
+                        RT_SCOPE_UNIVERSE /* scope */, deprecationTime, expirationTime);
+            } catch (IllegalArgumentException e) {
+                Log.e(TAG, "Invalid IPv6 link address " + e);
+                return;
+            }
             if (!la.isGlobalPreferred()) {
                 Log.w(TAG, la + " is not a global IPv6 address");
                 return;

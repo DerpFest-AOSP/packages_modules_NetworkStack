@@ -55,6 +55,7 @@ import com.android.net.module.util.netlink.StructNdMsg.NUD_PROBE
 import com.android.net.module.util.netlink.StructNdMsg.NUD_REACHABLE
 import com.android.net.module.util.netlink.StructNdMsg.NUD_STALE
 import com.android.networkstack.metrics.IpReachabilityMonitorMetrics
+import com.android.networkstack.util.NetworkStackUtils.IP_REACHABILITY_IGNORE_ORGANIC_NUD_FAILURE_VERSION
 import com.android.networkstack.util.NetworkStackUtils.IP_REACHABILITY_MCAST_RESOLICIT_VERSION
 import com.android.networkstack.util.NetworkStackUtils.IP_REACHABILITY_ROUTER_MAC_CHANGE_FAILURE_ONLY_AFTER_ROAM_VERSION
 import com.android.testutils.makeNewNeighMessage
@@ -312,6 +313,15 @@ class IpReachabilityMonitorTest {
         lostNeighbor: InetAddress,
         eventType: NudEventType
     ) {
+        runLoseProvisioningTest(newLp, lostNeighbor, eventType, true /* expectedNotifyLost */)
+    }
+
+    private fun runLoseProvisioningTest(
+        newLp: LinkProperties,
+        lostNeighbor: InetAddress,
+        eventType: NudEventType,
+        expectedNotifyLost: Boolean
+    ) {
         reachabilityMonitor.updateLinkProperties(newLp)
 
         neighborMonitor.enqueuePacket(makeNewNeighMessage(TEST_IPV4_GATEWAY, NUD_STALE))
@@ -320,8 +330,12 @@ class IpReachabilityMonitorTest {
         neighborMonitor.enqueuePacket(makeNewNeighMessage(TEST_IPV6_DNS, NUD_STALE))
 
         neighborMonitor.enqueuePacket(makeNewNeighMessage(lostNeighbor, NUD_FAILED))
-        verify(callback, timeout(TEST_TIMEOUT_MS)).notifyLost(eq(lostNeighbor), anyString(),
-                eq(eventType))
+        if (expectedNotifyLost) {
+            verify(callback, timeout(TEST_TIMEOUT_MS)).notifyLost(eq(lostNeighbor), anyString(),
+                    eq(eventType))
+        } else {
+             verify(callback, never()).notifyLost(eq(lostNeighbor), anyString(), any())
+        }
     }
 
     private fun verifyNudFailureMetrics(
@@ -393,6 +407,38 @@ class IpReachabilityMonitorTest {
     fun testLoseProvisioning_Ipv6GatewayLost() {
         runLoseProvisioningTest(TEST_LINK_PROPERTIES, TEST_IPV6_GATEWAY,
                 NUD_ORGANIC_FAILED_CRITICAL)
+    }
+
+    @Test
+    fun testLoseProvisioning_ignoreOrganicIpv4DnsLost() {
+        doReturn(true).`when`(dependencies).isFeatureEnabled(any(),
+            eq(IP_REACHABILITY_IGNORE_ORGANIC_NUD_FAILURE_VERSION))
+        runLoseProvisioningTest(TEST_LINK_PROPERTIES, TEST_IPV4_DNS, NUD_ORGANIC_FAILED_CRITICAL,
+                false /* expectedNotifyLost */)
+    }
+
+    @Test
+    fun testLoseProvisioning_ignoreOrganicIpv6DnsLost() {
+        doReturn(true).`when`(dependencies).isFeatureEnabled(any(),
+            eq(IP_REACHABILITY_IGNORE_ORGANIC_NUD_FAILURE_VERSION))
+        runLoseProvisioningTest(TEST_LINK_PROPERTIES, TEST_IPV6_DNS, NUD_ORGANIC_FAILED_CRITICAL,
+                false /* expectedNotifyLost */)
+    }
+
+    @Test
+    fun testLoseProvisioning_ignoreOrganicIpv4GatewayLost() {
+        doReturn(true).`when`(dependencies).isFeatureEnabled(any(),
+            eq(IP_REACHABILITY_IGNORE_ORGANIC_NUD_FAILURE_VERSION))
+        runLoseProvisioningTest(TEST_LINK_PROPERTIES, TEST_IPV4_GATEWAY,
+                NUD_ORGANIC_FAILED_CRITICAL, false /* expectedNotifyLost */)
+    }
+
+    @Test
+    fun testLoseProvisioning_ignoreOrganicIpv6GatewayLost() {
+        doReturn(true).`when`(dependencies).isFeatureEnabled(any(),
+            eq(IP_REACHABILITY_IGNORE_ORGANIC_NUD_FAILURE_VERSION))
+        runLoseProvisioningTest(TEST_LINK_PROPERTIES, TEST_IPV6_GATEWAY,
+                NUD_ORGANIC_FAILED_CRITICAL, false /* expectedNotifyLost */)
     }
 
     private fun runNudProbeFailureMetricsTest(

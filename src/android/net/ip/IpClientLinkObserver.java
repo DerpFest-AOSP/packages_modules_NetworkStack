@@ -21,6 +21,7 @@ import static android.system.OsConstants.AF_UNSPEC;
 import static android.system.OsConstants.IFF_LOOPBACK;
 
 import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ROUTER_ADVERTISEMENT;
+import static com.android.net.module.util.NetworkStackConstants.INFINITE_LEASE;
 import static com.android.net.module.util.netlink.NetlinkConstants.IFF_LOWER_UP;
 import static com.android.net.module.util.netlink.NetlinkConstants.RTM_F_CLONED;
 import static com.android.net.module.util.netlink.NetlinkConstants.RTN_UNICAST;
@@ -38,6 +39,7 @@ import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.RouteInfo;
 import android.os.Handler;
+import android.os.SystemClock;
 import android.system.OsConstants;
 import android.util.Log;
 
@@ -56,6 +58,7 @@ import com.android.net.module.util.netlink.NetlinkMessage;
 import com.android.net.module.util.netlink.RtNetlinkAddressMessage;
 import com.android.net.module.util.netlink.RtNetlinkLinkMessage;
 import com.android.net.module.util.netlink.RtNetlinkRouteMessage;
+import com.android.net.module.util.netlink.StructIfacacheInfo;
 import com.android.net.module.util.netlink.StructIfaddrMsg;
 import com.android.net.module.util.netlink.StructIfinfoMsg;
 import com.android.net.module.util.netlink.StructNdOptPref64;
@@ -629,13 +632,30 @@ public class IpClientLinkObserver implements NetworkObserver {
             }
         }
 
+        // The preferred/valid in ifa_cacheinfo expressed in units of seconds, convert
+        // it to milliseconds for deprecationTime or expirationTime used in LinkAddress.
+        private static long getDeprecationOrExpirationTime(
+                @Nullable final StructIfacacheInfo cacheInfo, long lifetime, long now) {
+            if (cacheInfo == null) return LinkAddress.LIFETIME_UNKNOWN;
+            return (lifetime == Integer.toUnsignedLong(INFINITE_LEASE))
+                    ? LinkAddress.LIFETIME_PERMANENT
+                    : now + lifetime * 1000;
+        }
+
         private void processRtNetlinkAddressMessage(RtNetlinkAddressMessage msg) {
             if (!mNetlinkEventParsingEnabled) return;
 
             final StructIfaddrMsg ifaddrMsg = msg.getIfaddrHeader();
             if (ifaddrMsg.index != mIfindex) return;
+
+            final StructIfacacheInfo cacheInfo = msg.getIfacacheInfo();
+            final long now = SystemClock.elapsedRealtime();
+            final long deprecationTime =
+                    getDeprecationOrExpirationTime(cacheInfo, cacheInfo.preferred, now);
+            final long expirationTime =
+                    getDeprecationOrExpirationTime(cacheInfo, cacheInfo.valid, now);
             final LinkAddress la = new LinkAddress(msg.getIpAddress(), ifaddrMsg.prefixLen,
-                    msg.getFlags(), ifaddrMsg.scope);
+                    msg.getFlags(), ifaddrMsg.scope, deprecationTime, expirationTime);
 
             switch (msg.getHeader().nlmsg_type) {
                 case NetlinkConstants.RTM_NEWADDR:

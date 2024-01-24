@@ -78,7 +78,6 @@ import static com.android.net.module.util.NetworkStackConstants.NEIGHBOR_ADVERTI
 import static com.android.net.module.util.NetworkStackConstants.NEIGHBOR_ADVERTISEMENT_FLAG_SOLICITED;
 import static com.android.net.module.util.NetworkStackConstants.PIO_FLAG_AUTONOMOUS;
 import static com.android.net.module.util.NetworkStackConstants.PIO_FLAG_ON_LINK;
-import static com.android.net.module.util.NetworkStackConstants.RFC7421_PREFIX_LENGTH;
 import static com.android.networkstack.util.NetworkStackUtils.IP_REACHABILITY_ROUTER_MAC_CHANGE_FAILURE_ONLY_AFTER_ROAM_VERSION;
 import static com.android.testutils.MiscAsserts.assertThrows;
 import static com.android.testutils.ParcelUtils.parcelingRoundTrip;
@@ -4841,7 +4840,7 @@ public abstract class IpClientIntegrationTestCommon {
     private IaPrefixOption buildIaPrefixOption(final IpPrefix prefix, int preferred,
             int valid) {
         return new IaPrefixOption((short) IaPrefixOption.LENGTH, preferred, valid,
-                (byte) RFC7421_PREFIX_LENGTH, prefix.getRawAddress() /* prefix */);
+                (byte) prefix.getPrefixLength(), prefix.getRawAddress() /* prefix */);
     }
 
     private void handleDhcp6Packets(final IpPrefix prefix, boolean shouldReplyRapidCommit)

@@ -364,9 +364,10 @@ public class NetworkStackUtils {
      * Generate an IPv6 address based on the given prefix(/64) and stable interface
      * identifier(EUI64).
      */
+    @Nullable
     public static Inet6Address createInet6AddressFromEui64(@NonNull final IpPrefix prefix,
             @NonNull final byte[] eui64) {
-        if (prefix.getPrefixLength() != 64) {
+        if (prefix.getPrefixLength() > 64) {
             Log.e(TAG, "Invalid IPv6 prefix length " + prefix.getPrefixLength());
             return null;
         }

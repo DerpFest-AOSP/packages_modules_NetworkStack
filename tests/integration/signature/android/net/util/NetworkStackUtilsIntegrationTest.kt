@@ -30,7 +30,6 @@ import android.system.Os
 import android.system.OsConstants
 import android.system.OsConstants.AF_INET
 import android.system.OsConstants.AF_PACKET
-import android.system.OsConstants.ARPHRD_ETHER
 import android.system.OsConstants.ETH_P_IPV6
 import android.system.OsConstants.IPPROTO_UDP
 import android.system.OsConstants.SOCK_CLOEXEC
@@ -264,14 +263,15 @@ class NetworkStackUtilsIntegrationTest {
         // Don't accept the prefix length larger than 64.
         assertNull(NetworkStackUtils.createInet6AddressFromEui64(prefix, eui64))
 
+        // prefix length equals to or less than 64 is acceptable.
         prefix = IpPrefix("2001:db8:1::/48")
-        // Don't accept the prefix length less than 64.
-        assertNull(NetworkStackUtils.createInet6AddressFromEui64(prefix, eui64))
-
-        prefix = IpPrefix("2001:db8:1::/64")
         // IPv6 address string is formed by combining the IPv6 prefix("2001:db8:1::") and
         // EUI64 converted from TEST_SRC_MAC, see above test for the output EUI64 example.
-        val expected = parseNumericAddress("2001:db8:1::b898:76ff:fe54:3210") as Inet6Address
+        var expected = parseNumericAddress("2001:db8:1::b898:76ff:fe54:3210") as Inet6Address
+        assertEquals(expected, NetworkStackUtils.createInet6AddressFromEui64(prefix, eui64))
+
+        prefix = IpPrefix("2001:db8:1:2::/64")
+        expected = parseNumericAddress("2001:db8:1:2:b898:76ff:fe54:3210") as Inet6Address
         assertEquals(expected, NetworkStackUtils.createInet6AddressFromEui64(prefix, eui64))
     }
 

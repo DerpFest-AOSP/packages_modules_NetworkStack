@@ -3056,8 +3056,10 @@ public class IpClient extends StateMachine {
                 @NonNull final IaPrefixOption ipo) {
             final int flags = IFA_F_NOPREFIXROUTE | IFA_F_MANAGETEMPADDR | IFA_F_NODAD;
             final long now = SystemClock.elapsedRealtime();
-            final long deprecationTime = now + ipo.preferred;
-            final long expirationTime = now + ipo.valid;
+            // Per RFC8415 section 21.22 the preferred/valid lifetime in IA Prefix option
+            // expressed in units of seconds.
+            final long deprecationTime = now + ipo.preferred * 1000;
+            final long expirationTime = now + ipo.valid * 1000;
             final LinkAddress la;
             try {
                 la = new LinkAddress(address, RFC7421_PREFIX_LENGTH, flags,

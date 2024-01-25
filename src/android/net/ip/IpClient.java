@@ -3083,15 +3083,21 @@ public class IpClient extends StateMachine {
 
         private void updateDelegatedAddresses(@NonNull final List<IaPrefixOption> valid) {
             if (valid.isEmpty()) return;
+            final List<IpPrefix> zeroLifetimePrefixList = new ArrayList<>();
             for (IaPrefixOption ipo : valid) {
                 final IpPrefix prefix = ipo.getIpPrefix();
                 // The prefix with preferred/valid lifetime of 0 is considered as a valid prefix,
-                // it can be passed to IpClient from Dhcp6Client, however, client should stop using
-                // the global addresses derived from this prefix immediately.
+                // and can be passed to IpClient from Dhcp6Client, but client should stop using
+                // the global addresses derived from this prefix asap. Deleting the associated
+                // global IPv6 addresses immediately before adding another IPv6 address may result
+                // in a race where the device throws the provisioning failure callback due to the
+                // loss of all valid IPv6 addresses, however, IPv6 provisioning will soon complete
+                // successfully when the user space sees the new IPv6 address update. To avoid this
+                // race, temporarily store all prefix(es) with 0 preferred/valid lifetime and then
+                // delete them after iterating through all valid IA prefix options.
                 if (ipo.withZeroLifetimes()) {
-                    Log.d(TAG, "Delete IPv6 address derived from prefix " + prefix
-                            + " with 0 preferred/valid lifetime");
-                    deleteIpv6PrefixDelegationAddresses(prefix);
+                    zeroLifetimePrefixList.add(prefix);
+                    continue;
                 }
                 // Otherwise, configure IPv6 addresses derived from the delegated prefix(es) on
                 // the interface. We've checked that delegated prefix is valid upon receiving the
@@ -3101,6 +3107,15 @@ public class IpClient extends StateMachine {
                 final Inet6Address address = createInet6AddressFromEui64(prefix,
                         macAddressToEui64(mInterfaceParams.macAddr));
                 addInterfaceAddress(address, ipo);
+            }
+
+            // Delete global IPv6 addresses derived from prefix with 0 preferred/valid lifetime.
+            if (!zeroLifetimePrefixList.isEmpty()) {
+                for (IpPrefix prefix : zeroLifetimePrefixList) {
+                    Log.d(TAG, "Delete IPv6 address derived from prefix " + prefix
+                            + " with 0 preferred/valid lifetime");
+                    deleteIpv6PrefixDelegationAddresses(prefix);
+                }
             }
         }
 

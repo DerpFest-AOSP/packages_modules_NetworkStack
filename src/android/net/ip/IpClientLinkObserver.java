@@ -403,7 +403,7 @@ public class IpClientLinkObserver implements NetworkObserver {
         // while interfaceDnsServerInfo() is being called, we'll end up with no DNS servers in
         // mLinkProperties, as desired.
         mDnsServerRepository = new DnsServerRepository(mConfig.minRdnssLifetime);
-        mNetlinkMonitor.clearAlarms();
+        cancelPref64Alarm();
         mLinkProperties.clear();
         mLinkProperties.setInterfaceName(mInterfaceName);
     }
@@ -487,10 +487,6 @@ public class IpClientLinkObserver implements NetworkObserver {
 
         protected boolean isRunning() {
             return super.isRunning();
-        }
-
-        void clearAlarms() {
-            cancelPref64Alarm();
         }
     }
 

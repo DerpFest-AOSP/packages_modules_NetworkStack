@@ -164,8 +164,11 @@ public class IpClientLinkObserver implements NetworkObserver {
     private final String mClatInterfaceName;
     private final IpClientNetlinkMonitor mNetlinkMonitor;
     private final boolean mNetlinkEventParsingEnabled;
+    private final NetworkInformationShim mShim;
+    private final AlarmManager.OnAlarmListener mExpirePref64Alarm;
 
     private boolean mClatInterfaceExists;
+    private long mNat64PrefixExpiry;
 
     /**
      * Current interface index. Most of this class (and of IpClient), only uses interface names,
@@ -210,6 +213,8 @@ public class IpClientLinkObserver implements NetworkObserver {
                 getSocketReceiveBufferSize(),
                 mNetlinkEventParsingEnabled,
                 (nlMsg, whenMs) -> processNetlinkMessage(nlMsg, whenMs));
+        mShim = NetworkInformationShimImpl.newInstance();
+        mExpirePref64Alarm = new IpClientObserverAlarmListener();
         mHandler.post(() -> {
             if (!mNetlinkMonitor.start()) {
                 Log.wtf(mTag, "Fail to start NetlinkMonitor.");
@@ -481,27 +486,26 @@ public class IpClientLinkObserver implements NetworkObserver {
             mNetlinkMessageProcessor.processNetlinkMessage(nlMsg, whenMs);
         }
 
-        private final NetworkInformationShim mShim = NetworkInformationShimImpl.newInstance();
-
-        private long mNat64PrefixExpiry;
-
         protected boolean isRunning() {
             return super.isRunning();
         }
     }
 
-    private final AlarmManager.OnAlarmListener mExpirePref64Alarm = () -> {
-        // Ignore the alarm if cancelPref64Alarm has already been called.
-        //
-        // TODO: in the rare case where the alarm fires and posts the lambda to the handler
-        // thread while we are processing an RA that changes the lifetime of the same prefix,
-        // this code will run anyway even if the alarm is rescheduled or cancelled. If the
-        // lifetime in the RA is zero this code will correctly do nothing, but if the lifetime
-        // is nonzero then the prefix will be added and immediately removed by this code.
-        if (mNat64PrefixExpiry == 0) return;
-        updatePref64(mShim.getNat64Prefix(mLinkProperties),
-                mNat64PrefixExpiry, mNat64PrefixExpiry);
-    };
+    private class IpClientObserverAlarmListener implements AlarmManager.OnAlarmListener {
+        @Override
+        public void onAlarm() {
+            // Ignore the alarm if cancelPref64Alarm has already been called.
+            //
+            // TODO: in the rare case where the alarm fires and posts the lambda to the handler
+            // thread while we are processing an RA that changes the lifetime of the same prefix,
+            // this code will run anyway even if the alarm is rescheduled or cancelled. If the
+            // lifetime in the RA is zero this code will correctly do nothing, but if the lifetime
+            // is nonzero then the prefix will be added and immediately removed by this code.
+            if (mNat64PrefixExpiry == 0) return;
+            updatePref64(mShim.getNat64Prefix(mLinkProperties), mNat64PrefixExpiry,
+                    mNat64PrefixExpiry);
+        }
+    }
 
     private void cancelPref64Alarm() {
         // Clear the expiry in case the alarm just fired and has not been processed yet.

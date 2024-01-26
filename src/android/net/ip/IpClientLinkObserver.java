@@ -160,7 +160,7 @@ public class IpClientLinkObserver implements NetworkObserver {
     private final Handler mHandler;
     private final IpClient.Dependencies mDependencies;
     private final String mClatInterfaceName;
-    private final MyNetlinkMonitor mNetlinkMonitor;
+    private final IpClientNetlinkMonitor mNetlinkMonitor;
     private final boolean mNetlinkEventParsingEnabled;
 
     private boolean mClatInterfaceExists;
@@ -194,7 +194,7 @@ public class IpClientLinkObserver implements NetworkObserver {
         mDependencies = deps;
         mNetlinkEventParsingEnabled = deps.isFeatureNotChickenedOut(context,
                 IPCLIENT_PARSE_NETLINK_EVENTS_FORCE_DISABLE);
-        mNetlinkMonitor = new MyNetlinkMonitor(h, log, mTag);
+        mNetlinkMonitor = new IpClientNetlinkMonitor(h, log, mTag);
         mHandler.post(() -> {
             if (!mNetlinkMonitor.start()) {
                 Log.wtf(mTag, "Fail to start NetlinkMonitor.");
@@ -427,10 +427,10 @@ public class IpClientLinkObserver implements NetworkObserver {
      * Simple NetlinkMonitor. Listen for netlink events from kernel.
      * All methods except the constructor must be called on the handler thread.
      */
-    private class MyNetlinkMonitor extends NetlinkMonitor {
+    private class IpClientNetlinkMonitor extends NetlinkMonitor {
         private final Handler mHandler;
 
-        MyNetlinkMonitor(Handler h, SharedLog log, String tag) {
+        IpClientNetlinkMonitor(Handler h, SharedLog log, String tag) {
             super(h, log, tag, OsConstants.NETLINK_ROUTE,
                     !mNetlinkEventParsingEnabled
                         ? NetlinkConstants.RTMGRP_ND_USEROPT

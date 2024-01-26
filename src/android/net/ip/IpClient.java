@@ -24,6 +24,8 @@ import static android.net.ip.IIpClient.PROV_IPV6_DISABLED;
 import static android.net.ip.IIpClient.PROV_IPV6_LINKLOCAL;
 import static android.net.ip.IIpClient.PROV_IPV6_SLAAC;
 import static android.net.ip.IIpClientCallbacks.DTIM_MULTIPLIER_RESET;
+import static android.net.ip.IpClientLinkObserver.IpClientNetlinkMonitor;
+import static android.net.ip.IpClientLinkObserver.IpClientNetlinkMonitor.INetlinkMessageProcessor;
 import static android.net.ip.IpReachabilityMonitor.INVALID_REACHABILITY_LOSS_TYPE;
 import static android.net.ip.IpReachabilityMonitor.nudEventTypeToInt;
 import static android.net.util.SocketUtils.makePacketSocketAddress;
@@ -879,7 +881,8 @@ public class IpClient extends StateMachine {
             final File sysctl = new File(path);
             return sysctl.exists();
         }
-         /**
+
+        /**
          * Get the configuration from RRO to check whether or not to send domain search list
          * option in DHCPDISCOVER/DHCPREQUEST message.
          */
@@ -887,6 +890,15 @@ public class IpClient extends StateMachine {
             return context.getResources().getBoolean(R.bool.config_dhcp_client_domain_search_list);
         }
 
+        /**
+         * Create an IpClientNetlinkMonitor instance.
+         */
+        public IpClientNetlinkMonitor makeIpClientNetlinkMonitor(Handler h, SharedLog log,
+                String tag, int sockRcvbufSize, boolean isNetlinkEventParsingEnabled,
+                INetlinkMessageProcessor p) {
+            return new IpClientNetlinkMonitor(h, log, tag, sockRcvbufSize,
+                    isNetlinkEventParsingEnabled, p);
+        }
     }
 
     public IpClient(Context context, String ifName, IIpClientCallbacks callback,

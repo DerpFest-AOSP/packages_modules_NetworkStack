@@ -238,8 +238,8 @@ class ApfV5Test {
                 encodeInstruction(opcode = 21, immLength = 1, register = 0), 37,
                 encodeInstruction(opcode = 21, immLength = 1, register = 1), 37,
         ), program)
-        // TODO: add back disassembling test check after we update the apf_disassembler
-        // assertContentEquals(arrayOf("       0: trans"), ApfJniUtils.disassembleApf(program))
+         assertContentEquals(listOf("0: discard", "2: transmit"),
+             ApfJniUtils.disassembleApf(program).map { it.trim() })
 
         gen = ApfV4Generator(MIN_APF_VERSION_IN_DEV)
         val largeByteArray = ByteArray(256) { 0x01 }

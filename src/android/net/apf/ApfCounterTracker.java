@@ -40,7 +40,10 @@ public class ApfCounterTracker {
     @VisibleForTesting
     public enum Counter {
         RESERVED_OOB,  // Points to offset 0 from the end of the buffer (out-of-bounds)
-        TOTAL_PACKETS,
+        ENDIANNESS,              // APFv6 interpreter stores 0x12345678 here
+        TOTAL_PACKETS,           // hardcoded in APFv6 interpreter
+        PASSED_ALLOCATE_FAILURE, // hardcoded in APFv6 interpreter
+        PASSED_TRANSMIT_FAILURE, // hardcoded in APFv6 interpreter
         PASSED_ARP,
         PASSED_DHCP,
         PASSED_IPV4,

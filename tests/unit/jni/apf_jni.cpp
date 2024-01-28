@@ -288,7 +288,7 @@ jbyteArray com_android_server_ApfTest_getTransmittedPacket(JNIEnv* env,
 
 void com_android_server_ApfTest_resetTransmittedPacketMemory(JNIEnv, jclass) {
     apf_test_tx_packet_len = 0;
-    memset(apf_test_buffer, 0, APF_TX_BUFFER_SIZE);
+    memset(apf_test_buffer, 0xff, APF_TX_BUFFER_SIZE);
 }
 
 extern "C" jint JNI_OnLoad(JavaVM* vm, void*) {

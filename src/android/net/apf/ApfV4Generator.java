@@ -54,8 +54,7 @@ public class ApfV4Generator {
         // It is a U32 big-endian value and is always incremented by 1.
         // This is more or less equivalent to: lddw R0, -N4; add R0,1; stdw R0, -N4; {pass,drop}
         // e.g. "pass", "pass 1", "drop", "drop 1"
-        PASS(0),
-        DROP(0),
+        PASSDROP(0),
         LDB(1),    // Load 1 byte from immediate offset, e.g. "ldb R0, [5]"
         LDH(2),    // Load 2 bytes from immediate offset, e.g. "ldh R0, [5]"
         LDW(3),    // Load 4 bytes from immediate offset, e.g. "ldw R0, [5]"
@@ -118,10 +117,9 @@ public class ApfV4Generator {
         ALLOCATE(36),
         //  Transmit and deallocate the buffer (transmission can be delayed until the program
         //  terminates). R=0 means discard the buffer, R=1 means transmit the buffer.
-        // "e.g. trans"
+        // "e.g. transmit"
         // "e.g. discard"
-        TRANSMIT(37),
-        DISCARD(37),
+        TRANSMITDISCARD(37),
         // Write 1, 2 or 4 byte value from register to the output buffer and auto-increment the
         // output buffer pointer.
         // e.g. "ewrite1 r0"
@@ -1003,7 +1001,7 @@ public class ApfV4Generator {
      */
     public ApfV4Generator addPass() {
         // PASS requires using R0 because it shares opcode with DROP
-        return append(new Instruction(Opcodes.PASS));
+        return append(new Instruction(Opcodes.PASSDROP));
     }
 
     /**
@@ -1015,7 +1013,7 @@ public class ApfV4Generator {
         checkRange("CounterNumber", cnt /* value */, 1 /* lowerBound */,
                 1000 /* upperBound */);
         // PASS requires using R0 because it shares opcode with DROP
-        return append(new Instruction(Opcodes.PASS).addUnsigned(cnt));
+        return append(new Instruction(Opcodes.PASSDROP).addUnsigned(cnt));
     }
 
     /**
@@ -1024,7 +1022,7 @@ public class ApfV4Generator {
     public ApfV4Generator addDrop() throws IllegalInstructionException {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
         // DROP requires using R1 because it shares opcode with PASS
-        return append(new Instruction(Opcodes.DROP, R1));
+        return append(new Instruction(Opcodes.PASSDROP, R1));
     }
 
     /**
@@ -1036,7 +1034,7 @@ public class ApfV4Generator {
         checkRange("CounterNumber", cnt /* value */, 1 /* lowerBound */,
                 1000 /* upperBound */);
         // DROP requires using R1 because it shares opcode with PASS
-        return append(new Instruction(Opcodes.DROP, R1).addUnsigned(cnt));
+        return append(new Instruction(Opcodes.PASSDROP, R1).addUnsigned(cnt));
     }
 
     /**
@@ -1077,7 +1075,7 @@ public class ApfV4Generator {
     public ApfV4Generator addTransmit() throws IllegalInstructionException {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
         // TRANSMIT requires using R0 because it shares opcode with DISCARD
-        return append(new Instruction(ExtendedOpcodes.TRANSMIT));
+        return append(new Instruction(ExtendedOpcodes.TRANSMITDISCARD));
     }
 
     /**
@@ -1086,7 +1084,7 @@ public class ApfV4Generator {
     public ApfV4Generator addDiscard() throws IllegalInstructionException {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
         // DISCARD requires using R1 because it shares opcode with TRANSMIT
-        return append(new Instruction(ExtendedOpcodes.DISCARD, R1));
+        return append(new Instruction(ExtendedOpcodes.TRANSMITDISCARD, R1));
     }
 
     /**

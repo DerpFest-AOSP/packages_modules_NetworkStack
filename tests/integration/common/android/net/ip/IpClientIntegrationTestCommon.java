@@ -1495,9 +1495,6 @@ public abstract class IpClientIntegrationTestCommon {
             final boolean shouldFirePreconnectionTimeout,
             final boolean timeoutBeforePreconnectionComplete) throws Exception {
         final long currentTime = System.currentTimeMillis();
-        final ArgumentCaptor<InterfaceConfigurationParcel> ifConfig =
-                ArgumentCaptor.forClass(InterfaceConfigurationParcel.class);
-
         startIpClientProvisioning(shouldReplyRapidCommitAck,
                 true /* isDhcpPreConnectionEnabled */,
                 false /* isDhcpIpConflictDetectEnabled */);
@@ -1554,12 +1551,7 @@ public abstract class IpClientIntegrationTestCommon {
             }
         }
         verify(mCb, timeout(TEST_TIMEOUT_MS)).setFallbackMulticastFilter(true);
-
-        final LinkAddress ipAddress = new LinkAddress(CLIENT_ADDR, PREFIX_LENGTH);
-        verify(mNetd, timeout(TEST_TIMEOUT_MS).times(1)).interfaceSetCfg(ifConfig.capture());
-        assertEquals(ifConfig.getValue().ifName, mIfaceName);
-        assertEquals(ifConfig.getValue().ipv4Addr, ipAddress.getAddress().getHostAddress());
-        assertEquals(ifConfig.getValue().prefixLength, PREFIX_LENGTH);
+        verifyIPv4OnlyProvisioningSuccess(Collections.singletonList(CLIENT_ADDR));
         assertIpMemoryStoreNetworkAttributes(TEST_LEASE_DURATION_S, currentTime, TEST_DEFAULT_MTU);
     }
 
@@ -5700,16 +5692,70 @@ public abstract class IpClientIntegrationTestCommon {
         long when = 0;
         for (LinkAddress la : lp.getLinkAddresses()) {
             if (la.isIpv4()) {
-                // TODO: assert the deprecationTime and expirationTime for IPv4 address
-                // once we populate the correct lifetime with dhcp lease(3600s) for IPv4
-                // link address.
-                assertLinkAddressPermanentLifetime(la);
+                when = now + 3600 * 1000; // DHCP lease duration
+                assertLinkAddressDeprecationTime(la, when);
+                assertLinkAddressExpirationTime(la, when);
             } else if (la.isIpv6() && la.getAddress().isLinkLocalAddress()) {
                 assertLinkAddressPermanentLifetime(la);
             } else if (la.isIpv6() && la.isGlobalPreferred()) {
                 when = now + 1800 * 1000; // preferred=1800s
                 assertLinkAddressDeprecationTime(la, when);
                 when = now + 3600 * 1000; // valid=3600s
+                assertLinkAddressExpirationTime(la, when);
+            }
+        }
+    }
+
+    @Test
+    public void testPopulateLinkAddressLifetime_infiniteLeaseDuration() throws Exception {
+        // Only run the test when the flag of parsing netlink events is enabled.
+        assumeTrue(mIsNetlinkEventParseEnabled);
+
+        final ProvisioningConfiguration cfg = new ProvisioningConfiguration.Builder()
+                .withoutIPv6()
+                .build();
+
+        startIpClientProvisioning(cfg);
+        handleDhcpPackets(true /* isSuccessLease */, DhcpPacket.INFINITE_LEASE,
+                false /* shouldReplyRapidCommitAck */, TEST_DEFAULT_MTU,
+                null /* captivePortalApiUrl */, null /* ipv6OnlyWaitTime */,
+                null /* domainName */, null /* domainSearchList */);
+
+        final ArgumentCaptor<LinkProperties> captor = ArgumentCaptor.forClass(LinkProperties.class);
+        verify(mCb, timeout(TEST_TIMEOUT_MS)).onProvisioningSuccess(captor.capture());
+        final LinkProperties lp = captor.getValue();
+        assertNotNull(lp);
+        for (LinkAddress la : lp.getLinkAddresses()) {
+            if (la.isIpv4()) {
+                assertLinkAddressPermanentLifetime(la);
+            }
+        }
+    }
+
+    @Test
+    public void testPopulateLinkAddressLifetime_minimalLeaseDuration() throws Exception {
+        // Only run the test when the flag of parsing netlink events is enabled.
+        assumeTrue(mIsNetlinkEventParseEnabled);
+
+        final ProvisioningConfiguration cfg = new ProvisioningConfiguration.Builder()
+                .withoutIPv6()
+                .build();
+
+        startIpClientProvisioning(cfg);
+        handleDhcpPackets(true /* isSuccessLease */, 59 /* lease duration */,
+                false /* shouldReplyRapidCommitAck */, TEST_DEFAULT_MTU,
+                null /* captivePortalApiUrl */, null /* ipv6OnlyWaitTime */,
+                null /* domainName */, null /* domainSearchList */);
+
+        final ArgumentCaptor<LinkProperties> captor = ArgumentCaptor.forClass(LinkProperties.class);
+        verify(mCb, timeout(TEST_TIMEOUT_MS)).onProvisioningSuccess(captor.capture());
+        final LinkProperties lp = captor.getValue();
+        assertNotNull(lp);
+        for (LinkAddress la : lp.getLinkAddresses()) {
+            if (la.isIpv4()) {
+                final long now = SystemClock.elapsedRealtime();
+                final long when = now + 60 * 1000; // minimal lease duration
+                assertLinkAddressDeprecationTime(la, when);
                 assertLinkAddressExpirationTime(la, when);
             }
         }

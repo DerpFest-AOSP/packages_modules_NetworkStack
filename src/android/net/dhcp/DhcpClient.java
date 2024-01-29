@@ -1490,7 +1490,8 @@ public class DhcpClient extends StateMachine {
             // IpClient sees the IP address appear, it will enter provisioned state without any
             // configuration information from DHCP. http://b/146850745.
             notifySuccess();
-            mController.sendMessage(CMD_CONFIGURE_LINKADDRESS, mDhcpLease.ipAddress);
+            mController.sendMessage(CMD_CONFIGURE_LINKADDRESS, mDhcpLease.leaseDuration, 0,
+                    mDhcpLease.ipAddress);
         }
 
         @Override

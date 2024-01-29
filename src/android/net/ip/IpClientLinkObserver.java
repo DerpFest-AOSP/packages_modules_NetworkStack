@@ -635,8 +635,9 @@ public class IpClientLinkObserver implements NetworkObserver {
         // The preferred/valid in ifa_cacheinfo expressed in units of seconds, convert
         // it to milliseconds for deprecationTime or expirationTime used in LinkAddress.
         private static long getDeprecationOrExpirationTime(
-                @Nullable final StructIfacacheInfo cacheInfo, long lifetime, long now) {
+                @Nullable final StructIfacacheInfo cacheInfo, long now, boolean deprecationTime) {
             if (cacheInfo == null) return LinkAddress.LIFETIME_UNKNOWN;
+            final long lifetime = deprecationTime ? cacheInfo.preferred : cacheInfo.valid;
             return (lifetime == Integer.toUnsignedLong(INFINITE_LEASE))
                     ? LinkAddress.LIFETIME_PERMANENT
                     : now + lifetime * 1000;
@@ -651,9 +652,9 @@ public class IpClientLinkObserver implements NetworkObserver {
             final StructIfacacheInfo cacheInfo = msg.getIfacacheInfo();
             final long now = SystemClock.elapsedRealtime();
             final long deprecationTime =
-                    getDeprecationOrExpirationTime(cacheInfo, cacheInfo.preferred, now);
+                    getDeprecationOrExpirationTime(cacheInfo, now, true /* deprecationTime */);
             final long expirationTime =
-                    getDeprecationOrExpirationTime(cacheInfo, cacheInfo.valid, now);
+                    getDeprecationOrExpirationTime(cacheInfo, now, false /* deprecationTime */);
             final LinkAddress la = new LinkAddress(msg.getIpAddress(), ifaddrMsg.prefixLen,
                     msg.getFlags(), ifaddrMsg.scope, deprecationTime, expirationTime);
 

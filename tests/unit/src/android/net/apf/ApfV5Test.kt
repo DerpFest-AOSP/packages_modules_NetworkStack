@@ -177,6 +177,9 @@ class ApfV5Test {
         // encoding PASS opcode: opcode=0, imm_len=0, R=0
         assertContentEquals(
                 byteArrayOf(encodeInstruction(opcode = 0, immLength = 0, register = 0)), program)
+        assertContentEquals(
+            listOf("0: pass"),
+            ApfJniUtils.disassembleApf(program).map { it.trim() } )
 
         gen = ApfV4Generator(MIN_APF_VERSION_IN_DEV)
         gen.addDrop()
@@ -184,6 +187,9 @@ class ApfV5Test {
         // encoding DROP opcode: opcode=0, imm_len=0, R=1
         assertContentEquals(
                 byteArrayOf(encodeInstruction(opcode = 0, immLength = 0, register = 1)), program)
+        assertContentEquals(
+            listOf("0: drop"),
+            ApfJniUtils.disassembleApf(program).map { it.trim() } )
 
         gen = ApfV4Generator(MIN_APF_VERSION_IN_DEV)
         gen.addCountAndPass(129)
@@ -192,6 +198,9 @@ class ApfV5Test {
         assertContentEquals(
                 byteArrayOf(encodeInstruction(opcode = 0, immLength = 1, register = 0),
                         0x81.toByte()), program)
+        assertContentEquals(
+            listOf("0: pass         129"),
+            ApfJniUtils.disassembleApf(program).map { it.trim() } )
 
         gen = ApfV4Generator(MIN_APF_VERSION_IN_DEV)
         gen.addCountAndDrop(1000)
@@ -200,6 +209,9 @@ class ApfV5Test {
         assertContentEquals(
                 byteArrayOf(encodeInstruction(opcode = 0, immLength = 2, register = 1),
                         0x03, 0xe8.toByte()), program)
+        assertContentEquals(
+            listOf("0: drop         1000"),
+            ApfJniUtils.disassembleApf(program).map { it.trim() } )
 
         gen = ApfV4Generator(MIN_APF_VERSION_IN_DEV)
         gen.addAllocateR0()

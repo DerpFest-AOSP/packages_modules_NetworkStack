@@ -224,8 +224,8 @@ class ApfV5Test {
                 encodeInstruction(opcode = 21, immLength = 1, register = 1), 36, 0x05,
                 0xDC.toByte()),
         program)
-        // TODO: add back disassembling test check after we update the apf_disassembler
-        // assertContentEquals(arrayOf("       0: alloc"), ApfJniUtils.disassembleApf(program))
+        assertContentEquals(listOf("0: allocate    r0", "2: allocate    1500"),
+            ApfJniUtils.disassembleApf(program).map { it.trim() })
 
         gen = ApfV4Generator(MIN_APF_VERSION_IN_DEV)
         gen.addTransmit()

@@ -23,6 +23,7 @@ import static android.net.metrics.IpReachabilityEvent.PROVISIONING_LOST_ORGANIC;
 
 import static com.android.networkstack.util.NetworkStackUtils.IP_REACHABILITY_IGNORE_INCOMPLETE_IPV6_DEFAULT_ROUTER_VERSION;
 import static com.android.networkstack.util.NetworkStackUtils.IP_REACHABILITY_IGNORE_INCOMPLETE_IPV6_DNS_SERVER_VERSION;
+import static com.android.networkstack.util.NetworkStackUtils.IP_REACHABILITY_IGNORE_ORGANIC_NUD_FAILURE_VERSION;
 import static com.android.networkstack.util.NetworkStackUtils.IP_REACHABILITY_MCAST_RESOLICIT_VERSION;
 import static com.android.networkstack.util.NetworkStackUtils.IP_REACHABILITY_ROUTER_MAC_CHANGE_FAILURE_ONLY_AFTER_ROAM_VERSION;
 
@@ -241,6 +242,7 @@ public class IpReachabilityMonitor {
     private final boolean mIgnoreIncompleteIpv6DnsServerEnabled;
     private final boolean mIgnoreIncompleteIpv6DefaultRouterEnabled;
     private final boolean mMacChangeFailureOnlyAfterRoam;
+    private final boolean mIgnoreOrganicNudFailure;
 
     public IpReachabilityMonitor(
             Context context, InterfaceParams ifParams, Handler h, SharedLog log, Callback callback,
@@ -270,6 +272,8 @@ public class IpReachabilityMonitor {
                 IP_REACHABILITY_IGNORE_INCOMPLETE_IPV6_DEFAULT_ROUTER_VERSION);
         mMacChangeFailureOnlyAfterRoam = dependencies.isFeatureNotChickenedOut(context,
                 IP_REACHABILITY_ROUTER_MAC_CHANGE_FAILURE_ONLY_AFTER_ROAM_VERSION);
+        mIgnoreOrganicNudFailure = dependencies.isFeatureEnabled(context,
+                IP_REACHABILITY_IGNORE_ORGANIC_NUD_FAILURE_VERSION);
         mMetricsLog = metricsLog;
         mNetd = netd;
         Preconditions.checkNotNull(mNetd);
@@ -531,7 +535,13 @@ public class IpReachabilityMonitor {
             Log.w(TAG, logMsg);
             // TODO: remove |ip| when the callback signature no longer has
             // an InetAddress argument.
-            mCallback.notifyLost(ip, logMsg, type);
+            // Notify critical neighbor lost as long as the NUD failures
+            // are not from kernel organic or the NUD failure event type is
+            // NUD_ORGANIC_FAILED_CRITICAL but the experiment flag is not
+            // enabled. Regardless, the event metrics are still recoreded.
+            if (type != NudEventType.NUD_ORGANIC_FAILED_CRITICAL || !mIgnoreOrganicNudFailure) {
+                mCallback.notifyLost(ip, logMsg, type);
+            }
         }
         logNudFailed(event, type);
     }

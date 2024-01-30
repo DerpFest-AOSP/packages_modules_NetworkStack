@@ -303,14 +303,13 @@ class ApfV5Test {
                 encodeInstruction(21, 1, 1), 39,
                 encodeInstruction(21, 1, 1), 40
         ), program)
-        // TODO: add back disassembling test check after we update the apf_disassembler
-//        assertContentEquals(arrayOf(
-//                "       0: ewrite1 r0",
-//                "       2: ewrite2 r0",
-//                "       4: ewrite4 r0",
-//                "       6: ewrite1 r1",
-//                "       8: ewrite2 r1",
-//                "      10: ewrite4 r1"), ApfJniUtils.disassembleApf(program))
+        assertContentEquals(listOf(
+                "0: ewrite1     r0",
+                "2: ewrite2     r0",
+                "4: ewrite4     r0",
+                "6: ewrite1     r1",
+                "8: ewrite2     r1",
+                "10: ewrite4     r1"), ApfJniUtils.disassembleApf(program).map { it.trim() })
 
         gen = ApfV4Generator(MIN_APF_VERSION_IN_DEV)
         gen.addDataCopy(0, 10)

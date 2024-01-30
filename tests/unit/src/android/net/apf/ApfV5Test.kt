@@ -322,10 +322,10 @@ class ApfV5Test {
                 encodeInstruction(25, 2, 0),
                 0x03.toByte(), 0xe8.toByte(), 0xff.toByte(),
         ), program)
-        // TODO: add back disassembling test check after we update the apf_disassembler
-//        assertContentEquals(arrayOf(
-//                "       0: dcopy 0, 5",
-//                "       3: pcopy 1000, 255"), ApfJniUtils.disassembleApf(program))
+        assertContentEquals(listOf(
+                "0: dcopy       0, 10",
+                "2: dcopy       1, 5",
+                "5: pcopy       1000, 255"), ApfJniUtils.disassembleApf(program).map { it.trim() })
 
         gen = ApfV4Generator(MIN_APF_VERSION_IN_DEV)
         gen.addPacketCopyFromR0LenR1()

@@ -2092,6 +2092,7 @@ public class NetworkMonitor extends StateMachine {
             mThread = new Thread(() -> sendMessage(obtainMessage(CMD_PROBE_COMPLETE, token, 0,
                     isCaptivePortal(deps, httpsUrls, httpUrls, fallbackUrl))));
             mThread.start();
+            mDependencies.onThreadCreated(mThread);
         }
 
         @Override
@@ -3205,6 +3206,7 @@ public class NetworkMonitor extends StateMachine {
                     ? new HttpsProbe(properties, proxy, url, captivePortalApiUrl)
                     : new HttpProbe(properties, proxy, url, captivePortalApiUrl);
             mResult = CaptivePortalProbeResult.failed(probeType);
+            mDependencies.onThreadCreated(this);
         }
 
         private volatile CaptivePortalProbeResult mResult;
@@ -3382,6 +3384,7 @@ public class NetworkMonitor extends StateMachine {
         // Fixed pool to prevent configuring too many urls to exhaust system resource.
         final ExecutorService executor = Executors.newFixedThreadPool(
                 Math.min(num, MAX_PROBE_THREAD_POOL_SIZE));
+        mDependencies.onExecutorServiceCreated(executor);
         final CompletionService<CaptivePortalProbeResult> ecs =
                 new ExecutorCompletionService<CaptivePortalProbeResult>(executor);
         final Uri capportApiUrl = getCaptivePortalApiUrl(mLinkProperties);
@@ -3724,6 +3727,24 @@ public class NetworkMonitor extends StateMachine {
         public void writeDataStallDetectionStats(@NonNull final DataStallDetectionStats stats,
                 @NonNull final CaptivePortalProbeResult result) {
             DataStallStatsUtils.write(stats, result);
+        }
+
+        /**
+         * Callback to be called when a probing thread instance is created.
+         *
+         * This method is designed for overriding in test classes to collect
+         * created threads and waits for the termination.
+         */
+        public void onThreadCreated(@NonNull Thread thread) {
+        }
+
+        /**
+         * Callback to be called when a ExecutorService instance is created.
+         *
+         * This method is designed for overriding in test classes to collect
+         * created threads and waits for the termination.
+         */
+        public void onExecutorServiceCreated(@NonNull ExecutorService ecs) {
         }
 
         public static final Dependencies DEFAULT = new Dependencies();

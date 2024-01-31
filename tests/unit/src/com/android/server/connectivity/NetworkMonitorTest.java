@@ -154,8 +154,8 @@ import android.telephony.TelephonyManager;
 import android.util.ArrayMap;
 
 import androidx.test.filters.SmallTest;
-import androidx.test.runner.AndroidJUnit4;
 
+import com.android.internal.annotations.GuardedBy;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.SharedLog;
 import com.android.networkstack.NetworkStackNotifier;
@@ -180,6 +180,8 @@ import com.android.server.connectivity.nano.WifiData;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
+import com.android.testutils.DevSdkIgnoreRunner;
+import com.android.testutils.FunctionalUtils.ThrowingConsumer;
 import com.android.testutils.HandlerUtils;
 
 import com.google.protobuf.nano.MessageNano;
@@ -194,6 +196,7 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.mockito.invocation.InvocationOnMock;
@@ -223,12 +226,15 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 
 import javax.net.ssl.SSLHandshakeException;
 
-@RunWith(AndroidJUnit4.class)
+@DevSdkIgnoreRunner.MonitorThreadLeak
+@RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
 @SuppressLint("NewApi")  // Uses hidden APIs, which the linter would identify as missing APIs.
 public class NetworkMonitorTest {
@@ -321,6 +327,7 @@ public class NetworkMonitorTest {
     private static final NetworkAgentConfigShim TEST_AGENT_CONFIG =
             NetworkAgentConfigShimImpl.newInstance(null);
     private static final LinkProperties TEST_LINK_PROPERTIES = new LinkProperties();
+    private static final int THREAD_QUIT_MAX_RETRY_COUNT = 3;
 
     // Cannot have a static member for the LinkProperties with captive portal API information, as
     // the initializer would crash on Q (the members in LinkProperties were introduced in R).
@@ -564,6 +571,11 @@ public class NetworkMonitorTest {
 
     private FakeDns mFakeDns;
 
+    @GuardedBy("mThreadsToBeCleared")
+    private final ArrayList<Thread> mThreadsToBeCleared = new ArrayList<>();
+    @GuardedBy("mExecutorServiceToBeCleared")
+    private final ArrayList<ExecutorService> mExecutorServiceToBeCleared = new ArrayList<>();
+
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
@@ -578,6 +590,18 @@ public class NetworkMonitorTest {
                 .getSetting(any(), eq(Settings.Global.CAPTIVE_PORTAL_HTTP_URL), any());
         doReturn(TEST_HTTPS_URL).when(mDependencies)
                 .getSetting(any(), eq(Settings.Global.CAPTIVE_PORTAL_HTTPS_URL), any());
+        doAnswer((invocation) -> {
+            synchronized (mThreadsToBeCleared) {
+                mThreadsToBeCleared.add(invocation.getArgument(0));
+            }
+            return null;
+        }).when(mDependencies).onThreadCreated(any());
+        doAnswer((invocation) -> {
+            synchronized (mExecutorServiceToBeCleared) {
+                mExecutorServiceToBeCleared.add(invocation.getArgument(0));
+            }
+            return null;
+        }).when(mDependencies).onExecutorServiceCreated(any());
 
         doReturn(mCleartextDnsNetwork).when(mNetwork).getPrivateDnsBypassingCopy();
 
@@ -680,8 +704,52 @@ public class NetworkMonitorTest {
         mRegisteredReceivers = new HashSet<>();
     }
 
+    private static <T> void quitThreadsThat(Supplier<List<T>> supplier, ThrowingConsumer terminator)
+            throws Exception {
+        // Run it multiple times since new threads might be generated in a thread
+        // that is about to be terminated, e.g. each thread that runs
+        // isCaptivePortal could generate 2 more probing threads.
+        for (int retryCount = 0; retryCount < THREAD_QUIT_MAX_RETRY_COUNT; retryCount++) {
+            final List<T> resourcesToBeCleared = supplier.get();
+            if (resourcesToBeCleared.isEmpty()) return;
+            for (final T resource : resourcesToBeCleared) {
+                terminator.accept(resource);
+            }
+        }
+
+        assertEquals(Collections.emptyList(), supplier.get());
+    }
+
+    private void quitExecutorServices() throws Exception {
+        quitThreadsThat(() -> {
+            synchronized (mExecutorServiceToBeCleared) {
+                final ArrayList<ExecutorService> ret = new ArrayList<>(mExecutorServiceToBeCleared);
+                mExecutorServiceToBeCleared.clear();
+                return ret;
+            }
+        }, (it) -> {
+            final ExecutorService ecs = (ExecutorService) it;
+            ecs.awaitTermination(HANDLER_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        });
+    }
+
+    private void quitThreads() throws Exception {
+        quitThreadsThat(() -> {
+            synchronized (mThreadsToBeCleared) {
+                final ArrayList<Thread> ret = new ArrayList<>(mThreadsToBeCleared);
+                mThreadsToBeCleared.clear();
+                return ret;
+            }
+        }, (it) -> {
+            final Thread th = (Thread) it;
+            th.interrupt();
+            th.join(HANDLER_TIMEOUT_MS);
+            if (th.isAlive()) fail("Threads did not terminate within timeout.");
+        });
+    }
+
     @After
-    public void tearDown() {
+    public void tearDown() throws Exception {
         mFakeDns.clearAll();
         // Make a local copy of mCreatedNetworkMonitors because during the iteration below,
         // WrappedNetworkMonitor#onQuitting will delete elements from it on the handler threads.
@@ -695,6 +763,10 @@ public class NetworkMonitorTest {
                 0, mCreatedNetworkMonitors.size());
         assertEquals("BroadcastReceiver still registered after disconnect",
                 0, mRegisteredReceivers.size());
+        quitThreads();
+        quitExecutorServices();
+        // Clear mocks to prevent from stubs holding instances and cause memory leaks.
+        Mockito.framework().clearInlineMocks();
     }
 
     private void initHttpConnection(HttpURLConnection connection) {

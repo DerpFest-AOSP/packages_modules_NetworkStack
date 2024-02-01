@@ -22,7 +22,6 @@ import static android.net.apf.ApfV4Generator.Register.R1;
 import androidx.annotation.NonNull;
 
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.net.module.util.HexDump;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -45,7 +44,7 @@ public class ApfV4Generator {
             super(msg);
         }
     }
-    private enum Opcodes {
+    enum Opcodes {
         LABEL(-1),
         // Unconditionally pass (if R=0) or drop (if R=1) packet.
         // An optional unsigned immediate value can be provided to encode the counter number.
@@ -103,7 +102,7 @@ public class ApfV4Generator {
     }
     // Extended opcodes. Primary opcode is Opcodes.EXT. ExtendedOpcodes are encoded in the immediate
     // field.
-    private enum ExtendedOpcodes {
+    enum ExtendedOpcodes {
         LDM(0),   // Load from memory, e.g. "ldm R0,5"
         STM(16),  // Store to memory, e.g. "stm R0,5"
         NOT(32),  // Not, e.g. "not R0"
@@ -295,7 +294,7 @@ public class ApfV4Generator {
         }
     }
 
-    private class Instruction {
+    class Instruction {
         private final byte mOpcode;   // A "Opcode" value.
         private final byte mRegister; // A "Register" value.
         public final List<IntImmediate> mIntImms = new ArrayList<>();
@@ -628,7 +627,7 @@ public class ApfV4Generator {
     public static final int APF_VERSION_4 = 4;
 
 
-    private final ArrayList<Instruction> mInstructions = new ArrayList<Instruction>();
+    final ArrayList<Instruction> mInstructions = new ArrayList<Instruction>();
     private final HashMap<String, Instruction> mLabels = new HashMap<String, Instruction>();
     private final Instruction mDropLabel = new Instruction(Opcodes.LABEL);
     private final Instruction mPassLabel = new Instruction(Opcodes.LABEL);
@@ -653,13 +652,13 @@ public class ApfV4Generator {
         return version >= MIN_APF_VERSION;
     }
 
-    private void requireApfVersion(int minimumVersion) throws IllegalInstructionException {
+    void requireApfVersion(int minimumVersion) throws IllegalInstructionException {
         if (mVersion < minimumVersion) {
             throw new IllegalInstructionException("Requires APF >= " + minimumVersion);
         }
     }
 
-    private ApfV4Generator append(Instruction instruction) {
+    ApfV4Generator append(Instruction instruction) {
         if (mGenerated) {
             throw new IllegalStateException("Program already generated");
         }
@@ -1004,319 +1003,8 @@ public class ApfV4Generator {
         return append(new Instruction(Opcodes.PASSDROP));
     }
 
-    /**
-     * Add an instruction to the end of the program to increment the counter value and
-     * immediately return PASS.
-     */
-    public ApfV4Generator addCountAndPass(int cnt) throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        checkRange("CounterNumber", cnt /* value */, 1 /* lowerBound */,
-                1000 /* upperBound */);
-        // PASS requires using R0 because it shares opcode with DROP
-        return append(new Instruction(Opcodes.PASSDROP).addUnsigned(cnt));
-    }
-
-    /**
-     * Add an instruction to the end of the program to let the program immediately return DROP.
-     */
-    public ApfV4Generator addDrop() throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        // DROP requires using R1 because it shares opcode with PASS
-        return append(new Instruction(Opcodes.PASSDROP, R1));
-    }
-
-    /**
-     * Add an instruction to the end of the program to increment the counter value and
-     * immediately return DROP.
-     */
-    public ApfV4Generator addCountAndDrop(int cnt) throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        checkRange("CounterNumber", cnt /* value */, 1 /* lowerBound */,
-                1000 /* upperBound */);
-        // DROP requires using R1 because it shares opcode with PASS
-        return append(new Instruction(Opcodes.PASSDROP, R1).addUnsigned(cnt));
-    }
-
-    /**
-     * Add an instruction to the end of the program to call the apf_allocate_buffer() function.
-     * Buffer length to be allocated is stored in register 0.
-     */
-    public ApfV4Generator addAllocateR0() throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        return append(new Instruction(ExtendedOpcodes.ALLOCATE));
-    }
-
-    /**
-     * Add an instruction to the end of the program to call the apf_allocate_buffer() function.
-     *
-     * @param size the buffer length to be allocated.
-     */
-    public ApfV4Generator addAllocate(int size) throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        // R1 means the extra be16 immediate is present
-        return append(new Instruction(ExtendedOpcodes.ALLOCATE, R1).addU16(size));
-    }
-
-    /**
-     * Add an instruction to the beginning of the program to reserve the data region.
-     * @param data the actual data byte
-     */
-    public ApfV4Generator addData(byte[] data) throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        if (!mInstructions.isEmpty()) {
-            throw new IllegalInstructionException("data instruction has to come first");
-        }
-        return append(new Instruction(Opcodes.JMP, R1).addUnsigned(data.length).setBytesImm(data));
-    }
-
-    /**
-     * Add an instruction to the end of the program to transmit the allocated buffer.
-     */
-    public ApfV4Generator addTransmit() throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        // TRANSMIT requires using R0 because it shares opcode with DISCARD
-        return append(new Instruction(ExtendedOpcodes.TRANSMITDISCARD));
-    }
-
-    /**
-     * Add an instruction to the end of the program to discard the allocated buffer.
-     */
-    public ApfV4Generator addDiscard() throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        // DISCARD requires using R1 because it shares opcode with TRANSMIT
-        return append(new Instruction(ExtendedOpcodes.TRANSMITDISCARD, R1));
-    }
-
-    /**
-     * Add an instruction to the end of the program to write 1 byte value to output buffer.
-     */
-    public ApfV4Generator addWriteU8(int val) throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        return append(new Instruction(Opcodes.WRITE).overrideLenField(1).addU8(val));
-    }
-
-    /**
-     * Add an instruction to the end of the program to write 2 bytes value to output buffer.
-     */
-    public ApfV4Generator addWriteU16(int val) throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        return append(new Instruction(Opcodes.WRITE).overrideLenField(2).addU16(val));
-    }
-
-    /**
-     * Add an instruction to the end of the program to write 4 bytes value to output buffer.
-     */
-    public ApfV4Generator addWriteU32(long val) throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        return append(new Instruction(Opcodes.WRITE).overrideLenField(4).addU32(val));
-    }
-
-    /**
-     * Add an instruction to the end of the program to write 1 byte value from register to output
-     * buffer.
-     */
-    public ApfV4Generator addWriteU8(Register reg) throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        return append(new Instruction(ExtendedOpcodes.EWRITE1, reg));
-    }
-
-    /**
-     * Add an instruction to the end of the program to write 2 byte value from register to output
-     * buffer.
-     */
-    public ApfV4Generator addWriteU16(Register reg) throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        return append(new Instruction(ExtendedOpcodes.EWRITE2, reg));
-    }
-
-    /**
-     * Add an instruction to the end of the program to write 4 byte value from register to output
-     * buffer.
-     */
-    public ApfV4Generator addWriteU32(Register reg) throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        return append(new Instruction(ExtendedOpcodes.EWRITE4, reg));
-    }
-
-    /**
-     * Add an instruction to the end of the program to copy data from APF program/data region to
-     * output buffer and auto-increment the output buffer pointer.
-     *
-     * @param src the offset inside the APF program/data region for where to start copy.
-     * @param len the length of bytes needed to be copied, only <= 255 bytes can be copied at
-     *               one time.
-     * @return the ApfGenerator object
-     */
-    public ApfV4Generator addDataCopy(int src, int len)
-            throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        return append(new Instruction(Opcodes.PKTDATACOPY, R1).addUnsigned(src).addU8(len));
-    }
-
-    /**
-     * Add an instruction to the end of the program to copy data from input packet to output
-     * buffer and auto-increment the output buffer pointer.
-     *
-     * @param src the offset inside the input packet for where to start copy.
-     * @param len the length of bytes needed to be copied, only <= 255 bytes can be copied at
-     *               one time.
-     * @return the ApfGenerator object
-     */
-    public ApfV4Generator addPacketCopy(int src, int len)
-            throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        return append(new Instruction(Opcodes.PKTDATACOPY, R0).addUnsigned(src).addU8(len));
-    }
-
-    /**
-     * Add an instruction to the end of the program to copy data from APF program/data region to
-     * output buffer and auto-increment the output buffer pointer.
-     * Source offset is stored in R0.
-     *
-     * @param len the number of bytes to be copied, only <= 255 bytes can be copied at once.
-     * @return the ApfGenerator object
-     */
-    public ApfV4Generator addDataCopyFromR0(int len) throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        return append(new Instruction(ExtendedOpcodes.EDATACOPY).addU8(len));
-    }
-
-    /**
-     * Add an instruction to the end of the program to copy data from input packet to output
-     * buffer and auto-increment the output buffer pointer.
-     * Source offset is stored in R0.
-     *
-     * @param len the number of bytes to be copied, only <= 255 bytes can be copied at once.
-     * @return the ApfGenerator object
-     */
-    public ApfV4Generator addPacketCopyFromR0(int len) throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        return append(new Instruction(ExtendedOpcodes.EPKTCOPY).addU8(len));
-    }
-
-    /**
-     * Add an instruction to the end of the program to copy data from APF program/data region to
-     * output buffer and auto-increment the output buffer pointer.
-     * Source offset is stored in R0.
-     * Copy length is stored in R1.
-     *
-     * @return the ApfGenerator object
-     */
-    public ApfV4Generator addDataCopyFromR0LenR1() throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        return append(new Instruction(ExtendedOpcodes.EDATACOPY, R1));
-    }
-
-    /**
-     * Add an instruction to the end of the program to copy data from input packet to output
-     * buffer and auto-increment the output buffer pointer.
-     * Source offset is stored in R0.
-     * Copy length is stored in R1.
-     *
-     * @return the ApfGenerator object
-     */
-    public ApfV4Generator addPacketCopyFromR0LenR1() throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        return append(new Instruction(ExtendedOpcodes.EPKTCOPY, R1));
-    }
-
-    /**
-     * Check if the byte is valid dns character: A-Z,0-9,-,_
-     */
-    private static boolean isValidDnsCharacter(byte c) {
-        return (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_';
-    }
-
-    private static void validateNames(@NonNull byte[] names) {
-        final int len = names.length;
-        if (len < 4) {
-            throw new IllegalArgumentException("qnames must have at least length 4");
-        }
-        final String errorMessage = "qname: " + HexDump.toHexString(names)
-                + "is not null-terminated list of TLV-encoded names";
-        int i = 0;
-        while (i < len - 1) {
-            int label_len = names[i++];
-            if (label_len < 1 || label_len > 63) {
-                throw new IllegalArgumentException(
-                        "label len: " + label_len + " must be between 1 and 63");
-            }
-            if (i + label_len >= len - 1) {
-                throw new IllegalArgumentException(errorMessage);
-            }
-            while (label_len-- > 0) {
-                if (!isValidDnsCharacter(names[i++])) {
-                    throw new IllegalArgumentException("qname: " + HexDump.toHexString(names)
-                            + " contains invalid character");
-                }
-            }
-            if (names[i] == 0) {
-                i++; // skip null terminator.
-            }
-        }
-        if (names[len - 1] != 0) {
-            throw new IllegalArgumentException(errorMessage);
-        }
-    }
-
-    /**
-     * Appends a conditional jump instruction to the program: Jumps to {@code tgt} if the UDP
-     * payload's DNS questions do NOT contain the QNAMEs specified in {@code qnames} and qtype
-     * equals {@code qtype}. Examines the payload starting at the offset in R0.
-     * R = 0 means check for "does not contain".
-     */
-    public ApfV4Generator addJumpIfPktAtR0DoesNotContainDnsQ(@NonNull byte[] qnames, int qtype,
-            @NonNull String tgt) throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        validateNames(qnames);
-        return append(new Instruction(ExtendedOpcodes.JDNSQMATCH).setTargetLabel(tgt).addU8(
-                qtype).setBytesImm(qnames));
-    }
-
-    /**
-     * Appends a conditional jump instruction to the program: Jumps to {@code tgt} if the UDP
-     * payload's DNS questions contain the QNAMEs specified in {@code qnames} and qtype
-     * equals {@code qtype}. Examines the payload starting at the offset in R0.
-     * R = 1 means check for "contain".
-     */
-    public ApfV4Generator addJumpIfPktAtR0ContainDnsQ(@NonNull byte[] qnames, int qtype,
-            @NonNull String tgt) throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        validateNames(qnames);
-        return append(new Instruction(ExtendedOpcodes.JDNSQMATCH, R1).setTargetLabel(tgt).addU8(
-                qtype).setBytesImm(qnames));
-    }
-
-    /**
-     * Appends a conditional jump instruction to the program: Jumps to {@code tgt} if the UDP
-     * payload's DNS answers/authority/additional records do NOT contain the NAMEs
-     * specified in {@code Names}. Examines the payload starting at the offset in R0.
-     * R = 0 means check for "does not contain".
-     */
-    public ApfV4Generator addJumpIfPktAtR0DoesNotContainDnsA(@NonNull byte[] names,
-            @NonNull String tgt) throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        validateNames(names);
-        return append(new Instruction(ExtendedOpcodes.JDNSAMATCH).setTargetLabel(tgt).setBytesImm(
-                names));
-    }
-
-    /**
-     * Appends a conditional jump instruction to the program: Jumps to {@code tgt} if the UDP
-     * payload's DNS answers/authority/additional records contain the NAMEs
-     * specified in {@code Names}. Examines the payload starting at the offset in R0.
-     * R = 1 means check for "contain".
-     */
-    public ApfV4Generator addJumpIfPktAtR0ContainDnsA(@NonNull byte[] names,
-            @NonNull String tgt) throws IllegalInstructionException {
-        requireApfVersion(MIN_APF_VERSION_IN_DEV);
-        validateNames(names);
-        return append(new Instruction(ExtendedOpcodes.JDNSAMATCH, R1).setTargetLabel(
-                tgt).setBytesImm(names));
-    }
-
-    private static void checkRange(@NonNull String variableName, long value, long lowerBound,
-            long upperBound) {
+    static void checkRange(@NonNull String variableName, long value, long lowerBound,
+                           long upperBound) {
         if (value >= lowerBound && value <= upperBound) {
             return;
         }

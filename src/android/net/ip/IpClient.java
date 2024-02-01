@@ -51,6 +51,7 @@ import static com.android.networkstack.util.NetworkStackUtils.IPCLIENT_DHCPV6_PR
 import static com.android.networkstack.util.NetworkStackUtils.IPCLIENT_GARP_NA_ROAMING_VERSION;
 import static com.android.networkstack.util.NetworkStackUtils.IPCLIENT_GRATUITOUS_NA_VERSION;
 import static com.android.networkstack.util.NetworkStackUtils.IPCLIENT_IGNORE_LOW_RA_LIFETIME_VERSION;
+import static com.android.networkstack.util.NetworkStackUtils.IPCLIENT_POPULATE_LINK_ADDRESS_LIFETIME_VERSION;
 import static com.android.networkstack.util.NetworkStackUtils.createInet6AddressFromEui64;
 import static com.android.networkstack.util.NetworkStackUtils.macAddressToEui64;
 import static com.android.server.util.PermissionUtil.enforceNetworkStackCallingPermission;
@@ -705,6 +706,7 @@ public class IpClient extends StateMachine {
     private final boolean mEnableIpClientIgnoreLowRaLifetime;
     private final boolean mApfShouldHandleLightDoze;
     private final boolean mEnableApfPollingCounters;
+    private final boolean mPopulateLinkAddressLifetime;
 
     private InterfaceParams mInterfaceParams;
 
@@ -944,6 +946,8 @@ public class IpClient extends StateMachine {
         // Light doze mode status checking API is only available at T or later releases.
         mApfShouldHandleLightDoze = SdkLevel.isAtLeastT() && mDependencies.isFeatureNotChickenedOut(
                 mContext, APF_HANDLE_LIGHT_DOZE_FORCE_DISABLE);
+        mPopulateLinkAddressLifetime = mDependencies.isFeatureEnabled(context,
+                IPCLIENT_POPULATE_LINK_ADDRESS_LIFETIME_VERSION);
 
         IpClientLinkObserver.Configuration config = new IpClientLinkObserver.Configuration(
                 mMinRdnssLifetimeSec);
@@ -3258,19 +3262,25 @@ public class IpClient extends StateMachine {
                     break;
 
                 case DhcpClient.CMD_CONFIGURE_LINKADDRESS: {
-                    final int leaseDuration = msg.arg1;
                     final LinkAddress ipAddress = (LinkAddress) msg.obj;
-                    // For IPv4 link addresses, there is no concept of preferred/valid lifetimes.
-                    // Populate the ifa_cacheinfo attribute in the netlink message with the DHCP
-                    // lease duration, which is used by the kernel to maintain the validity of the
-                    // IP addresses.
-                    if (NetlinkUtils.sendRtmNewAddressRequest(mInterfaceParams.index,
-                            ipAddress.getAddress(),
-                            (short) ipAddress.getPrefixLength(),
-                            0 /* flags */,
-                            (byte) RT_SCOPE_UNIVERSE /* scope */,
-                            leaseDuration /* preferred */,
-                            leaseDuration /* valid */)) {
+                    final boolean success;
+                    if (mPopulateLinkAddressLifetime) {
+                        // For IPv4 link addresses, there is no concept of preferred/valid
+                        // lifetimes. Populate the ifa_cacheinfo attribute in the netlink
+                        // message with the DHCP lease duration, which is used by the kernel
+                        // to maintain the validity of the IP addresses.
+                        final int leaseDuration = msg.arg1;
+                        success = NetlinkUtils.sendRtmNewAddressRequest(mInterfaceParams.index,
+                                ipAddress.getAddress(),
+                                (short) ipAddress.getPrefixLength(),
+                                0 /* flags */,
+                                (byte) RT_SCOPE_UNIVERSE /* scope */,
+                                leaseDuration /* preferred */,
+                                leaseDuration /* valid */);
+                    } else {
+                        success = mInterfaceCtrl.setIPv4Address(ipAddress);
+                    }
+                    if (success) {
                         // Although it's impossible to happen that DHCP client becomes null in
                         // RunningState and then NPE is thrown when it attempts to send a message
                         // on an null object, sometimes it's found during stress tests. If this

@@ -531,7 +531,12 @@ public class IpReachabilityMonitor {
                 isNudFailureDueToRoam(), lostProvisioning);
 
         if (lostProvisioning) {
-            final String logMsg = "FAILURE: LOST_PROVISIONING, " + event;
+            final boolean isOrganicNudFailureAndToBeIgnored =
+                    ((type == NudEventType.NUD_ORGANIC_FAILED_CRITICAL)
+                            && mIgnoreOrganicNudFailure);
+            final String logMsg = "FAILURE: LOST_PROVISIONING, " + event
+                    + ", NUD event type: " + type.name()
+                    + (isOrganicNudFailureAndToBeIgnored ? ", to be ignored" : "");
             Log.w(TAG, logMsg);
             // TODO: remove |ip| when the callback signature no longer has
             // an InetAddress argument.
@@ -539,7 +544,7 @@ public class IpReachabilityMonitor {
             // are not from kernel organic or the NUD failure event type is
             // NUD_ORGANIC_FAILED_CRITICAL but the experiment flag is not
             // enabled. Regardless, the event metrics are still recoreded.
-            if (type != NudEventType.NUD_ORGANIC_FAILED_CRITICAL || !mIgnoreOrganicNudFailure) {
+            if (!isOrganicNudFailureAndToBeIgnored) {
                 mCallback.notifyLost(ip, logMsg, type);
             }
         }

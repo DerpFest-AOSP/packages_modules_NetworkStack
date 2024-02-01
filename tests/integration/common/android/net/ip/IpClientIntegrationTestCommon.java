@@ -746,6 +746,10 @@ public abstract class IpClientIntegrationTestCommon {
         setFeatureEnabled(NetworkStackUtils.IPCLIENT_DHCPV6_PREFIX_DELEGATION_VERSION,
                 true /* isDhcp6PrefixDelegationEnabled */);
 
+        // Enable populating the IP Link Address lifetime.
+        setFeatureEnabled(NetworkStackUtils.IPCLIENT_POPULATE_LINK_ADDRESS_LIFETIME_VERSION,
+                true /* enabled */);
+
         setUpTapInterface();
         // It turns out that Router Solicitation will also be sent out even after the tap interface
         // is brought up, however, we want to wait for RS which is sent due to IPv6 stack is enabled

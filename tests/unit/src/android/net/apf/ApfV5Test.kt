@@ -17,7 +17,6 @@ package android.net.apf
 
 import android.net.apf.ApfV4Generator.IllegalInstructionException
 import android.net.apf.ApfV4Generator.MIN_APF_VERSION
-import android.net.apf.ApfV4Generator.MIN_APF_VERSION_IN_DEV
 import android.net.apf.ApfV4Generator.Register.R0
 import android.net.apf.ApfV4Generator.Register.R1
 import androidx.test.filters.SmallTest
@@ -36,53 +35,15 @@ import org.junit.runner.RunWith
 class ApfV5Test {
 
     @Test
-    fun testApfInstructionVersionCheck() {
-        var gen = ApfV4Generator(MIN_APF_VERSION)
-        assertFailsWith<IllegalInstructionException> { gen.addDrop() }
-        assertFailsWith<IllegalInstructionException> { gen.addCountAndDrop(12) }
-        assertFailsWith<IllegalInstructionException> { gen.addCountAndPass(1000) }
-        assertFailsWith<IllegalInstructionException> { gen.addTransmit() }
-        assertFailsWith<IllegalInstructionException> { gen.addDiscard() }
-        assertFailsWith<IllegalInstructionException> { gen.addAllocateR0() }
-        assertFailsWith<IllegalInstructionException> { gen.addAllocate(100) }
-        assertFailsWith<IllegalInstructionException> { gen.addData(ByteArray(3) { 0x01 }) }
-        assertFailsWith<IllegalInstructionException> { gen.addWriteU8(100) }
-        assertFailsWith<IllegalInstructionException> { gen.addWriteU16(100) }
-        assertFailsWith<IllegalInstructionException> { gen.addWriteU32(100) }
-        assertFailsWith<IllegalInstructionException> { gen.addPacketCopy(100, 100) }
-        assertFailsWith<IllegalInstructionException> { gen.addDataCopy(100, 100) }
-        assertFailsWith<IllegalInstructionException> { gen.addWriteU8(R0) }
-        assertFailsWith<IllegalInstructionException> { gen.addWriteU16(R0) }
-        assertFailsWith<IllegalInstructionException> { gen.addWriteU32(R0) }
-        assertFailsWith<IllegalInstructionException> { gen.addWriteU8(R1) }
-        assertFailsWith<IllegalInstructionException> { gen.addWriteU16(R1) }
-        assertFailsWith<IllegalInstructionException> { gen.addWriteU32(R1) }
-        assertFailsWith<IllegalInstructionException> { gen.addPacketCopyFromR0LenR1() }
-        assertFailsWith<IllegalInstructionException> { gen.addDataCopyFromR0LenR1() }
-        assertFailsWith<IllegalInstructionException> { gen.addPacketCopyFromR0(10) }
-        assertFailsWith<IllegalInstructionException> { gen.addDataCopyFromR0(10) }
-        assertFailsWith<IllegalInstructionException> {
-            gen.addJumpIfBytesAtR0Equal(byteArrayOf('A'.code.toByte()), ApfV4Generator.DROP_LABEL) }
-        assertFailsWith<IllegalInstructionException> { gen.addJumpIfPktAtR0DoesNotContainDnsQ(
-                byteArrayOf(1, 'A'.code.toByte()), 0x0c, ApfV4Generator.DROP_LABEL) }
-        assertFailsWith<IllegalInstructionException> { gen.addJumpIfPktAtR0ContainDnsQ(
-                byteArrayOf(1, 'A'.code.toByte()), 0x0c, ApfV4Generator.DROP_LABEL) }
-        assertFailsWith<IllegalInstructionException> { gen.addJumpIfPktAtR0DoesNotContainDnsA(
-                byteArrayOf(1, 'A'.code.toByte()), ApfV4Generator.DROP_LABEL) }
-        assertFailsWith<IllegalInstructionException> { gen.addJumpIfPktAtR0ContainDnsA(
-                byteArrayOf(1, 'A'.code.toByte()), ApfV4Generator.DROP_LABEL) }
-    }
-
-    @Test
     fun testDataInstructionMustComeFirst() {
-        var gen = ApfV4Generator(MIN_APF_VERSION_IN_DEV)
+        var gen = ApfV6Generator()
         gen.addAllocateR0()
         assertFailsWith<IllegalInstructionException> { gen.addData(ByteArray(3) { 0x01 }) }
     }
 
     @Test
     fun testApfInstructionEncodingSizeCheck() {
-        var gen = ApfV4Generator(MIN_APF_VERSION_IN_DEV)
+        var gen = ApfV6Generator()
         assertFailsWith<IllegalArgumentException> { gen.addAllocate(65536) }
         assertFailsWith<IllegalArgumentException> { gen.addAllocate(-1) }
         assertFailsWith<IllegalArgumentException> { gen.addDataCopy(-1, 1) }
@@ -181,7 +142,7 @@ class ApfV5Test {
             listOf("0: pass"),
             ApfJniUtils.disassembleApf(program).map { it.trim() } )
 
-        gen = ApfV4Generator(MIN_APF_VERSION_IN_DEV)
+        gen = ApfV6Generator()
         gen.addDrop()
         program = gen.generate()
         // encoding DROP opcode: opcode=0, imm_len=0, R=1
@@ -191,7 +152,7 @@ class ApfV5Test {
             listOf("0: drop"),
             ApfJniUtils.disassembleApf(program).map { it.trim() } )
 
-        gen = ApfV4Generator(MIN_APF_VERSION_IN_DEV)
+        gen = ApfV6Generator()
         gen.addCountAndPass(129)
         program = gen.generate()
         // encoding COUNT(PASS) opcode: opcode=0, imm_len=size_of(imm), R=0, imm=counterNumber
@@ -202,7 +163,7 @@ class ApfV5Test {
             listOf("0: pass         129"),
             ApfJniUtils.disassembleApf(program).map { it.trim() } )
 
-        gen = ApfV4Generator(MIN_APF_VERSION_IN_DEV)
+        gen = ApfV6Generator()
         gen.addCountAndDrop(1000)
         program = gen.generate()
         // encoding COUNT(DROP) opcode: opcode=0, imm_len=size_of(imm), R=1, imm=counterNumber
@@ -213,7 +174,7 @@ class ApfV5Test {
             listOf("0: drop         1000"),
             ApfJniUtils.disassembleApf(program).map { it.trim() } )
 
-        gen = ApfV4Generator(MIN_APF_VERSION_IN_DEV)
+        gen = ApfV6Generator()
         gen.addAllocateR0()
         gen.addAllocate(1500)
         program = gen.generate()
@@ -227,7 +188,7 @@ class ApfV5Test {
         assertContentEquals(listOf("0: allocate    r0", "2: allocate    1500"),
             ApfJniUtils.disassembleApf(program).map { it.trim() })
 
-        gen = ApfV4Generator(MIN_APF_VERSION_IN_DEV)
+        gen = ApfV6Generator()
         gen.addTransmit()
         gen.addDiscard()
         program = gen.generate()
@@ -241,7 +202,7 @@ class ApfV5Test {
          assertContentEquals(listOf("0: discard", "2: transmit"),
              ApfJniUtils.disassembleApf(program).map { it.trim() })
 
-        gen = ApfV4Generator(MIN_APF_VERSION_IN_DEV)
+        gen = ApfV6Generator()
         val largeByteArray = ByteArray(256) { 0x01 }
         gen.addData(largeByteArray)
         program = gen.generate()
@@ -252,7 +213,7 @@ class ApfV5Test {
         assertContentEquals(listOf("0: data        256," + "01".repeat(256) ),
             ApfJniUtils.disassembleApf(program).map { it.trim() })
 
-        gen = ApfV4Generator(MIN_APF_VERSION_IN_DEV)
+        gen = ApfV6Generator()
         gen.addWriteU8(0x01)
         gen.addWriteU16(0x0102)
         gen.addWriteU32(0x01020304)
@@ -287,7 +248,7 @@ class ApfV5Test {
         ),
         ApfJniUtils.disassembleApf(program).map { it.trim() })
 
-        gen = ApfV4Generator(MIN_APF_VERSION_IN_DEV)
+        gen = ApfV6Generator()
         gen.addWriteU8(R0)
         gen.addWriteU16(R0)
         gen.addWriteU32(R0)
@@ -311,7 +272,7 @@ class ApfV5Test {
                 "8: ewrite2     r1",
                 "10: ewrite4     r1"), ApfJniUtils.disassembleApf(program).map { it.trim() })
 
-        gen = ApfV4Generator(MIN_APF_VERSION_IN_DEV)
+        gen = ApfV6Generator()
         gen.addDataCopy(0, 10)
         gen.addDataCopy(1, 5)
         gen.addPacketCopy(1000, 255)
@@ -327,7 +288,7 @@ class ApfV5Test {
                 "2: dcopy       1, 5",
                 "5: pcopy       1000, 255"), ApfJniUtils.disassembleApf(program).map { it.trim() })
 
-        gen = ApfV4Generator(MIN_APF_VERSION_IN_DEV)
+        gen = ApfV6Generator()
         gen.addPacketCopyFromR0LenR1()
         gen.addPacketCopyFromR0(5)
         gen.addDataCopyFromR0LenR1()
@@ -344,7 +305,7 @@ class ApfV5Test {
 //                "       0: dcopy [r1+0], 5",
 //                "       4: pcopy [r0+1000], 255"), ApfJniUtils.disassembleApf(program))
 
-        gen = ApfV4Generator(MIN_APF_VERSION_IN_DEV)
+        gen = ApfV6Generator()
         gen.addJumpIfBytesAtR0Equal(byteArrayOf('a'.code.toByte()), ApfV4Generator.DROP_LABEL)
         program = gen.generate()
         assertContentEquals(
@@ -352,7 +313,7 @@ class ApfV5Test {
                         1, 1, 'a'.code.toByte()), program)
 
         val qnames = byteArrayOf(1, 'A'.code.toByte(), 1, 'B'.code.toByte(), 0, 0)
-        gen = ApfV4Generator(MIN_APF_VERSION_IN_DEV)
+        gen = ApfV6Generator()
         gen.addJumpIfPktAtR0DoesNotContainDnsQ(qnames, 0x0c, ApfV4Generator.DROP_LABEL)
         gen.addJumpIfPktAtR0ContainDnsQ(qnames, 0x0c, ApfV4Generator.DROP_LABEL)
         program = gen.generate()
@@ -362,7 +323,7 @@ class ApfV5Test {
                 encodeInstruction(21, 1, 1), 43, 1, 0x0c.toByte(),
         ) + qnames, program)
 
-        gen = ApfV4Generator(MIN_APF_VERSION_IN_DEV)
+        gen = ApfV6Generator()
         gen.addJumpIfPktAtR0DoesNotContainDnsA(qnames, ApfV4Generator.DROP_LABEL)
         gen.addJumpIfPktAtR0ContainDnsA(qnames, ApfV4Generator.DROP_LABEL)
         program = gen.generate()

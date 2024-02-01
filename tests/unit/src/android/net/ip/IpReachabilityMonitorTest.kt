@@ -72,7 +72,9 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestName
 import org.junit.runner.RunWith
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
@@ -186,6 +188,7 @@ private val TEST_DUAL_LINK_PROPERTIES = LinkProperties().apply {
 @RunWith(AndroidJUnit4::class)
 @SmallTest
 class IpReachabilityMonitorTest {
+    @get:Rule val mTestName = TestName()
     private val callback = mock(IpReachabilityMonitor.Callback::class.java)
     private val dependencies = mock(IpReachabilityMonitor.Dependencies::class.java)
     private val log = mock(SharedLog::class.java)
@@ -272,6 +275,19 @@ class IpReachabilityMonitorTest {
         doReturn(true).`when`(dependencies).isFeatureNotChickenedOut(any(),
             eq(IP_REACHABILITY_ROUTER_MAC_CHANGE_FAILURE_ONLY_AFTER_ROAM_VERSION))
 
+        val ignoreOrganicNudFailureTestList = listOf(
+                "testLoseProvisioning_ignoreOrganicIpv4DnsLost",
+                "testLoseProvisioning_ignoreOrganicIpv6DnsLost",
+                "testLoseProvisioning_ignoreOrganicIpv4GatewayLost",
+                "testLoseProvisioning_ignoreOrganicIpv6GatewayLost")
+        // The experiment flag: IP_REACHABILITY_IGNORE_ORGANIC_NUD_FAILURE_VERSION is read at
+        // the IpReachabilityMonitor constructor, so we have to set the value before initializing
+        // an IpReachabilityMonitor instance.
+        if (ignoreOrganicNudFailureTestList.contains(mTestName.methodName)) {
+            doReturn(true).`when`(dependencies).isFeatureEnabled(any(),
+                    eq(IP_REACHABILITY_IGNORE_ORGANIC_NUD_FAILURE_VERSION))
+        }
+
         val monitorFuture = CompletableFuture<IpReachabilityMonitor>()
         // IpReachabilityMonitor needs to be started from the handler thread
         handler.post {
@@ -330,6 +346,8 @@ class IpReachabilityMonitorTest {
         neighborMonitor.enqueuePacket(makeNewNeighMessage(TEST_IPV6_DNS, NUD_STALE))
 
         neighborMonitor.enqueuePacket(makeNewNeighMessage(lostNeighbor, NUD_FAILED))
+        handlerThread.waitForIdle(TEST_TIMEOUT_MS)
+
         if (expectedNotifyLost) {
             verify(callback, timeout(TEST_TIMEOUT_MS)).notifyLost(eq(lostNeighbor), anyString(),
                     eq(eventType))
@@ -411,32 +429,24 @@ class IpReachabilityMonitorTest {
 
     @Test
     fun testLoseProvisioning_ignoreOrganicIpv4DnsLost() {
-        doReturn(true).`when`(dependencies).isFeatureEnabled(any(),
-            eq(IP_REACHABILITY_IGNORE_ORGANIC_NUD_FAILURE_VERSION))
         runLoseProvisioningTest(TEST_LINK_PROPERTIES, TEST_IPV4_DNS, NUD_ORGANIC_FAILED_CRITICAL,
                 false /* expectedNotifyLost */)
     }
 
     @Test
     fun testLoseProvisioning_ignoreOrganicIpv6DnsLost() {
-        doReturn(true).`when`(dependencies).isFeatureEnabled(any(),
-            eq(IP_REACHABILITY_IGNORE_ORGANIC_NUD_FAILURE_VERSION))
         runLoseProvisioningTest(TEST_LINK_PROPERTIES, TEST_IPV6_DNS, NUD_ORGANIC_FAILED_CRITICAL,
                 false /* expectedNotifyLost */)
     }
 
     @Test
     fun testLoseProvisioning_ignoreOrganicIpv4GatewayLost() {
-        doReturn(true).`when`(dependencies).isFeatureEnabled(any(),
-            eq(IP_REACHABILITY_IGNORE_ORGANIC_NUD_FAILURE_VERSION))
         runLoseProvisioningTest(TEST_LINK_PROPERTIES, TEST_IPV4_GATEWAY,
                 NUD_ORGANIC_FAILED_CRITICAL, false /* expectedNotifyLost */)
     }
 
     @Test
     fun testLoseProvisioning_ignoreOrganicIpv6GatewayLost() {
-        doReturn(true).`when`(dependencies).isFeatureEnabled(any(),
-            eq(IP_REACHABILITY_IGNORE_ORGANIC_NUD_FAILURE_VERSION))
         runLoseProvisioningTest(TEST_LINK_PROPERTIES, TEST_IPV6_GATEWAY,
                 NUD_ORGANIC_FAILED_CRITICAL, false /* expectedNotifyLost */)
     }

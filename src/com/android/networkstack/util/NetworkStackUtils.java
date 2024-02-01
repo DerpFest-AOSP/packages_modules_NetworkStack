@@ -268,6 +268,14 @@ public class NetworkStackUtils {
     public static final String NETWORKMONITOR_ASYNC_PRIVDNS_RESOLUTION =
             "networkmonitor_async_privdns_resolution";
 
+    /**
+     * Experiment flag to populate the IP link address lifetime such as deprecationTime and
+     * expirationtTime.
+     */
+    public static final String IPCLIENT_POPULATE_LINK_ADDRESS_LIFETIME_VERSION =
+            "ipclient_populate_link_address_lifetime_version";
+
+
     /**** BEGIN Feature Kill Switch Flags ****/
 
     /**

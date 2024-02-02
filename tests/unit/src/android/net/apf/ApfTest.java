@@ -263,6 +263,12 @@ public class ApfTest {
         ApfV4Generator gen = new ApfV4Generator(MIN_APF_VERSION);
         assertPass(gen);
 
+        // Test pass opcode
+        gen = new ApfV4Generator(MIN_APF_VERSION);
+        gen.addPass();
+        gen.addJump(DROP_LABEL);
+        assertPass(gen);
+
         // Test jumping to pass label.
         gen = new ApfV4Generator(MIN_APF_VERSION);
         gen.addJump(PASS_LABEL);

@@ -278,8 +278,10 @@ public class NetworkMonitorTest {
     private @Mock TcpSocketTracker.Dependencies mTstDependencies;
     private @Mock INetd mNetd;
     private @Mock TcpSocketTracker mTst;
-    private HashSet<WrappedNetworkMonitor> mCreatedNetworkMonitors;
-    private HashSet<BroadcastReceiver> mRegisteredReceivers;
+    @GuardedBy("mCreatedNetworkMonitors")
+    private final HashSet<WrappedNetworkMonitor> mCreatedNetworkMonitors = new HashSet<>();
+    @GuardedBy("mRegisteredReceivers")
+    private final HashSet<BroadcastReceiver> mRegisteredReceivers = new HashSet<>();
     private @Mock Context mMccContext;
     private @Mock Resources mMccResource;
     private @Mock WifiInfo mWifiInfo;
@@ -681,16 +683,22 @@ public class NetworkMonitorTest {
         mFakeDns.setAnswer(PRIVATE_DNS_PROBE_HOST_SUFFIX, new String[]{"2001:db8::1"}, TYPE_AAAA);
 
         doAnswer((invocation) -> {
-            mRegisteredReceivers.add(invocation.getArgument(0));
+            synchronized (mRegisteredReceivers) {
+                mRegisteredReceivers.add(invocation.getArgument(0));
+            }
             return new Intent();
         }).when(mContext).registerReceiver(any(BroadcastReceiver.class), any());
         doAnswer((invocation) -> {
-            mRegisteredReceivers.add(invocation.getArgument(0));
+            synchronized (mRegisteredReceivers) {
+                mRegisteredReceivers.add(invocation.getArgument(0));
+            }
             return new Intent();
         }).when(mContext).registerReceiver(any(BroadcastReceiver.class), any(), anyInt());
 
         doAnswer((invocation) -> {
-            mRegisteredReceivers.remove(invocation.getArgument(0));
+            synchronized (mRegisteredReceivers) {
+                mRegisteredReceivers.remove(invocation.getArgument(0));
+            }
             return null;
         }).when(mContext).unregisterReceiver(any());
 
@@ -700,12 +708,10 @@ public class NetworkMonitorTest {
         setDataStallEvaluationType(DATA_STALL_EVALUATION_TYPE_DNS);
         setValidDataStallDnsTimeThreshold(TEST_MIN_VALID_STALL_DNS_TIME_THRESHOLD_MS);
         setConsecutiveDnsTimeoutThreshold(5);
-        mCreatedNetworkMonitors = new HashSet<>();
-        mRegisteredReceivers = new HashSet<>();
     }
 
-    private static <T> void quitThreadsThat(Supplier<List<T>> supplier, ThrowingConsumer terminator)
-            throws Exception {
+    private static <T> void quitResourcesThat(Supplier<List<T>> supplier,
+            ThrowingConsumer terminator) throws Exception {
         // Run it multiple times since new threads might be generated in a thread
         // that is about to be terminated, e.g. each thread that runs
         // isCaptivePortal could generate 2 more probing threads.
@@ -720,8 +726,29 @@ public class NetworkMonitorTest {
         assertEquals(Collections.emptyList(), supplier.get());
     }
 
+    private void quitNetworkMonitors() throws Exception {
+        quitResourcesThat(() -> {
+            synchronized (mCreatedNetworkMonitors) {
+                final ArrayList<WrappedNetworkMonitor> ret =
+                        new ArrayList<>(mCreatedNetworkMonitors);
+                mCreatedNetworkMonitors.clear();
+                return ret;
+            }
+        }, (it) -> {
+            final WrappedNetworkMonitor nm = (WrappedNetworkMonitor) it;
+            nm.notifyNetworkDisconnected();
+            nm.awaitQuit();
+        });
+        synchronized (mRegisteredReceivers) {
+            assertEquals("BroadcastReceiver still registered after disconnect",
+                    0, mRegisteredReceivers.size());
+        }
+        quitThreads();
+        quitExecutorServices();
+    }
+
     private void quitExecutorServices() throws Exception {
-        quitThreadsThat(() -> {
+        quitResourcesThat(() -> {
             synchronized (mExecutorServiceToBeCleared) {
                 final ArrayList<ExecutorService> ret = new ArrayList<>(mExecutorServiceToBeCleared);
                 mExecutorServiceToBeCleared.clear();
@@ -734,7 +761,7 @@ public class NetworkMonitorTest {
     }
 
     private void quitThreads() throws Exception {
-        quitThreadsThat(() -> {
+        quitResourcesThat(() -> {
             synchronized (mThreadsToBeCleared) {
                 final ArrayList<Thread> ret = new ArrayList<>(mThreadsToBeCleared);
                 mThreadsToBeCleared.clear();
@@ -751,20 +778,7 @@ public class NetworkMonitorTest {
     @After
     public void tearDown() throws Exception {
         mFakeDns.clearAll();
-        // Make a local copy of mCreatedNetworkMonitors because during the iteration below,
-        // WrappedNetworkMonitor#onQuitting will delete elements from it on the handler threads.
-        WrappedNetworkMonitor[] networkMonitors = mCreatedNetworkMonitors.toArray(
-                new WrappedNetworkMonitor[0]);
-        for (WrappedNetworkMonitor nm : networkMonitors) {
-            nm.notifyNetworkDisconnected();
-            nm.awaitQuit();
-        }
-        assertEquals("NetworkMonitor still running after disconnect",
-                0, mCreatedNetworkMonitors.size());
-        assertEquals("BroadcastReceiver still registered after disconnect",
-                0, mRegisteredReceivers.size());
-        quitThreads();
-        quitExecutorServices();
+        quitNetworkMonitors();
         // Clear mocks to prevent from stubs holding instances and cause memory leaks.
         Mockito.framework().clearInlineMocks();
     }
@@ -849,7 +863,6 @@ public class NetworkMonitorTest {
         @Override
         protected void onQuitting() {
             super.onQuitting();
-            assertTrue(mCreatedNetworkMonitors.remove(this));
             mQuitCv.open();
         }
 
@@ -1171,7 +1184,9 @@ public class NetworkMonitorTest {
         verify(mContext, never()).registerReceiver(receiverCaptor.capture(),
                 argThat(receiver -> ACTION_CONFIGURATION_CHANGED.equals(receiver.getAction(0))));
         nm.start();
-        mCreatedNetworkMonitors.add(nm);
+        synchronized (mCreatedNetworkMonitors) {
+            mCreatedNetworkMonitors.add(nm);
+        }
         HandlerUtils.waitForIdle(nm.getHandler(), HANDLER_TIMEOUT_MS);
         verify(mContext, times(1)).registerReceiver(receiverCaptor.capture(),
                 argThat(receiver -> ACTION_CONFIGURATION_CHANGED.equals(receiver.getAction(0))));
@@ -3773,6 +3788,8 @@ public class NetworkMonitorTest {
         // started. If captive portal app receiver is registered, then the size of the registered
         // receivers will be 2. Otherwise, mRegisteredReceivers should only contain 1 configuration
         // change receiver.
-        assertEquals(isPortal ? 2 : 1, mRegisteredReceivers.size());
+        synchronized (mRegisteredReceivers) {
+            assertEquals(isPortal ? 2 : 1, mRegisteredReceivers.size());
+        }
     }
 }

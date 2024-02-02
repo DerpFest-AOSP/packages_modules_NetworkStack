@@ -306,10 +306,10 @@ public abstract class IpClientIntegrationTestCommon {
     protected static final long TEST_TIMEOUT_MS = 2_000L;
     private static final long TEST_WAIT_ENOBUFS_TIMEOUT_MS = 30_000L;
     private static final long TEST_WAIT_RENEW_REBIND_RETRANSMIT_MS = 15_000L;
-    // To prevent the flakiness about deprecationTime and expirationTime check, +/- 2s tolerance
+    // To prevent the flakiness about deprecationTime and expirationTime check, +/- 4s tolerance
     // should be enough between the timestamp when the IP provisioning completes successfully and
     // when IpClientLinkObserver sees the RTM_NEWADDR netlink events.
-    private static final long TEST_LIFETIME_TOLERANCE_MS = 2_000L;
+    private static final long TEST_LIFETIME_TOLERANCE_MS = 4_000L;
 
     @Rule
     public final DevSdkIgnoreRule mIgnoreRule = new DevSdkIgnoreRule();

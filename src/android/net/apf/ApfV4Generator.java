@@ -315,9 +315,18 @@ public class ApfV4Generator {
         // Offset in bytes from the beginning of this program. Set by {@link ApfGenerator#generate}.
         int offset;
 
-        Instruction(Opcodes opcode, Register register) {
+        Instruction(Opcodes opcode, Rbit rbit) {
             mOpcode = (byte) opcode.value;
-            mRbit = register == R0 ? Rbit0 : Rbit1;
+            mRbit = rbit;
+        }
+
+        Instruction(Opcodes opcode, Register register) {
+            this(opcode, register == R0 ? Rbit0 : Rbit1);
+        }
+
+        Instruction(ExtendedOpcodes extendedOpcodes, Rbit rbit) {
+            this(Opcodes.EXT, rbit);
+            addUnsigned(extendedOpcodes.value);
         }
 
         Instruction(ExtendedOpcodes extendedOpcodes, Register register) {
@@ -1006,8 +1015,8 @@ public class ApfV4Generator {
      * Add an instruction to the end of the program to let the program immediately return PASS.
      */
     public ApfV4Generator addPass() {
-        // PASS requires using R0 because it shares opcode with DROP
-        return append(new Instruction(Opcodes.PASSDROP));
+        // PASS requires using Rbit0 because it shares opcode with DROP
+        return append(new Instruction(Opcodes.PASSDROP, Rbit0));
     }
 
     static void checkRange(@NonNull String variableName, long value, long lowerBound,

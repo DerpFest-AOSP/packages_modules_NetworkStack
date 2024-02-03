@@ -312,6 +312,9 @@ class ApfV5Test {
         assertContentEquals(
                 byteArrayOf(encodeInstruction(opcode = 20, immLength = 1, register = 1),
                         1, 1, 'a'.code.toByte()), program)
+        assertContentEquals(listOf(
+            "0: jebs        r0, 0x1, DROP, 61"),
+            ApfJniUtils.disassembleApf(program).map{ it.trim() })
 
         val qnames = byteArrayOf(1, 'A'.code.toByte(), 1, 'B'.code.toByte(), 0, 0)
         gen = ApfV6Generator()

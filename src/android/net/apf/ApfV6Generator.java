@@ -15,8 +15,8 @@
  */
 package android.net.apf;
 
-import static android.net.apf.ApfV4Generator.Register.R0;
-import static android.net.apf.ApfV4Generator.Register.R1;
+import static android.net.apf.ApfV4Generator.Rbit.Rbit0;
+import static android.net.apf.ApfV4Generator.Rbit.Rbit1;
 
 import androidx.annotation.NonNull;
 
@@ -46,16 +46,16 @@ public class ApfV6Generator extends ApfV4Generator {
     public ApfV4Generator addCountAndPass(int cnt) {
         checkRange("CounterNumber", cnt /* value */, 1 /* lowerBound */,
                 1000 /* upperBound */);
-        // PASS requires using R0 because it shares opcode with DROP
-        return append(new Instruction(Opcodes.PASSDROP).addUnsigned(cnt));
+        // PASS requires using Rbit0 because it shares opcode with DROP
+        return append(new Instruction(Opcodes.PASSDROP, Rbit0).addUnsigned(cnt));
     }
 
     /**
      * Add an instruction to the end of the program to let the program immediately return DROP.
      */
     public ApfV4Generator addDrop() {
-        // DROP requires using R1 because it shares opcode with PASS
-        return append(new Instruction(Opcodes.PASSDROP, R1));
+        // DROP requires using Rbit1 because it shares opcode with PASS
+        return append(new Instruction(Opcodes.PASSDROP, Rbit1));
     }
 
     /**
@@ -65,8 +65,8 @@ public class ApfV6Generator extends ApfV4Generator {
     public ApfV4Generator addCountAndDrop(int cnt) {
         checkRange("CounterNumber", cnt /* value */, 1 /* lowerBound */,
                 1000 /* upperBound */);
-        // DROP requires using R1 because it shares opcode with PASS
-        return append(new Instruction(Opcodes.PASSDROP, R1).addUnsigned(cnt));
+        // DROP requires using Rbit1 because it shares opcode with PASS
+        return append(new Instruction(Opcodes.PASSDROP, Rbit1).addUnsigned(cnt));
     }
 
     /**
@@ -83,8 +83,8 @@ public class ApfV6Generator extends ApfV4Generator {
      * @param size the buffer length to be allocated.
      */
     public ApfV4Generator addAllocate(int size) {
-        // R1 means the extra be16 immediate is present
-        return append(new Instruction(ExtendedOpcodes.ALLOCATE, R1).addU16(size));
+        // Rbit1 means the extra be16 immediate is present
+        return append(new Instruction(ExtendedOpcodes.ALLOCATE, Rbit1).addU16(size));
     }
 
     /**
@@ -95,23 +95,24 @@ public class ApfV6Generator extends ApfV4Generator {
         if (!mInstructions.isEmpty()) {
             throw new IllegalInstructionException("data instruction has to come first");
         }
-        return append(new Instruction(Opcodes.JMP, R1).addUnsigned(data.length).setBytesImm(data));
+        return append(new Instruction(Opcodes.JMP, Rbit1).addUnsigned(data.length)
+                .setBytesImm(data));
     }
 
     /**
      * Add an instruction to the end of the program to transmit the allocated buffer.
      */
     public ApfV4Generator addTransmit() {
-        // TRANSMIT requires using R0 because it shares opcode with DISCARD
-        return append(new Instruction(ExtendedOpcodes.TRANSMITDISCARD));
+        // TRANSMIT requires using Rbit0 because it shares opcode with DISCARD
+        return append(new Instruction(ExtendedOpcodes.TRANSMITDISCARD, Rbit0));
     }
 
     /**
      * Add an instruction to the end of the program to discard the allocated buffer.
      */
     public ApfV4Generator addDiscard() {
-        // DISCARD requires using R1 because it shares opcode with TRANSMIT
-        return append(new Instruction(ExtendedOpcodes.TRANSMITDISCARD, R1));
+        // DISCARD requires using Rbit1 because it shares opcode with TRANSMIT
+        return append(new Instruction(ExtendedOpcodes.TRANSMITDISCARD, Rbit1));
     }
 
     /**
@@ -169,7 +170,7 @@ public class ApfV6Generator extends ApfV4Generator {
      * @return the ApfGenerator object
      */
     public ApfV4Generator addDataCopy(int src, int len) {
-        return append(new Instruction(Opcodes.PKTDATACOPY, R1).addUnsigned(src).addU8(len));
+        return append(new Instruction(Opcodes.PKTDATACOPY, Rbit1).addUnsigned(src).addU8(len));
     }
 
     /**
@@ -182,7 +183,7 @@ public class ApfV6Generator extends ApfV4Generator {
      * @return the ApfGenerator object
      */
     public ApfV4Generator addPacketCopy(int src, int len) {
-        return append(new Instruction(Opcodes.PKTDATACOPY, R0).addUnsigned(src).addU8(len));
+        return append(new Instruction(Opcodes.PKTDATACOPY, Rbit0).addUnsigned(src).addU8(len));
     }
 
     /**
@@ -194,7 +195,7 @@ public class ApfV6Generator extends ApfV4Generator {
      * @return the ApfGenerator object
      */
     public ApfV4Generator addDataCopyFromR0(int len) {
-        return append(new Instruction(ExtendedOpcodes.EDATACOPY).addU8(len));
+        return append(new Instruction(ExtendedOpcodes.EDATACOPY, Rbit0).addU8(len));
     }
 
     /**
@@ -206,7 +207,7 @@ public class ApfV6Generator extends ApfV4Generator {
      * @return the ApfGenerator object
      */
     public ApfV4Generator addPacketCopyFromR0(int len) {
-        return append(new Instruction(ExtendedOpcodes.EPKTCOPY).addU8(len));
+        return append(new Instruction(ExtendedOpcodes.EPKTCOPY, Rbit0).addU8(len));
     }
 
     /**
@@ -218,7 +219,7 @@ public class ApfV6Generator extends ApfV4Generator {
      * @return the ApfGenerator object
      */
     public ApfV4Generator addDataCopyFromR0LenR1() {
-        return append(new Instruction(ExtendedOpcodes.EDATACOPY, R1));
+        return append(new Instruction(ExtendedOpcodes.EDATACOPY, Rbit1));
     }
 
     /**
@@ -230,7 +231,7 @@ public class ApfV6Generator extends ApfV4Generator {
      * @return the ApfGenerator object
      */
     public ApfV4Generator addPacketCopyFromR0LenR1() {
-        return append(new Instruction(ExtendedOpcodes.EPKTCOPY, R1));
+        return append(new Instruction(ExtendedOpcodes.EPKTCOPY, Rbit1));
     }
 
     /**
@@ -242,7 +243,7 @@ public class ApfV6Generator extends ApfV4Generator {
     public ApfV4Generator addJumpIfPktAtR0DoesNotContainDnsQ(@NonNull byte[] qnames, int qtype,
                                                              @NonNull String tgt) {
         validateNames(qnames);
-        return append(new Instruction(ExtendedOpcodes.JDNSQMATCH).setTargetLabel(tgt).addU8(
+        return append(new Instruction(ExtendedOpcodes.JDNSQMATCH, Rbit0).setTargetLabel(tgt).addU8(
                 qtype).setBytesImm(qnames));
     }
 
@@ -255,7 +256,7 @@ public class ApfV6Generator extends ApfV4Generator {
     public ApfV4Generator addJumpIfPktAtR0ContainDnsQ(@NonNull byte[] qnames, int qtype,
                                                       @NonNull String tgt) {
         validateNames(qnames);
-        return append(new Instruction(ExtendedOpcodes.JDNSQMATCH, R1).setTargetLabel(tgt).addU8(
+        return append(new Instruction(ExtendedOpcodes.JDNSQMATCH, Rbit1).setTargetLabel(tgt).addU8(
                 qtype).setBytesImm(qnames));
     }
 
@@ -268,8 +269,8 @@ public class ApfV6Generator extends ApfV4Generator {
     public ApfV4Generator addJumpIfPktAtR0DoesNotContainDnsA(@NonNull byte[] names,
                                                              @NonNull String tgt) {
         validateNames(names);
-        return append(new Instruction(ExtendedOpcodes.JDNSAMATCH).setTargetLabel(tgt).setBytesImm(
-                names));
+        return append(new Instruction(ExtendedOpcodes.JDNSAMATCH, Rbit0).setTargetLabel(tgt)
+                        .setBytesImm(names));
     }
 
     /**
@@ -281,7 +282,7 @@ public class ApfV6Generator extends ApfV4Generator {
     public ApfV4Generator addJumpIfPktAtR0ContainDnsA(@NonNull byte[] names,
                                                       @NonNull String tgt) {
         validateNames(names);
-        return append(new Instruction(ExtendedOpcodes.JDNSAMATCH, R1).setTargetLabel(
+        return append(new Instruction(ExtendedOpcodes.JDNSAMATCH, Rbit1).setTargetLabel(
                 tgt).setBytesImm(names));
     }
 

@@ -326,6 +326,10 @@ class ApfV5Test {
         ) + qnames + byteArrayOf(
                 encodeInstruction(21, 1, 1), 43, 1, 0x0c.toByte(),
         ) + qnames, program)
+        assertContentEquals(listOf(
+            "0: jdnsqne     r0, DROP, 12, 014101420000",
+            "10: jdnsqeq     r0, DROP, 12, 014101420000"),
+            ApfJniUtils.disassembleApf(program).map{ it.trim() })
 
         gen = ApfV6Generator()
         gen.addJumpIfPktAtR0DoesNotContainDnsA(qnames, ApfV4Generator.DROP_LABEL)

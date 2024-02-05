@@ -210,7 +210,7 @@ class ApfV5Test {
         assertContentEquals(byteArrayOf(
                 encodeInstruction(opcode = 14, immLength = 2, register = 1), 0x01, 0x00) +
                 largeByteArray, program)
-        assertContentEquals(listOf("0: data        256," + "01".repeat(256) ),
+        assertContentEquals(listOf("0: data        256, " + "01".repeat(256) ),
             ApfJniUtils.disassembleApf(program).map { it.trim() })
 
         gen = ApfV6Generator()

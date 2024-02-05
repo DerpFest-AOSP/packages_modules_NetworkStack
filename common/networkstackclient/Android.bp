@@ -48,6 +48,9 @@ aidl_interface {
         cpp: {
             enabled: false,
         },
+        rust: {
+            enabled: false,
+        },
     },
 
     visibility: [
@@ -158,6 +161,9 @@ aidl_interface {
             enabled: false,
         },
         cpp: {
+            enabled: false,
+        },
+        rust: {
             enabled: false,
         },
     },

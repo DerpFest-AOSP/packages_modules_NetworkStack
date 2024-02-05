@@ -289,21 +289,22 @@ class ApfV5Test {
                 "5: pcopy       1000, 255"), ApfJniUtils.disassembleApf(program).map { it.trim() })
 
         gen = ApfV6Generator()
-        gen.addPacketCopyFromR0LenR1()
+        gen.addDataCopyFromR0(5)
         gen.addPacketCopyFromR0(5)
         gen.addDataCopyFromR0LenR1()
-        gen.addDataCopyFromR0(5)
+        gen.addPacketCopyFromR0LenR1()
         program = gen.generate()
         assertContentEquals(byteArrayOf(
-                encodeInstruction(21, 1, 1), 41,
+                encodeInstruction(21, 1, 1), 41, 5,
                 encodeInstruction(21, 1, 0), 41, 5,
                 encodeInstruction(21, 1, 1), 42,
-                encodeInstruction(21, 1, 0), 42, 5,
+                encodeInstruction(21, 1, 0), 42,
         ), program)
-        // TODO: add back the following test case when implementing EPKTCOPY, EDATACOPY opcodes.
-//        assertContentEquals(arrayOf(
-//                "       0: dcopy [r1+0], 5",
-//                "       4: pcopy [r0+1000], 255"), ApfJniUtils.disassembleApf(program))
+        assertContentEquals(listOf(
+            "0: edatacopy    r0, 5",
+            "3: epktcopy     r0, 5",
+            "6: edatacopy    r0, r1",
+            "8: epktcopy     r0, r1"), ApfJniUtils.disassembleApf(program).map{ it.trim() })
 
         gen = ApfV6Generator()
         gen.addJumpIfBytesAtR0Equal(byteArrayOf('a'.code.toByte()), ApfV4Generator.DROP_LABEL)

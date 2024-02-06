@@ -51,4 +51,5 @@ parcelable ProvisioningConfigurationParcelable {
     int ipv6ProvisioningMode;
     boolean uniqueEui64AddressesOnly;
     int creatorUid;
+    int hostnameSetting;
 }

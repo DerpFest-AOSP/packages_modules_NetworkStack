@@ -16,6 +16,7 @@
 
 package android.net.shared;
 
+import static android.net.ip.IIpClient.HOSTNAME_SETTING_UNSET;
 import static android.net.ip.IIpClient.PROV_IPV4_DHCP;
 import static android.net.ip.IIpClient.PROV_IPV4_DISABLED;
 import static android.net.ip.IIpClient.PROV_IPV4_STATIC;
@@ -290,6 +291,17 @@ public class ProvisioningConfiguration {
         }
 
         /**
+         * Specify the hostname setting to use during IP provisioning.
+         *     - {@link IIpClient#HOSTNAME_SETTING_UNSET}: Default value.
+         *     - {@link IIpClient#HOSTNAME_SETTING_SEND}: Send the hostname.
+         *     - {@link IIpClient#HOSTNAME_SETTING_DO_NOT_SEND}: Don't send the hostname.
+         */
+        public Builder withHostnameSetting(int setting) {
+            mConfig.mHostnameSetting = setting;
+            return this;
+        }
+
+        /**
          * Build the configuration using previously specified parameters.
          */
         public ProvisioningConfiguration build() {
@@ -501,6 +513,7 @@ public class ProvisioningConfiguration {
     public int mIPv4ProvisioningMode = PROV_IPV4_DHCP;
     public int mIPv6ProvisioningMode = PROV_IPV6_SLAAC;
     public int mCreatorUid;
+    public int mHostnameSetting = HOSTNAME_SETTING_UNSET;
 
     public ProvisioningConfiguration() {} // used by Builder
 
@@ -525,6 +538,7 @@ public class ProvisioningConfiguration {
         mDhcpOptions = other.mDhcpOptions;
         mIPv4ProvisioningMode = other.mIPv4ProvisioningMode;
         mIPv6ProvisioningMode = other.mIPv6ProvisioningMode;
+        mHostnameSetting = other.mHostnameSetting;
     }
 
     /**
@@ -554,6 +568,7 @@ public class ProvisioningConfiguration {
         p.scanResultInfo = (mScanResultInfo == null) ? null : mScanResultInfo.toStableParcelable();
         p.layer2Info = (mLayer2Info == null) ? null : mLayer2Info.toStableParcelable();
         p.options = (mDhcpOptions == null) ? null : new ArrayList<>(mDhcpOptions);
+        p.hostnameSetting = mHostnameSetting;
         return p;
     }
 
@@ -594,6 +609,7 @@ public class ProvisioningConfiguration {
             config.mIPv4ProvisioningMode = p.ipv4ProvisioningMode;
             config.mIPv6ProvisioningMode = p.ipv6ProvisioningMode;
         }
+        config.mHostnameSetting = p.hostnameSetting;
         return config;
     }
 
@@ -648,6 +664,7 @@ public class ProvisioningConfiguration {
                 .add("mDhcpOptions: " + mDhcpOptions)
                 .add("mIPv4ProvisioningMode: " + ipv4ProvisioningMode)
                 .add("mIPv6ProvisioningMode: " + ipv6ProvisioningMode)
+                .add("mHostnameSetting: " + mHostnameSetting)
                 .toString();
     }
 
@@ -694,7 +711,8 @@ public class ProvisioningConfiguration {
                 && dhcpOptionListEquals(mDhcpOptions, other.mDhcpOptions)
                 && mIPv4ProvisioningMode == other.mIPv4ProvisioningMode
                 && mIPv6ProvisioningMode == other.mIPv6ProvisioningMode
-                && mCreatorUid == other.mCreatorUid;
+                && mCreatorUid == other.mCreatorUid
+                && mHostnameSetting == other.mHostnameSetting;
     }
 
     public boolean isValid() {

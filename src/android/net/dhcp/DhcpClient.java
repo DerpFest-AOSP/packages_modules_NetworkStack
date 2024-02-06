@@ -64,6 +64,7 @@ import android.net.Layer2PacketParcelable;
 import android.net.MacAddress;
 import android.net.NetworkStackIpMemoryStore;
 import android.net.TrafficStats;
+import android.net.ip.IIpClient;
 import android.net.ip.IpClient;
 import android.net.ipmemorystore.NetworkAttributes;
 import android.net.ipmemorystore.OnNetworkAttributesRetrievedListener;
@@ -424,7 +425,7 @@ public class DhcpClient extends StateMachine {
          * Get the configuration from RRO to check whether or not to send hostname option in
          * DHCPDISCOVER/DHCPREQUEST message.
          */
-        public boolean getSendHostnameOption(final Context context) {
+        public boolean getSendHostnameOverlaySetting(final Context context) {
             return context.getResources().getBoolean(R.bool.config_dhcp_client_hostname);
         }
 
@@ -533,11 +534,19 @@ public class DhcpClient extends StateMachine {
         mRebindAlarm = makeWakeupMessage("REBIND", CMD_REBIND_DHCP);
         mExpiryAlarm = makeWakeupMessage("EXPIRY", CMD_EXPIRE_DHCP);
 
-        // Transliterate hostname read from system settings if RRO option is enabled.
-        final boolean sendHostname = deps.getSendHostnameOption(context);
-        mHostname = sendHostname ? new HostnameTransliterator().transliterate(
-                deps.getDeviceName(mContext)) : null;
-        mMetrics.setHostnameTransinfo(sendHostname, mHostname != null);
+        mHostname = new HostnameTransliterator().transliterate(deps.getDeviceName(mContext));
+        mMetrics.setHostnameTransinfo(deps.getSendHostnameOverlaySetting(context),
+                mHostname != null);
+    }
+
+    @Nullable
+    private String maybeGetHostnameForSending() {
+        boolean sendHostname = mDependencies.getSendHostnameOverlaySetting(mContext);
+        if (mConfiguration != null
+                && mConfiguration.hostnameSetting != IIpClient.HOSTNAME_SETTING_UNSET) {
+            sendHostname = mConfiguration.hostnameSetting == IIpClient.HOSTNAME_SETTING_SEND;
+        }
+        return sendHostname ? mHostname : null;
     }
 
     public void registerForPreDhcpNotification() {
@@ -758,7 +767,7 @@ public class DhcpClient extends StateMachine {
         final boolean requestRapidCommit = isDhcpRapidCommitEnabled() && (getSecs() <= 4);
         final ByteBuffer packet = DhcpPacket.buildDiscoverPacket(
                 DhcpPacket.ENCAP_L2, mTransactionId, getSecs(), mHwAddr,
-                DO_UNICAST, getRequestedParams(), requestRapidCommit, mHostname,
+                DO_UNICAST, getRequestedParams(), requestRapidCommit, maybeGetHostnameForSending(),
                 mConfiguration.options);
         mMetrics.incrementCountForDiscover();
         return transmitPacket(packet, "DHCPDISCOVER", DhcpPacket.ENCAP_L2, INADDR_BROADCAST);
@@ -773,7 +782,7 @@ public class DhcpClient extends StateMachine {
 
         final ByteBuffer packet = DhcpPacket.buildRequestPacket(
                 encap, mTransactionId, getSecs(), clientAddress, DO_UNICAST, mHwAddr,
-                requestedAddress, serverAddress, getRequestedParams(), mHostname,
+                requestedAddress, serverAddress, getRequestedParams(), maybeGetHostnameForSending(),
                 mConfiguration.options);
         String serverStr = (serverAddress != null) ? serverAddress.getHostAddress() : null;
         String description = "DHCPREQUEST ciaddr=" + clientAddress.getHostAddress() +
@@ -996,14 +1005,17 @@ public class DhcpClient extends StateMachine {
         @NonNull
         public final List<DhcpOption> options;
         public final boolean isWifiManagedProfile;
+        public final int hostnameSetting;
 
         public Configuration(@Nullable final String l2Key, final boolean isPreconnectionEnabled,
                 @NonNull final List<DhcpOption> options,
-                final boolean isWifiManagedProfile) {
+                final boolean isWifiManagedProfile,
+                final int hostnameSetting) {
             this.l2Key = l2Key;
             this.isPreconnectionEnabled = isPreconnectionEnabled;
             this.options = options;
             this.isWifiManagedProfile = isWifiManagedProfile;
+            this.hostnameSetting = hostnameSetting;
         }
     }
 
@@ -1400,7 +1412,8 @@ public class DhcpClient extends StateMachine {
             final Layer2PacketParcelable l2Packet = new Layer2PacketParcelable();
             final ByteBuffer packet = DhcpPacket.buildDiscoverPacket(
                     DhcpPacket.ENCAP_L2, mTransactionId, getSecs(), mHwAddr,
-                    DO_UNICAST, getRequestedParams(), true /* rapid commit */, mHostname,
+                    DO_UNICAST, getRequestedParams(), true /* rapid commit */,
+                    maybeGetHostnameForSending(),
                     mConfiguration.options);
 
             l2Packet.dstMacAddress = MacAddress.fromBytes(DhcpPacket.ETHER_BROADCAST);

@@ -15,13 +15,15 @@
  */
 package android.net.apf
 
+import android.net.apf.ApfTestUtils.MIN_PKT_SIZE
+import android.net.apf.ApfTestUtils.assertPass
 import android.net.apf.ApfV4Generator.IllegalInstructionException
 import android.net.apf.ApfV4Generator.MIN_APF_VERSION
+import android.net.apf.ApfV4Generator.MIN_APF_VERSION_IN_DEV
 import android.net.apf.ApfV4Generator.Register.R0
 import android.net.apf.ApfV4Generator.Register.R1
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
-import java.lang.IllegalArgumentException
 import kotlin.test.assertContentEquals
 import kotlin.test.assertFailsWith
 import org.junit.Test
@@ -342,6 +344,20 @@ class ApfV5Test {
         ) + qnames + byteArrayOf(
                 encodeInstruction(21, 1, 1), 44, 1,
         ) + qnames, program)
+    }
+
+    @Test
+    fun testWriteToTxBuffer() {
+        val gen = ApfV6Generator()
+        gen.addAllocate(74)
+        gen.addWriteU8(0x01)
+        gen.addWriteU16(0x0102)
+        gen.addWriteU32(0x01020304)
+        gen.addTransmit()
+        val program = gen.generate()
+        assertPass(MIN_APF_VERSION_IN_DEV, program, ByteArray(MIN_PKT_SIZE))
+        assertContentEquals(byteArrayOf(0x01, 0x01, 0x02, 0x01, 0x02, 0x03, 0x04),
+          ApfJniUtils.getTransmittedPacket())
     }
 
     private fun encodeInstruction(opcode: Int, immLength: Int, register: Int): Byte {

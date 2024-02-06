@@ -169,6 +169,7 @@ import android.net.networkstack.aidl.ip.ReachabilityLossReason;
 import android.net.shared.Layer2Information;
 import android.net.shared.ProvisioningConfiguration;
 import android.net.shared.ProvisioningConfiguration.ScanResultInfo;
+import android.net.util.HostnameTransliterator;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -178,6 +179,7 @@ import android.os.PowerManager;
 import android.os.RemoteException;
 import android.os.SystemClock;
 import android.os.SystemProperties;
+import android.provider.Settings;
 import android.stats.connectivity.NudEventType;
 import android.system.ErrnoException;
 import android.system.Os;
@@ -598,13 +600,13 @@ public abstract class IpClientIntegrationTestCommon {
                 }
 
                 @Override
-                public boolean getSendHostnameOption(final Context context) {
+                public boolean getSendHostnameOverlaySetting(final Context context) {
                     return mIsHostnameConfigurationEnabled;
                 }
 
                 @Override
                 public String getDeviceName(final Context context) {
-                    return mIsHostnameConfigurationEnabled ? mHostname : null;
+                    return mHostname;
                 }
             };
         }
@@ -1259,14 +1261,14 @@ public abstract class IpClientIntegrationTestCommon {
         assertIpMemoryNeverStoreNetworkAttributes(TEST_L2KEY, TEST_TIMEOUT_MS);
     }
 
-    private void assertHostname(final boolean isHostnameConfigurationEnabled,
+    private void assertHostname(final boolean expectSendHostname,
             final String hostname, final String hostnameAfterTransliteration,
             final List<DhcpPacket> packetList) throws Exception {
         for (DhcpPacket packet : packetList) {
-            if (!isHostnameConfigurationEnabled || hostname == null) {
+            if (!expectSendHostname || hostname == null) {
                 assertNoHostname(packet.getHostname());
             } else {
-                assertEquals(packet.getHostname(), hostnameAfterTransliteration);
+                assertEquals(hostnameAfterTransliteration, packet.getHostname());
             }
         }
     }
@@ -5852,5 +5854,91 @@ public abstract class IpClientIntegrationTestCommon {
                 assertLinkAddressExpirationTime(la, when);
             }
         }
+    }
+
+    private void doDhcpHostnameSettingTest(int hostnameSetting,
+            boolean isHostnameConfigurationEnabled, boolean expectSendHostname) throws Exception {
+        final ProvisioningConfiguration cfg = new ProvisioningConfiguration.Builder()
+                .withoutIPv6()
+                .withHostnameSetting(hostnameSetting)
+                .build();
+        final String expectedHostname;
+        final String expectedHostnameAfterTransliteration;
+        if (mDependencies != null) {
+            mDependencies.setHostnameConfiguration(isHostnameConfigurationEnabled,
+                    TEST_HOST_NAME);
+            expectedHostname = TEST_HOST_NAME;
+            expectedHostnameAfterTransliteration = TEST_HOST_NAME_TRANSLITERATION;
+        } else {
+            expectedHostname = Settings.Global.getString(
+                    InstrumentationRegistry.getInstrumentation().getContext().getContentResolver(),
+                    Settings.Global.DEVICE_NAME);
+            expectedHostnameAfterTransliteration = new HostnameTransliterator()
+                    .transliterate(expectedHostname);
+        }
+        startIpClientProvisioning(cfg);
+
+        // perform DHCP handshake and capture the packets sent from client such as
+        // DHCPDISCOVER and DHCPREQUEST.
+        final List<DhcpPacket> sentPackets = handleDhcpPackets(true /* isSuccessLease */,
+                DhcpPacket.INFINITE_LEASE,
+                false /* shouldReplyRapidCommitAck */, TEST_DEFAULT_MTU,
+                null /* captivePortalApiUrl */, null /* ipv6OnlyWaitTime */,
+                null /* domainName */, null /* domainSearchList */);
+
+        // check if the DHCP packet sent from the client takes a hostname option per different
+        // configs. Do not consider the null hostname case.
+        assertHostname(expectSendHostname, expectedHostname, expectedHostnameAfterTransliteration,
+                sentPackets);
+    }
+
+    @Test
+    @SignatureRequiredTest(reason = "need to mock setHostnameConfiguration")
+    public void testHostname_hostnameSettingUnset_enableHostnameConfig() throws Exception {
+        // If hostname setting is unset but legacy hostname overlay config is enabled,
+        // we expect that the DHCP packet takes a hostname option.
+        doDhcpHostnameSettingTest(IIpClient.HOSTNAME_SETTING_UNSET,
+                true /* isHostnameConfigurationEnabled */, true /* expectSendHostname */);
+    }
+
+    @Test
+    @SignatureRequiredTest(reason = "need to mock setHostnameConfiguration")
+    public void testHostname_hostnameSettingUnset_disableHostnameConfig() throws Exception {
+        // If hostname setting is unset and legacy hostname overlay config is disabled,
+        // we expect that the DHCP packet doesn't take a hostname option.
+        doDhcpHostnameSettingTest(IIpClient.HOSTNAME_SETTING_UNSET,
+                false /* isHostnameConfigurationEnabled */, false /* expectSendHostname */);
+    }
+
+    @Test
+    public void testHostname_hostnameSettingSend_enableHostnameConfig() throws Exception {
+        // If hostname setting is set and legacy hostname overlay config is enabled,
+        // we expect that the DHCP packet takes a hostname option.
+        doDhcpHostnameSettingTest(IIpClient.HOSTNAME_SETTING_SEND,
+                true /* isHostnameConfigurationEnabled */, true /* expectSendHostname */);
+    }
+
+    @Test
+    public void testHostname_hostnameSettingSend_disableHostnameConfig() throws Exception {
+        // If hostname setting is set and legacy hostname overlay config is disabled,
+        // we still expect that the DHCP packet takes a hostname option.
+        doDhcpHostnameSettingTest(IIpClient.HOSTNAME_SETTING_SEND,
+                false /* isHostnameConfigurationEnabled */, true /* expectSendHostname */);
+    }
+
+    @Test
+    public void testHostname_hostnameSettingNotSend_enableHostnameConfig() throws Exception {
+        // If hostname setting is not send and even if legacy hostname overlay config is
+        // enabled, we expect that the DHCP packet doesn't take a hostname option.
+        doDhcpHostnameSettingTest(IIpClient.HOSTNAME_SETTING_DO_NOT_SEND,
+                true /* isHostnameConfigurationEnabled */, false /* expectSendHostname */);
+    }
+
+    @Test
+    public void testHostname_hostnameSettingNotSend_disableHostnameConfig() throws Exception {
+        // If hostname setting is not send and even if legacy hostname overlay config is
+        // disabled, we expect that the DHCP packet doesn't take a hostname option.
+        doDhcpHostnameSettingTest(IIpClient.HOSTNAME_SETTING_DO_NOT_SEND,
+                false /* isHostnameConfigurationEnabled */, false /* expectSendHostname */);
     }
 }

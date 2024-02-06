@@ -54,6 +54,21 @@ oneway interface IIpClient {
      */
     const int PROV_IPV6_LINKLOCAL = 0x02;
 
+    /**
+     * Unset hostname setting.
+     */
+    const int HOSTNAME_SETTING_UNSET = 0x00;
+
+    /**
+     * Send hostname to IP provisioning server.
+     */
+    const int HOSTNAME_SETTING_SEND = 0x01;
+
+    /**
+     * Do not send hostname to IP provisioning server.
+     */
+    const int HOSTNAME_SETTING_DO_NOT_SEND = 0x02;
+
     void completedPreDhcpAction();
     void confirmConfiguration();
     void readPacketFilterComplete(in byte[] data);

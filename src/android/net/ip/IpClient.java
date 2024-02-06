@@ -2669,7 +2669,8 @@ public class IpClient extends StateMachine {
             isManagedWifiProfile = true;
         }
         mDhcpClient.sendMessage(DhcpClient.CMD_START_DHCP, new DhcpClient.Configuration(mL2Key,
-                isUsingPreconnection(), options, isManagedWifiProfile));
+                isUsingPreconnection(), options, isManagedWifiProfile,
+                mConfiguration.mHostnameSetting));
     }
 
     private boolean hasPermission(String permissionName) {

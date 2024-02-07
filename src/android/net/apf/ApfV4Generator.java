@@ -884,7 +884,7 @@ public class ApfV4Generator {
      * Add an instruction to the end of the program to jump to {@code target} if register R0's
      * value is greater than {@code value}.
      */
-    public ApfV4Generator addJumpIfR0GreaterThan(int val, String tgt) {
+    public ApfV4Generator addJumpIfR0GreaterThan(long val, String tgt) {
         return append(new Instruction(Opcodes.JGT).addUnsigned(val).setTargetLabel(tgt));
     }
 
@@ -892,7 +892,7 @@ public class ApfV4Generator {
      * Add an instruction to the end of the program to jump to {@code target} if register R0's
      * value is less than {@code value}.
      */
-    public ApfV4Generator addJumpIfR0LessThan(int val, String tgt) {
+    public ApfV4Generator addJumpIfR0LessThan(long val, String tgt) {
         return append(new Instruction(Opcodes.JLT).addUnsigned(val).setTargetLabel(tgt));
     }
 

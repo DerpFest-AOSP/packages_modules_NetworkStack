@@ -170,7 +170,7 @@ public class ApfV6Generator extends ApfV4Generator {
      * @return the ApfGenerator object
      */
     public ApfV4Generator addDataCopy(int src, int len) {
-        return append(new Instruction(Opcodes.PKTDATACOPY, Rbit1).addUnsigned(src).addU8(len));
+        return append(new Instruction(Opcodes.PKTDATACOPY, Rbit1).addDataOffset(src).addU8(len));
     }
 
     /**
@@ -183,7 +183,7 @@ public class ApfV6Generator extends ApfV4Generator {
      * @return the ApfGenerator object
      */
     public ApfV4Generator addPacketCopy(int src, int len) {
-        return append(new Instruction(Opcodes.PKTDATACOPY, Rbit0).addUnsigned(src).addU8(len));
+        return append(new Instruction(Opcodes.PKTDATACOPY, Rbit0).addPacketOffset(src).addU8(len));
     }
 
     /**

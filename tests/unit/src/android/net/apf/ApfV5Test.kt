@@ -331,8 +331,8 @@ class ApfV5Test {
                 encodeInstruction(21, 1, 1), 43, 1, 0x0c.toByte(),
         ) + qnames, program)
         assertContentEquals(listOf(
-            "0: jdnsqne     r0, DROP, 12, 014101420000",
-            "10: jdnsqeq     r0, DROP, 12, 014101420000"),
+            "0: jdnsqne     r0, DROP, 12, (1)A(1)B(0)(0)",
+            "10: jdnsqeq     r0, DROP, 12, (1)A(1)B(0)(0)"),
             ApfJniUtils.disassembleApf(program).map{ it.trim() })
 
         gen = ApfV6Generator()
@@ -344,6 +344,10 @@ class ApfV5Test {
         ) + qnames + byteArrayOf(
                 encodeInstruction(21, 1, 1), 44, 1,
         ) + qnames, program)
+        assertContentEquals(listOf(
+            "0: jdnsane     r0, DROP, (1)A(1)B(0)(0)",
+            "9: jdnsaeq     r0, DROP, (1)A(1)B(0)(0)"),
+            ApfJniUtils.disassembleApf(program).map{ it.trim() })
     }
 
     @Test

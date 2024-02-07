@@ -355,13 +355,13 @@ class ApfV5Test {
 
     @Test
     fun testWriteToTxBuffer() {
-        val gen = ApfV6Generator()
-        gen.addAllocate(74)
-        gen.addWriteU8(0x01)
-        gen.addWriteU16(0x0102)
-        gen.addWriteU32(0x01020304)
-        gen.addTransmit()
-        val program = gen.generate()
+        val program = ApfV6Generator()
+            .addAllocate(74)
+            .addWriteU8(0x01)
+            .addWriteU16(0x0102)
+            .addWriteU32(0x01020304)
+            .addTransmit()
+            .generate()
         assertPass(MIN_APF_VERSION_IN_DEV, program, ByteArray(MIN_PKT_SIZE))
         assertContentEquals(byteArrayOf(0x01, 0x01, 0x02, 0x01, 0x02, 0x03, 0x04),
           ApfJniUtils.getTransmittedPacket())

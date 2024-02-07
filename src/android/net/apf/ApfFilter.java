@@ -1050,10 +1050,10 @@ public class ApfFilter implements AndroidPacketFilter {
                     //
                     // if lft < (oldLft + 2) // 3 -> PASS
                     // if lft > oldLft            -> PASS
-                    // gen.addJumpIfR0LessThan((int) ((section.lifetime + 2) / 3),
+                    // gen.addJumpIfR0LessThan(((section.lifetime + 2) / 3),
                     //        nextFilterLabel);
                     if (lft < (section.lifetime + 2) / 3) return MatchType.MATCH_PASS;
-                    // gen.addJumpIfR0GreaterThan((int) section.lifetime, nextFilterLabel);
+                    // gen.addJumpIfR0GreaterThan(section.lifetime, nextFilterLabel);
                     if (lft > section.lifetime) return MatchType.MATCH_PASS;
                 } else if (section.lifetime < section.min) {
                     // Case 2a) 0 < old lft < min
@@ -1077,7 +1077,7 @@ public class ApfFilter implements AndroidPacketFilter {
                     // if lft > oldLft -> PASS
                     // gen.addJumpIfR0Equals(0, nextFilterLabel);
                     if (lft == 0) return MatchType.MATCH_PASS;
-                    // gen.addJumpIfR0GreaterThan((int) section.lifetime, nextFilterLabel);
+                    // gen.addJumpIfR0GreaterThan(section.lifetime, nextFilterLabel);
                     if (lft > section.lifetime) return MatchType.MATCH_PASS;
                 } else {
                     // Case 4a) otherwise
@@ -1090,10 +1090,10 @@ public class ApfFilter implements AndroidPacketFilter {
                     if (lft == 0) return MatchType.MATCH_PASS;
                     // gen.addJumpIfR0LessThan(section.min, continueLabel);
                     if (lft < section.min) continue;
-                    // gen.addJumpIfR0LessThan((int) ((section.lifetime + 2) / 3),
+                    // gen.addJumpIfR0LessThan(((section.lifetime + 2) / 3),
                     //         nextFilterLabel);
                     if (lft < (section.lifetime + 2) / 3) return MatchType.MATCH_PASS;
-                    // gen.addJumpIfR0GreaterThan((int) section.lifetime, nextFilterLabel);
+                    // gen.addJumpIfR0GreaterThan(section.lifetime, nextFilterLabel);
                     if (lft > section.lifetime) return MatchType.MATCH_PASS;
                 }
             }
@@ -1178,9 +1178,9 @@ public class ApfFilter implements AndroidPacketFilter {
                         //
                         // if lft < (oldLft + 2) // 3 -> PASS
                         // if lft > oldLft            -> PASS
-                        gen.addJumpIfR0LessThan((int) ((section.lifetime + 2) / 3),
+                        gen.addJumpIfR0LessThan(((section.lifetime + 2) / 3),
                                 nextFilterLabel);
-                        gen.addJumpIfR0GreaterThan((int) section.lifetime, nextFilterLabel);
+                        gen.addJumpIfR0GreaterThan(section.lifetime, nextFilterLabel);
                     } else if (section.lifetime < section.min) {
                         // Case 2a) 0 < old lft < min
                         //
@@ -1200,7 +1200,7 @@ public class ApfFilter implements AndroidPacketFilter {
                         // if lft == 0     -> PASS
                         // if lft > oldLft -> PASS
                         gen.addJumpIfR0Equals(0, nextFilterLabel);
-                        gen.addJumpIfR0GreaterThan((int) section.lifetime, nextFilterLabel);
+                        gen.addJumpIfR0GreaterThan(section.lifetime, nextFilterLabel);
                     } else {
                         final String continueLabel = "Continue" + getUniqueNumberLocked();
                         // Case 4a) otherwise
@@ -1211,9 +1211,9 @@ public class ApfFilter implements AndroidPacketFilter {
                         // if lft > oldLft              -> PASS
                         gen.addJumpIfR0Equals(0, nextFilterLabel);
                         gen.addJumpIfR0LessThan(section.min, continueLabel);
-                        gen.addJumpIfR0LessThan((int) ((section.lifetime + 2) / 3),
+                        gen.addJumpIfR0LessThan(((section.lifetime + 2) / 3),
                                 nextFilterLabel);
-                        gen.addJumpIfR0GreaterThan((int) section.lifetime, nextFilterLabel);
+                        gen.addJumpIfR0GreaterThan(section.lifetime, nextFilterLabel);
 
                         // CONTINUE
                         gen.defineLabel(continueLabel);

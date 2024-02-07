@@ -36,6 +36,9 @@ import org.junit.runner.RunWith
 @SmallTest
 class ApfV5Test {
 
+    private val testPacket = byteArrayOf(1, 2, 3, 4, 5, 6, 7, 8,
+                                         9, 10, 11, 12, 13, 14, 15, 16)
+
     @Test
     fun testDataInstructionMustComeFirst() {
         var gen = ApfV6Generator()
@@ -362,6 +365,20 @@ class ApfV5Test {
         assertPass(MIN_APF_VERSION_IN_DEV, program, ByteArray(MIN_PKT_SIZE))
         assertContentEquals(byteArrayOf(0x01, 0x01, 0x02, 0x01, 0x02, 0x03, 0x04),
           ApfJniUtils.getTransmittedPacket())
+    }
+
+    @Test
+    fun testCopyToTxBuffer() {
+        val program = ApfV6Generator()
+            .addData(byteArrayOf(33, 34, 35))
+            .addAllocate(74)
+            .addDataCopy(2, 2)
+            .addPacketCopy(0, 1)
+            .addPacketCopy(1, 2)
+            .addTransmit()
+            .generate()
+        assertPass(MIN_APF_VERSION_IN_DEV, program, testPacket)
+        assertContentEquals(byteArrayOf(33, 34, 1, 2, 3), ApfJniUtils.getTransmittedPacket())
     }
 
     private fun encodeInstruction(opcode: Int, immLength: Int, register: Int): Byte {

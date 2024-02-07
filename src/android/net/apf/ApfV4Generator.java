@@ -357,7 +357,7 @@ public class ApfV4Generator {
             return this;
         }
 
-        Instruction addUnsigned(int imm) {
+        Instruction addUnsigned(long imm) {
             mIntImms.add(IntImmediate.newUnsigned(imm));
             return this;
         }
@@ -770,14 +770,14 @@ public class ApfV4Generator {
     /**
      * Add an instruction to the end of the program to multiply register R0 by {@code value}.
      */
-    public ApfV4Generator addMul(int val) {
+    public ApfV4Generator addMul(long val) {
         return append(new Instruction(Opcodes.MUL).addUnsigned(val));
     }
 
     /**
      * Add an instruction to the end of the program to divide register R0 by {@code value}.
      */
-    public ApfV4Generator addDiv(int val) {
+    public ApfV4Generator addDiv(long val) {
         return append(new Instruction(Opcodes.DIV).addUnsigned(val));
     }
 

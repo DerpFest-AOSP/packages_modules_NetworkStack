@@ -362,6 +362,15 @@ public class ApfV4Generator {
             return this;
         }
 
+        // in practice, 'int' always enough for packet offset
+        Instruction addPacketOffset(int imm) {
+            return addUnsigned(imm);
+        }
+
+        // in practice, 'int' always enough for data offset
+        Instruction addDataOffset(int imm) {
+            return addUnsigned(imm);
+        }
 
         Instruction addTwosCompSigned(int imm) {
             mIntImms.add(IntImmediate.newTwosComplementSigned(imm));
@@ -714,7 +723,7 @@ public class ApfV4Generator {
      * bytes from the beginning of the packet into {@code register}.
      */
     public ApfV4Generator addLoad8(Register r, int ofs) {
-        return append(new Instruction(Opcodes.LDB, r).addUnsigned(ofs));
+        return append(new Instruction(Opcodes.LDB, r).addPacketOffset(ofs));
     }
 
     /**
@@ -722,7 +731,7 @@ public class ApfV4Generator {
      * bytes from the beginning of the packet into {@code register}.
      */
     public ApfV4Generator addLoad16(Register r, int ofs) {
-        return append(new Instruction(Opcodes.LDH, r).addUnsigned(ofs));
+        return append(new Instruction(Opcodes.LDH, r).addPacketOffset(ofs));
     }
 
     /**
@@ -730,7 +739,7 @@ public class ApfV4Generator {
      * bytes from the beginning of the packet into {@code register}.
      */
     public ApfV4Generator addLoad32(Register r, int ofs) {
-        return append(new Instruction(Opcodes.LDW, r).addUnsigned(ofs));
+        return append(new Instruction(Opcodes.LDW, r).addPacketOffset(ofs));
     }
 
     /**
@@ -739,7 +748,7 @@ public class ApfV4Generator {
      * the sum of {@code offset} and the value in register R1.
      */
     public ApfV4Generator addLoad8Indexed(Register r, int ofs) {
-        return append(new Instruction(Opcodes.LDBX, r).addUnsigned(ofs));
+        return append(new Instruction(Opcodes.LDBX, r).addPacketOffset(ofs));
     }
 
     /**
@@ -748,7 +757,7 @@ public class ApfV4Generator {
      * the sum of {@code offset} and the value in register R1.
      */
     public ApfV4Generator addLoad16Indexed(Register r, int ofs) {
-        return append(new Instruction(Opcodes.LDHX, r).addUnsigned(ofs));
+        return append(new Instruction(Opcodes.LDHX, r).addPacketOffset(ofs));
     }
 
     /**
@@ -757,7 +766,7 @@ public class ApfV4Generator {
      * the sum of {@code offset} and the value in register R1.
      */
     public ApfV4Generator addLoad32Indexed(Register r, int ofs) {
-        return append(new Instruction(Opcodes.LDWX, r).addUnsigned(ofs));
+        return append(new Instruction(Opcodes.LDWX, r).addPacketOffset(ofs));
     }
 
     /**

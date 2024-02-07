@@ -313,7 +313,8 @@ public class ApfV4Generator {
         // When mOpcode == Opcodes.LABEL:
         private String mLabel;
         private byte[] mBytesImm;
-        // Offset in bytes from the beginning of this program. Set by {@link ApfGenerator#generate}.
+        // Offset in bytes from the beginning of this program.
+        // Set by {@link ApfV4Generator#generate}.
         int offset;
 
         Instruction(Opcodes opcode, Rbit rbit) {
@@ -661,7 +662,7 @@ public class ApfV4Generator {
     private boolean mGenerated;
 
     /**
-     * Creates an ApfGenerator instance which is able to emit instructions for the specified
+     * Creates an ApfV4Generator instance which is able to emit instructions for the specified
      * {@code version} of the APF interpreter. Throws {@code IllegalInstructionException} if
      * the requested version is unsupported.
      */
@@ -672,7 +673,7 @@ public class ApfV4Generator {
     }
 
     /**
-     * Returns true if the ApfGenerator supports the specified {@code version}, otherwise false.
+     * Returns true if the ApfV4Generator supports the specified {@code version}, otherwise false.
      */
     public static boolean supportsVersion(int version) {
         return version >= MIN_APF_VERSION;

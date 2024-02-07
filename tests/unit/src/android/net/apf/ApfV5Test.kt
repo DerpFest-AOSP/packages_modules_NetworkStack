@@ -286,9 +286,9 @@ class ApfV5Test {
                 0x03.toByte(), 0xe8.toByte(), 0xff.toByte(),
         ), program)
         assertContentEquals(listOf(
-                "0: dcopy       src=0, len=10",
-                "2: dcopy       src=1, len=5",
-                "5: pcopy       src=1000, len=255"
+                "0: datacopy    src=0, len=10",
+                "2: datacopy    src=1, len=5",
+                "5: pktcopy     src=1000, len=255"
         ),
         ApfJniUtils.disassembleApf(program).map { it.trim() })
 

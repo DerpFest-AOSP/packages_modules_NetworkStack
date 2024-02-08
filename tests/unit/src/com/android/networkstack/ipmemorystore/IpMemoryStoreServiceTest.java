@@ -937,4 +937,43 @@ public class IpMemoryStoreServiceTest {
             assertEquals(testCase.first, Utils.byteArrayToString(testCase.second));
         }
     }
+
+    @Test
+    public void testNullDb() throws Exception {
+        // Init IpMemoryStoreService with a file that can't be opened
+        final File file = new File("/", TEST_DATABASE_NAME);
+        doReturn(file).when(mMockContext).getDatabasePath(anyString());
+        final IpMemoryStoreService ipMemoryStoreService =
+                new IpMemoryStoreService(mMockContext);
+
+        //test delete, no NullPointerException, got expected status and deleting count
+        doLatched("Did not get fail callback", latch ->
+                ipMemoryStoreService.delete("key", false /* needWipe */,
+                        onDeleteStatus((status, deleted) -> {
+                            assertEquals("Unexpected status: ",
+                                    Status.ERROR_DATABASE_CANNOT_BE_OPENED,
+                                    status.resultCode);
+                            assertEquals("Deleting count != 1 :" +
+                                    deleted, 0, deleted.intValue());
+                            latch.countDown();
+                        })), LONG_TIMEOUT_MS);
+
+        //Test deleteCluster, no NullPointerException, got expected status and deletedCount
+        doLatched("Did not get fail callback", latch ->
+                ipMemoryStoreService.deleteCluster("key", false /* needWipe */,
+                        onDeleteStatus((status, deletedCount) -> {
+                            assertEquals("Unexpected status: ",
+                                    Status.ERROR_DATABASE_CANNOT_BE_OPENED,
+                                    status.resultCode);
+                            assertEquals("Unexpected deleted count : ",
+                                    0, deletedCount.intValue());
+                            latch.countDown();
+                        })), LONG_TIMEOUT_MS);
+
+        // Try to wipe all data in tables, no NullPointerException
+        ipMemoryStoreService.factoryReset();
+
+        //db is null, the db size could not over the threshold.
+        assertFalse(ipMemoryStoreService.isDbSizeOverThreshold());
+    }
 }

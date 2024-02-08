@@ -424,6 +424,12 @@ public class IpMemoryStoreService extends IIpMemoryStore.Stub {
             @Nullable final IOnStatusAndCountListener listener) {
         mExecutor.execute(() -> {
             try {
+                if (null == mDb) {
+                    if (null != listener) {
+                        listener.onComplete(makeStatus(ERROR_DATABASE_CANNOT_BE_OPENED), 0);
+                    }
+                    return;
+                }
                 final StatusAndCount res = IpMemoryStoreDatabase.delete(mDb, l2Key, needWipe);
                 if (null != listener) listener.onComplete(makeStatus(res.status), res.count);
             } catch (final RemoteException e) {
@@ -450,6 +456,12 @@ public class IpMemoryStoreService extends IIpMemoryStore.Stub {
             @Nullable final IOnStatusAndCountListener listener) {
         mExecutor.execute(() -> {
             try {
+                if (null == mDb) {
+                    if (null != listener) {
+                        listener.onComplete(makeStatus(ERROR_DATABASE_CANNOT_BE_OPENED), 0);
+                    }
+                    return;
+                }
                 final StatusAndCount res =
                         IpMemoryStoreDatabase.deleteCluster(mDb, cluster, needWipe);
                 if (null != listener) listener.onComplete(makeStatus(res.status), res.count);
@@ -464,7 +476,12 @@ public class IpMemoryStoreService extends IIpMemoryStore.Stub {
      */
     @Override
     public void factoryReset() {
-        mExecutor.execute(() -> IpMemoryStoreDatabase.wipeDataUponNetworkReset(mDb));
+        mExecutor.execute(() -> {
+            if (null == mDb) {
+                return;
+            }
+            IpMemoryStoreDatabase.wipeDataUponNetworkReset(mDb);
+        });
     }
 
     /** Get db size threshold. */
@@ -474,6 +491,9 @@ public class IpMemoryStoreService extends IIpMemoryStore.Stub {
     }
 
     private long getDbSize() {
+        if (null == mDb) {
+            return 0;
+        }
         final File dbFile = new File(mDb.getPath());
         try {
             return dbFile.length();

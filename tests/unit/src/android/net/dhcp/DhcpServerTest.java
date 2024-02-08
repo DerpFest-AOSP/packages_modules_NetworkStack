@@ -197,7 +197,8 @@ public class DhcpServerTest {
         when(mDeps.makeLeaseRepository(any(), any(), any())).thenReturn(mRepository);
         when(mDeps.makeClock()).thenReturn(mClock);
         when(mDeps.makePacketListener(any())).thenReturn(mPacketListener);
-        when(mDeps.isFeatureEnabled(eq(mContext), eq(DHCP_RAPID_COMMIT_VERSION))).thenReturn(true);
+        when(mDeps.isFeatureNotChickenedOut(eq(mContext), eq(DHCP_RAPID_COMMIT_VERSION)))
+                .thenReturn(true);
         doNothing().when(mDeps)
                 .sendPacket(any(), mSentPacketCaptor.capture(), mResponseDstAddrCaptor.capture());
         when(mClock.elapsedRealtime()).thenReturn(TEST_CLOCK_TIME);
@@ -253,7 +254,8 @@ public class DhcpServerTest {
     public void testDiscover_RapidCommit() throws Exception {
         startServer();
 
-        when(mDeps.isFeatureEnabled(eq(mContext), eq(DHCP_RAPID_COMMIT_VERSION))).thenReturn(true);
+        when(mDeps.isFeatureNotChickenedOut(eq(mContext), eq(DHCP_RAPID_COMMIT_VERSION)))
+                .thenReturn(true);
         when(mRepository.getCommittedLease(isNull() /* clientId */, eq(TEST_CLIENT_MAC),
                 eq(INADDR_ANY) /* relayAddr */, isNull() /* hostname */)).thenReturn(TEST_LEASE);
 

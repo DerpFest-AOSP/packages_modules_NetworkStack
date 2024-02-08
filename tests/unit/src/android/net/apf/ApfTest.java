@@ -2801,6 +2801,70 @@ public class ApfTest {
         apfFilter.shutdown();
     }
 
+    @Test
+    public void testProcessRaWithInfiniteLifeTimeWithoutCrash() throws Exception {
+        final MockIpClientCallback ipClientCallback = new MockIpClientCallback();
+        // configure accept_ra_min_lft
+        final ApfConfiguration config = getDefaultConfig();
+        config.acceptRaMinLft = 180;
+        TestApfFilter apfFilter;
+        // Template packet:
+        // Frame 1: 150 bytes on wire (1200 bits), 150 bytes captured (1200 bits)
+        // Ethernet II, Src: Netgear_23:67:2c (28:c6:8e:23:67:2c), Dst: IPv6mcast_01 (33:33:00:00:00:01)
+        // Internet Protocol Version 6, Src: fe80::2ac6:8eff:fe23:672c, Dst: ff02::1
+        // Internet Control Message Protocol v6
+        //   Type: Router Advertisement (134)
+        //   Code: 0
+        //   Checksum: 0x0acd [correct]
+        //   Checksum Status: Good
+        //   Cur hop limit: 64
+        //   Flags: 0xc0, Managed address configuration, Other configuration, Prf (Default Router Preference): Medium
+        //   Router lifetime (s): 7000
+        //   Reachable time (ms): 0
+        //   Retrans timer (ms): 0
+        //   ICMPv6 Option (Source link-layer address : 28:c6:8e:23:67:2c)
+        //     Type: Source link-layer address (1)
+        //     Length: 1 (8 bytes)
+        //     Link-layer address: Netgear_23:67:2c (28:c6:8e:23:67:2c)
+        //     Source Link-layer address: Netgear_23:67:2c (28:c6:8e:23:67:2c)
+        //   ICMPv6 Option (MTU : 1500)
+        //     Type: MTU (5)
+        //     Length: 1 (8 bytes)
+        //     Reserved
+        //     MTU: 1500
+        //   ICMPv6 Option (Prefix information : 2401:fa00:480:f000::/64)
+        //     Type: Prefix information (3)
+        //     Length: 4 (32 bytes)
+        //     Prefix Length: 64
+        //     Flag: 0xc0, On-link flag(L), Autonomous address-configuration flag(A)
+        //     Valid Lifetime: Infinity (4294967295)
+        //     Preferred Lifetime: Infinity (4294967295)
+        //     Reserved
+        //     Prefix: 2401:fa00:480:f000::
+        //   ICMPv6 Option (Recursive DNS Server 2401:fa00:480:f000::1)
+        //     Type: Recursive DNS Server (25)
+        //     Length: 3 (24 bytes)
+        //     Reserved
+        //     Lifetime: 7000
+        //     Recursive DNS Servers: 2401:fa00:480:f000::1
+        //   ICMPv6 Option (Advertisement Interval : 600000)
+        //     Type: Advertisement Interval (7)
+        //     Length: 1 (8 bytes)
+        //     Reserved
+        //     Advertisement Interval: 600000
+        final String packetStringFmt = "33330000000128C68E23672C86DD60054C6B00603AFFFE800000000000002AC68EFFFE23672CFF02000000000000000000000000000186000ACD40C01B580000000000000000010128C68E23672C05010000000005DC030440C0%s000000002401FA000480F00000000000000000001903000000001B582401FA000480F000000000000000000107010000000927C0";
+        final List<String> lifetimes = List.of("FFFFFFFF", "00000000", "00000001", "00001B58");
+        for (String lifetime : lifetimes) {
+            apfFilter = new TestApfFilter(mContext, config, ipClientCallback, mNetworkQuirkMetrics);
+            final byte[] ra = hexStringToByteArray(
+                    String.format(packetStringFmt, lifetime + lifetime));
+            // feed the RA into APF and generate the filter, the filter shouldn't crash.
+            apfFilter.pretendPacketReceived(ra);
+            ipClientCallback.assertProgramUpdateAndGet();
+            apfFilter.shutdown();
+        }
+    }
+
     // Test for go/apf-ra-filter Case 1a.
     // Old lifetime is 0
     @Test

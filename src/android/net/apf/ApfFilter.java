@@ -598,10 +598,6 @@ public class ApfFilter implements AndroidPacketFilter {
             if (type == Type.MATCH && (lifetime != 0 || min != 0)) {
                 throw new IllegalArgumentException("lifetime, min must be 0 for MATCH sections");
             }
-            // Clamp the lifetime to INT_MAX to prevent it from ever going negative.
-            if (lifetime > Integer.MAX_VALUE) {
-                lifetime = Integer.MAX_VALUE;
-            }
             this.lifetime = lifetime;
 
             // It has already been asserted that min is 0 for MATCH sections.

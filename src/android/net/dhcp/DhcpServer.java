@@ -195,6 +195,14 @@ public class DhcpServer extends StateMachine {
          * @param name Specific experimental flag name.
          */
         boolean isFeatureEnabled(@NonNull Context context, @NonNull String name);
+
+        /**
+         * Check whether one specific experimental feature for connectivity namespace is not
+         * disabled.
+         * @param context The global context information about an app environment.
+         * @param name Specific experimental flag name.
+         */
+        boolean isFeatureNotChickenedOut(@NonNull Context context, @NonNull String name);
     }
 
     private class DependenciesImpl implements Dependencies {
@@ -234,6 +242,11 @@ public class DhcpServer extends StateMachine {
         public boolean isFeatureEnabled(@NonNull Context context, @NonNull String name) {
             return DeviceConfigUtils.isNetworkStackFeatureEnabled(context, name);
         }
+
+        @Override
+        public boolean isFeatureNotChickenedOut(final Context context, final String name) {
+            return DeviceConfigUtils.isNetworkStackFeatureNotChickenedOut(context, name);
+        }
     }
 
     private static class MalformedPacketException extends Exception {
@@ -262,7 +275,8 @@ public class DhcpServer extends StateMachine {
         mDeps = deps;
         mClock = deps.makeClock();
         mLeaseRepo = deps.makeLeaseRepository(mServingParams, mLog, mClock);
-        mDhcpRapidCommitEnabled = deps.isFeatureEnabled(context, DHCP_RAPID_COMMIT_VERSION);
+        mDhcpRapidCommitEnabled =
+                deps.isFeatureNotChickenedOut(context, DHCP_RAPID_COMMIT_VERSION);
 
         // CHECKSTYLE:OFF IndentationCheck
         addState(mStoppedState);

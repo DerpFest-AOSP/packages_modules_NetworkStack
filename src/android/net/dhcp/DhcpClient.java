@@ -566,7 +566,7 @@ public class DhcpClient extends StateMachine {
      * check whether or not to support DHCP Rapid Commit option.
      */
     public boolean isDhcpRapidCommitEnabled() {
-        return mDependencies.isFeatureEnabled(mContext, DHCP_RAPID_COMMIT_VERSION);
+        return mDependencies.isFeatureNotChickenedOut(mContext, DHCP_RAPID_COMMIT_VERSION);
     }
 
     /**

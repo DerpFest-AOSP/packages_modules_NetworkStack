@@ -1773,6 +1773,9 @@ public class ApfFilter implements AndroidPacketFilter {
         maybeSetupCounter(gen, Counter.DROPPED_IPV6_MULTICAST_NA);
         gen.addJump(mCountAndDropLabel);
         gen.defineLabel(skipUnsolicitedMulticastNALabel);
+
+        // Note that this is immediately followed emitEpilogue which will:
+        // maybeSetupCounter(gen, Counter.PASSED_IPV6_ICMP);
     }
 
     /** Encodes qname in TLV pattern. */

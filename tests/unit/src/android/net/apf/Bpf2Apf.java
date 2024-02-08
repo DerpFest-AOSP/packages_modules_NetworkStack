@@ -16,11 +16,11 @@
 
 package android.net.apf;
 
-import static android.net.apf.ApfV4Generator.Register.R0;
-import static android.net.apf.ApfV4Generator.Register.R1;
+import static android.net.apf.BaseApfGenerator.Register.R0;
+import static android.net.apf.BaseApfGenerator.Register.R1;
 
-import android.net.apf.ApfV4Generator.IllegalInstructionException;
-import android.net.apf.ApfV4Generator.Register;
+import android.net.apf.BaseApfGenerator.IllegalInstructionException;
+import android.net.apf.BaseApfGenerator.Register;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -32,7 +32,7 @@ import java.io.InputStreamReader;
  *       translation of all BPF programs.
  *
  * Example usage:
- *   javac net/java/android/net/apf/ApfGenerator.java \
+ *   javac net/java/android/net/apf/ApfV4Generator.java \
  *         tests/servicestests/src/android/net/apf/Bpf2Apf.java
  *   sudo tcpdump -i em1 -d icmp | java -classpath tests/servicestests/src:net/java \
  *                                      android.net.apf.Bpf2Apf

@@ -28,7 +28,7 @@ import static org.mockito.Mockito.mock;
 import android.content.Context;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
-import android.net.apf.ApfV4Generator.IllegalInstructionException;
+import android.net.apf.BaseApfGenerator.IllegalInstructionException;
 import android.net.ip.IIpClientCallbacks;
 import android.net.ip.IpClient;
 import android.net.metrics.IpConnectivityLog;

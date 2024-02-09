@@ -27,9 +27,11 @@ import com.android.internal.annotations.VisibleForTesting;
  * Call add*() functions to add instructions to the program, then call
  * {@link BaseApfGenerator#generate} to get the APF bytecode for the program.
  *
+ * @param <Type> the generator class
+ *
  * @hide
  */
-public class ApfV4Generator extends BaseApfGenerator {
+public class ApfV4Generator<Type extends BaseApfGenerator> extends BaseApfGenerator {
 
     /**
      * Creates an ApfV4Generator instance which is able to emit instructions for the specified
@@ -42,12 +44,12 @@ public class ApfV4Generator extends BaseApfGenerator {
         requireApfVersion(MIN_APF_VERSION);
     }
 
-    ApfV4Generator append(Instruction instruction) {
+    Type append(Instruction instruction) {
         if (mGenerated) {
             throw new IllegalStateException("Program already generated");
         }
         mInstructions.add(instruction);
-        return this;
+        return (Type) this;
     }
 
     /**
@@ -65,14 +67,14 @@ public class ApfV4Generator extends BaseApfGenerator {
      * </pre>
      * In this case "next_filter" may not have any generated code associated with it.
      */
-    public ApfV4Generator defineLabel(String name) throws IllegalInstructionException {
+    public Type defineLabel(String name) throws IllegalInstructionException {
         return append(new Instruction(Opcodes.LABEL).setLabel(name));
     }
 
     /**
      * Add an unconditional jump instruction to the end of the program.
      */
-    public ApfV4Generator addJump(String target) {
+    public Type addJump(String target) {
         return append(new Instruction(Opcodes.JMP).setTargetLabel(target));
     }
 
@@ -80,7 +82,7 @@ public class ApfV4Generator extends BaseApfGenerator {
      * Add an instruction to the end of the program to load the byte at offset {@code offset}
      * bytes from the beginning of the packet into {@code register}.
      */
-    public ApfV4Generator addLoad8(Register r, int ofs) {
+    public Type addLoad8(Register r, int ofs) {
         return append(new Instruction(Opcodes.LDB, r).addPacketOffset(ofs));
     }
 
@@ -88,7 +90,7 @@ public class ApfV4Generator extends BaseApfGenerator {
      * Add an instruction to the end of the program to load 16-bits at offset {@code offset}
      * bytes from the beginning of the packet into {@code register}.
      */
-    public ApfV4Generator addLoad16(Register r, int ofs) {
+    public Type addLoad16(Register r, int ofs) {
         return append(new Instruction(Opcodes.LDH, r).addPacketOffset(ofs));
     }
 
@@ -96,7 +98,7 @@ public class ApfV4Generator extends BaseApfGenerator {
      * Add an instruction to the end of the program to load 32-bits at offset {@code offset}
      * bytes from the beginning of the packet into {@code register}.
      */
-    public ApfV4Generator addLoad32(Register r, int ofs) {
+    public Type addLoad32(Register r, int ofs) {
         return append(new Instruction(Opcodes.LDW, r).addPacketOffset(ofs));
     }
 
@@ -105,7 +107,7 @@ public class ApfV4Generator extends BaseApfGenerator {
      * {@code register}. The offset of the loaded byte from the beginning of the packet is
      * the sum of {@code offset} and the value in register R1.
      */
-    public ApfV4Generator addLoad8Indexed(Register r, int ofs) {
+    public Type addLoad8Indexed(Register r, int ofs) {
         return append(new Instruction(Opcodes.LDBX, r).addPacketOffset(ofs));
     }
 
@@ -114,7 +116,7 @@ public class ApfV4Generator extends BaseApfGenerator {
      * {@code register}. The offset of the loaded 16-bits from the beginning of the packet is
      * the sum of {@code offset} and the value in register R1.
      */
-    public ApfV4Generator addLoad16Indexed(Register r, int ofs) {
+    public Type addLoad16Indexed(Register r, int ofs) {
         return append(new Instruction(Opcodes.LDHX, r).addPacketOffset(ofs));
     }
 
@@ -123,42 +125,42 @@ public class ApfV4Generator extends BaseApfGenerator {
      * {@code register}. The offset of the loaded 32-bits from the beginning of the packet is
      * the sum of {@code offset} and the value in register R1.
      */
-    public ApfV4Generator addLoad32Indexed(Register r, int ofs) {
+    public Type addLoad32Indexed(Register r, int ofs) {
         return append(new Instruction(Opcodes.LDWX, r).addPacketOffset(ofs));
     }
 
     /**
      * Add an instruction to the end of the program to add {@code value} to register R0.
      */
-    public ApfV4Generator addAdd(int val) {
+    public Type addAdd(int val) {
         return append(new Instruction(Opcodes.ADD).addTwosCompUnsigned(val));
     }
 
     /**
      * Add an instruction to the end of the program to multiply register R0 by {@code value}.
      */
-    public ApfV4Generator addMul(long val) {
+    public Type addMul(long val) {
         return append(new Instruction(Opcodes.MUL).addUnsigned(val));
     }
 
     /**
      * Add an instruction to the end of the program to divide register R0 by {@code value}.
      */
-    public ApfV4Generator addDiv(long val) {
+    public Type addDiv(long val) {
         return append(new Instruction(Opcodes.DIV).addUnsigned(val));
     }
 
     /**
      * Add an instruction to the end of the program to logically and register R0 with {@code value}.
      */
-    public ApfV4Generator addAnd(int val) {
+    public Type addAnd(int val) {
         return append(new Instruction(Opcodes.AND).addTwosCompUnsigned(val));
     }
 
     /**
      * Add an instruction to the end of the program to logically or register R0 with {@code value}.
      */
-    public ApfV4Generator addOr(int val) {
+    public Type addOr(int val) {
         return append(new Instruction(Opcodes.OR).addTwosCompUnsigned(val));
     }
 
@@ -166,7 +168,7 @@ public class ApfV4Generator extends BaseApfGenerator {
      * Add an instruction to the end of the program to shift left register R0 by {@code value} bits.
      */
     // TODO: consider whether should change the argument type to byte
-    public ApfV4Generator addLeftShift(int val) {
+    public Type addLeftShift(int val) {
         return append(new Instruction(Opcodes.SH).addSigned(val));
     }
 
@@ -175,28 +177,28 @@ public class ApfV4Generator extends BaseApfGenerator {
      * bits.
      */
     // TODO: consider whether should change the argument type to byte
-    public ApfV4Generator addRightShift(int val) {
+    public Type addRightShift(int val) {
         return append(new Instruction(Opcodes.SH).addSigned(-val));
     }
 
     /**
      * Add an instruction to the end of the program to add register R1 to register R0.
      */
-    public ApfV4Generator addAddR1() {
+    public Type addAddR1() {
         return append(new Instruction(Opcodes.ADD, R1));
     }
 
     /**
      * Add an instruction to the end of the program to multiply register R0 by register R1.
      */
-    public ApfV4Generator addMulR1() {
+    public Type addMulR1() {
         return append(new Instruction(Opcodes.MUL, R1));
     }
 
     /**
      * Add an instruction to the end of the program to divide register R0 by register R1.
      */
-    public ApfV4Generator addDivR1() {
+    public Type addDivR1() {
         return append(new Instruction(Opcodes.DIV, R1));
     }
 
@@ -204,7 +206,7 @@ public class ApfV4Generator extends BaseApfGenerator {
      * Add an instruction to the end of the program to logically and register R0 with register R1
      * and store the result back into register R0.
      */
-    public ApfV4Generator addAndR1() {
+    public Type addAndR1() {
         return append(new Instruction(Opcodes.AND, R1));
     }
 
@@ -212,7 +214,7 @@ public class ApfV4Generator extends BaseApfGenerator {
      * Add an instruction to the end of the program to logically or register R0 with register R1
      * and store the result back into register R0.
      */
-    public ApfV4Generator addOrR1() {
+    public Type addOrR1() {
         return append(new Instruction(Opcodes.OR, R1));
     }
 
@@ -220,14 +222,14 @@ public class ApfV4Generator extends BaseApfGenerator {
      * Add an instruction to the end of the program to shift register R0 left by the value in
      * register R1.
      */
-    public ApfV4Generator addLeftShiftR1() {
+    public Type addLeftShiftR1() {
         return append(new Instruction(Opcodes.SH, R1));
     }
 
     /**
      * Add an instruction to the end of the program to move {@code value} into {@code register}.
      */
-    public ApfV4Generator addLoadImmediate(Register register, int value) {
+    public Type addLoadImmediate(Register register, int value) {
         return append(new Instruction(Opcodes.LI, register).addSigned(value));
     }
 
@@ -235,7 +237,7 @@ public class ApfV4Generator extends BaseApfGenerator {
      * Add an instruction to the end of the program to jump to {@code target} if register R0's
      * value equals {@code value}.
      */
-    public ApfV4Generator addJumpIfR0Equals(int val, String tgt) {
+    public Type addJumpIfR0Equals(int val, String tgt) {
         return append(new Instruction(Opcodes.JEQ).addTwosCompUnsigned(val).setTargetLabel(tgt));
     }
 
@@ -243,7 +245,7 @@ public class ApfV4Generator extends BaseApfGenerator {
      * Add an instruction to the end of the program to jump to {@code target} if register R0's
      * value does not equal {@code value}.
      */
-    public ApfV4Generator addJumpIfR0NotEquals(int val, String tgt) {
+    public Type addJumpIfR0NotEquals(int val, String tgt) {
         return append(new Instruction(Opcodes.JNE).addTwosCompUnsigned(val).setTargetLabel(tgt));
     }
 
@@ -251,7 +253,7 @@ public class ApfV4Generator extends BaseApfGenerator {
      * Add an instruction to the end of the program to jump to {@code target} if register R0's
      * value is greater than {@code value}.
      */
-    public ApfV4Generator addJumpIfR0GreaterThan(long val, String tgt) {
+    public Type addJumpIfR0GreaterThan(long val, String tgt) {
         return append(new Instruction(Opcodes.JGT).addUnsigned(val).setTargetLabel(tgt));
     }
 
@@ -259,7 +261,7 @@ public class ApfV4Generator extends BaseApfGenerator {
      * Add an instruction to the end of the program to jump to {@code target} if register R0's
      * value is less than {@code value}.
      */
-    public ApfV4Generator addJumpIfR0LessThan(long val, String tgt) {
+    public Type addJumpIfR0LessThan(long val, String tgt) {
         return append(new Instruction(Opcodes.JLT).addUnsigned(val).setTargetLabel(tgt));
     }
 
@@ -267,14 +269,14 @@ public class ApfV4Generator extends BaseApfGenerator {
      * Add an instruction to the end of the program to jump to {@code target} if register R0's
      * value has any bits set that are also set in {@code value}.
      */
-    public ApfV4Generator addJumpIfR0AnyBitsSet(int val, String tgt) {
+    public Type addJumpIfR0AnyBitsSet(int val, String tgt) {
         return append(new Instruction(Opcodes.JSET).addTwosCompUnsigned(val).setTargetLabel(tgt));
     }
     /**
      * Add an instruction to the end of the program to jump to {@code target} if register R0's
      * value equals register R1's value.
      */
-    public ApfV4Generator addJumpIfR0EqualsR1(String tgt) {
+    public Type addJumpIfR0EqualsR1(String tgt) {
         return append(new Instruction(Opcodes.JEQ, R1).setTargetLabel(tgt));
     }
 
@@ -282,7 +284,7 @@ public class ApfV4Generator extends BaseApfGenerator {
      * Add an instruction to the end of the program to jump to {@code target} if register R0's
      * value does not equal register R1's value.
      */
-    public ApfV4Generator addJumpIfR0NotEqualsR1(String tgt) {
+    public Type addJumpIfR0NotEqualsR1(String tgt) {
         return append(new Instruction(Opcodes.JNE, R1).setTargetLabel(tgt));
     }
 
@@ -290,7 +292,7 @@ public class ApfV4Generator extends BaseApfGenerator {
      * Add an instruction to the end of the program to jump to {@code target} if register R0's
      * value is greater than register R1's value.
      */
-    public ApfV4Generator addJumpIfR0GreaterThanR1(String tgt) {
+    public Type addJumpIfR0GreaterThanR1(String tgt) {
         return append(new Instruction(Opcodes.JGT, R1).setTargetLabel(tgt));
     }
 
@@ -298,7 +300,7 @@ public class ApfV4Generator extends BaseApfGenerator {
      * Add an instruction to the end of the program to jump to {@code target} if register R0's
      * value is less than register R1's value.
      */
-    public ApfV4Generator addJumpIfR0LessThanR1(String target) {
+    public Type addJumpIfR0LessThanR1(String target) {
         return append(new Instruction(Opcodes.JLT, R1).setTargetLabel(target));
     }
 
@@ -306,7 +308,7 @@ public class ApfV4Generator extends BaseApfGenerator {
      * Add an instruction to the end of the program to jump to {@code target} if register R0's
      * value has any bits set that are also set in R1's value.
      */
-    public ApfV4Generator addJumpIfR0AnyBitsSetR1(String tgt) {
+    public Type addJumpIfR0AnyBitsSetR1(String tgt) {
         return append(new Instruction(Opcodes.JSET, R1).setTargetLabel(tgt));
     }
 
@@ -315,7 +317,7 @@ public class ApfV4Generator extends BaseApfGenerator {
      * packet at an offset specified by {@code register} don't match {@code bytes}
      * R=0 means check for not equal
      */
-    public ApfV4Generator addJumpIfBytesAtR0NotEqual(byte[] bytes, String tgt) {
+    public Type addJumpIfBytesAtR0NotEqual(byte[] bytes, String tgt) {
         return append(new Instruction(Opcodes.JNEBS).addUnsigned(
                 bytes.length).setTargetLabel(tgt).setBytesImm(bytes));
     }
@@ -325,7 +327,7 @@ public class ApfV4Generator extends BaseApfGenerator {
      * packet at an offset specified by {@code register} match {@code bytes}
      * R=1 means check for equal.
      */
-    public ApfV4Generator addJumpIfBytesAtR0Equal(byte[] bytes, String tgt)
+    public Type addJumpIfBytesAtR0Equal(byte[] bytes, String tgt)
             throws IllegalInstructionException {
         requireApfVersion(MIN_APF_VERSION_IN_DEV);
         return append(new Instruction(Opcodes.JNEBS, R1).addUnsigned(
@@ -336,7 +338,7 @@ public class ApfV4Generator extends BaseApfGenerator {
      * Add an instruction to the end of the program to load memory slot {@code slot} into
      * {@code register}.
      */
-    public ApfV4Generator addLoadFromMemory(Register r, int slot)
+    public Type addLoadFromMemory(Register r, int slot)
             throws IllegalInstructionException {
         return append(new BaseApfGenerator.Instruction(ExtendedOpcodes.LDM, slot, r));
     }
@@ -345,7 +347,7 @@ public class ApfV4Generator extends BaseApfGenerator {
      * Add an instruction to the end of the program to store {@code register} into memory slot
      * {@code slot}.
      */
-    public ApfV4Generator addStoreToMemory(Register r, int slot)
+    public Type addStoreToMemory(Register r, int slot)
             throws IllegalInstructionException {
         return append(new Instruction(ExtendedOpcodes.STM, slot, r));
     }
@@ -353,21 +355,21 @@ public class ApfV4Generator extends BaseApfGenerator {
     /**
      * Add an instruction to the end of the program to logically not {@code register}.
      */
-    public ApfV4Generator addNot(Register r) {
+    public Type addNot(Register r) {
         return append(new Instruction(ExtendedOpcodes.NOT, r));
     }
 
     /**
      * Add an instruction to the end of the program to negate {@code register}.
      */
-    public ApfV4Generator addNeg(Register r) {
+    public Type addNeg(Register r) {
         return append(new Instruction(ExtendedOpcodes.NEG, r));
     }
 
     /**
      * Add an instruction to swap the values in register R0 and register R1.
      */
-    public ApfV4Generator addSwap() {
+    public Type addSwap() {
         return append(new Instruction(ExtendedOpcodes.SWAP));
     }
 
@@ -375,14 +377,14 @@ public class ApfV4Generator extends BaseApfGenerator {
      * Add an instruction to the end of the program to move the value into
      * {@code register} from the other register.
      */
-    public ApfV4Generator addMove(Register r) {
+    public Type addMove(Register r) {
         return append(new Instruction(ExtendedOpcodes.MOVE, r));
     }
 
     /**
      * Add an instruction to the end of the program to let the program immediately return PASS.
      */
-    public ApfV4Generator addPass() {
+    public Type addPass() {
         // PASS requires using Rbit0 because it shares opcode with DROP
         return append(new Instruction(Opcodes.PASSDROP, Rbit0));
     }
@@ -393,7 +395,7 @@ public class ApfV4Generator extends BaseApfGenerator {
      * @{code offset} to the other register.
      * Requires APF v4 or greater.
      */
-    public ApfV4Generator addLoadData(Register dst, int ofs)
+    public Type addLoadData(Register dst, int ofs)
             throws IllegalInstructionException {
         requireApfVersion(APF_VERSION_4);
         return append(new Instruction(Opcodes.LDDW, dst).addSigned(ofs));
@@ -405,7 +407,7 @@ public class ApfV4Generator extends BaseApfGenerator {
      * @{code offset} to the other register.
      * Requires APF v4 or greater.
      */
-    public ApfV4Generator addStoreData(Register src, int ofs)
+    public Type addStoreData(Register src, int ofs)
             throws IllegalInstructionException {
         requireApfVersion(APF_VERSION_4);
         return append(new Instruction(Opcodes.STDW, src).addSigned(ofs));

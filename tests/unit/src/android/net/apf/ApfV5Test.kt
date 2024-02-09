@@ -17,11 +17,11 @@ package android.net.apf
 
 import android.net.apf.ApfTestUtils.MIN_PKT_SIZE
 import android.net.apf.ApfTestUtils.assertPass
-import android.net.apf.ApfV4Generator.IllegalInstructionException
-import android.net.apf.ApfV4Generator.MIN_APF_VERSION
-import android.net.apf.ApfV4Generator.MIN_APF_VERSION_IN_DEV
-import android.net.apf.ApfV4Generator.Register.R0
-import android.net.apf.ApfV4Generator.Register.R1
+import android.net.apf.BaseApfGenerator.MIN_APF_VERSION
+import android.net.apf.BaseApfGenerator.MIN_APF_VERSION_IN_DEV
+import android.net.apf.BaseApfGenerator.IllegalInstructionException
+import android.net.apf.BaseApfGenerator.Register.R0
+import android.net.apf.BaseApfGenerator.Register.R1
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
 import kotlin.test.assertContentEquals

@@ -16,11 +16,11 @@
 
 package android.net.apf;
 
-import static android.net.apf.ApfV4Generator.APF_VERSION_4;
-import static android.net.apf.ApfV4Generator.DROP_LABEL;
-import static android.net.apf.ApfV4Generator.PASS_LABEL;
-import static android.net.apf.ApfV4Generator.Register.R0;
-import static android.net.apf.ApfV4Generator.Register.R1;
+import static android.net.apf.BaseApfGenerator.APF_VERSION_4;
+import static android.net.apf.BaseApfGenerator.DROP_LABEL;
+import static android.net.apf.BaseApfGenerator.PASS_LABEL;
+import static android.net.apf.BaseApfGenerator.Register.R0;
+import static android.net.apf.BaseApfGenerator.Register.R1;
 import static android.net.apf.ApfJniUtils.compareBpfApf;
 import static android.net.apf.ApfJniUtils.compileToBpf;
 import static android.net.apf.ApfJniUtils.dropsAllPackets;
@@ -70,7 +70,7 @@ import android.net.apf.ApfFilter.ApfConfiguration;
 import android.net.apf.ApfTestUtils.MockIpClientCallback;
 import android.net.apf.ApfTestUtils.TestApfFilter;
 import android.net.apf.ApfTestUtils.TestLegacyApfFilter;
-import android.net.apf.ApfV4Generator.IllegalInstructionException;
+import android.net.apf.BaseApfGenerator.IllegalInstructionException;
 import android.net.metrics.IpConnectivityLog;
 import android.os.Build;
 import android.os.PowerManager;

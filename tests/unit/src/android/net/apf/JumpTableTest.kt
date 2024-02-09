@@ -16,7 +16,7 @@
 
 package android.net.apf
 
-import android.net.apf.ApfV4Generator.Register.R0
+import android.net.apf.BaseApfGenerator.Register.R0
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
 import com.android.testutils.assertThrows

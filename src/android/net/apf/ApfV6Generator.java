@@ -15,8 +15,8 @@
  */
 package android.net.apf;
 
-import static android.net.apf.ApfV4Generator.Rbit.Rbit0;
-import static android.net.apf.ApfV4Generator.Rbit.Rbit1;
+import static android.net.apf.BaseApfGenerator.Rbit.Rbit0;
+import static android.net.apf.BaseApfGenerator.Rbit.Rbit1;
 
 import androidx.annotation.NonNull;
 

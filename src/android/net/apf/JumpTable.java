@@ -16,7 +16,7 @@
 
 package android.net.apf;
 
-import static android.net.apf.ApfV4Generator.Register.R0;
+import static android.net.apf.BaseApfGenerator.Register.R0;
 
 import androidx.annotation.NonNull;
 

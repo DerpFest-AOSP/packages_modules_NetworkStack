@@ -16,8 +16,8 @@
 
 package android.net.apf;
 
-import static android.net.apf.ApfV4Generator.Register.R0;
-import static android.net.apf.ApfV4Generator.Register.R1;
+import static android.net.apf.BaseApfGenerator.Register.R0;
+import static android.net.apf.BaseApfGenerator.Register.R1;
 import static android.net.util.SocketUtils.makePacketSocketAddress;
 import static android.system.OsConstants.AF_PACKET;
 import static android.system.OsConstants.ARPHRD_ETHER;
@@ -45,7 +45,7 @@ import android.net.LinkProperties;
 import android.net.NattKeepalivePacketDataParcelable;
 import android.net.TcpKeepalivePacketDataParcelable;
 import android.net.apf.ApfCounterTracker.Counter;
-import android.net.apf.ApfV4Generator.IllegalInstructionException;
+import android.net.apf.BaseApfGenerator.IllegalInstructionException;
 import android.net.ip.IpClient.IpClientCallbacksWrapper;
 import android.net.metrics.ApfProgramEvent;
 import android.net.metrics.ApfStats;

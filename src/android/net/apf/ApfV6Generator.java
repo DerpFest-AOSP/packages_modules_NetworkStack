@@ -27,7 +27,7 @@ import com.android.net.module.util.HexDump;
  *
  * @hide
  */
-public class ApfV6Generator extends ApfV4Generator {
+public class ApfV6Generator extends ApfV4Generator<ApfV6Generator> {
 
     /**
      * Creates an ApfV6Generator instance which is able to emit instructions for the specified
@@ -323,10 +323,5 @@ public class ApfV6Generator extends ApfV4Generator {
         if (names[len - 1] != 0) {
             throw new IllegalArgumentException(errorMessage);
         }
-    }
-
-    ApfV6Generator append(Instruction instruction) {
-        super.append(instruction);
-        return this;
     }
 }

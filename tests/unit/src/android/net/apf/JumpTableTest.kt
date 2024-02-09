@@ -35,7 +35,7 @@ import org.mockito.MockitoAnnotations
 class JumpTableTest {
 
     @Mock
-    lateinit var gen: ApfV4Generator
+    lateinit var gen: ApfV4Generator<ApfV4Generator<BaseApfGenerator>>
 
     @Before
     fun setUp() {

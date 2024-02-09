@@ -137,9 +137,9 @@ class ApfV5Test {
 
     @Test
     fun testApfInstructionsEncoding() {
-        var gen = ApfV4Generator(MIN_APF_VERSION)
-        gen.addPass()
-        var program = gen.generate()
+        val v4gen = ApfV4Generator<ApfV4Generator<BaseApfGenerator>>(MIN_APF_VERSION)
+        v4gen.addPass()
+        var program = v4gen.generate()
         // encoding PASS opcode: opcode=0, imm_len=0, R=0
         assertContentEquals(
                 byteArrayOf(encodeInstruction(opcode = 0, immLength = 0, register = 0)), program)
@@ -147,7 +147,7 @@ class ApfV5Test {
             listOf("0: pass"),
             ApfJniUtils.disassembleApf(program).map { it.trim() } )
 
-        gen = ApfV6Generator()
+        var gen = ApfV6Generator()
         gen.addDrop()
         program = gen.generate()
         // encoding DROP opcode: opcode=0, imm_len=0, R=1

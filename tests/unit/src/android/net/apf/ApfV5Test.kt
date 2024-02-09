@@ -17,9 +17,9 @@ package android.net.apf
 
 import android.net.apf.ApfTestUtils.MIN_PKT_SIZE
 import android.net.apf.ApfTestUtils.assertPass
+import android.net.apf.BaseApfGenerator.IllegalInstructionException
 import android.net.apf.BaseApfGenerator.MIN_APF_VERSION
 import android.net.apf.BaseApfGenerator.MIN_APF_VERSION_IN_DEV
-import android.net.apf.BaseApfGenerator.IllegalInstructionException
 import android.net.apf.BaseApfGenerator.Register.R0
 import android.net.apf.BaseApfGenerator.Register.R1
 import androidx.test.filters.SmallTest
@@ -355,7 +355,7 @@ class ApfV5Test {
 
     @Test
     fun testWriteToTxBuffer() {
-        val program = ApfV6Generator()
+        var program = ApfV6Generator()
             .addAllocate(74)
             .addWriteU8(0x01)
             .addWriteU16(0x0102)
@@ -365,6 +365,20 @@ class ApfV5Test {
         assertPass(MIN_APF_VERSION_IN_DEV, program, ByteArray(MIN_PKT_SIZE))
         assertContentEquals(byteArrayOf(0x01, 0x01, 0x02, 0x01, 0x02, 0x03, 0x04),
           ApfJniUtils.getTransmittedPacket())
+
+        program = ApfV6Generator()
+            .addAllocate(74)
+            .addLoadImmediate(R0, 1)
+            .addWriteU8(R0)
+            .addLoadImmediate(R0, 0x0203)
+            .addWriteU16(R0)
+            .addLoadImmediate(R1, 0x04050607)
+            .addWriteU32(R1)
+            .addTransmit()
+            .generate()
+        assertPass(MIN_APF_VERSION_IN_DEV, program, ByteArray(MIN_PKT_SIZE))
+        assertContentEquals(byteArrayOf(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07),
+            ApfJniUtils.getTransmittedPacket())
     }
 
     @Test

@@ -32,12 +32,12 @@
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #define LOG_TAG "NetworkStackUtils-JNI"
 
-static int run_apf_interpreter(int apf_version, uint8_t* program,
+static int run_apf_interpreter(int apf_version, uint32_t* program,
                                uint32_t program_len, uint32_t ram_len,
                                const uint8_t* packet, uint32_t packet_len,
                                uint32_t filter_age) {
   if (apf_version == 4) {
-    return accept_packet(program, program_len, ram_len, packet, packet_len,
+    return accept_packet((uint8_t*)program, program_len, ram_len, packet, packet_len,
                          filter_age);
   } else {
     return apf_run(nullptr, program, program_len, ram_len, packet, packet_len,
@@ -55,23 +55,30 @@ com_android_server_ApfTest_apfSimulate(JNIEnv* env, jclass, jint apf_version,
     uint32_t packet_len = (uint32_t)packet.size();
     uint32_t program_len = env->GetArrayLength(jprogram);
     uint32_t data_len = jdata ? env->GetArrayLength(jdata) : 0;
-    std::vector<uint8_t> buf(program_len + data_len, 0);
+    // we need to guarantee room for APFv6's 5 u32 counters (20 bytes)
+    // and we need to make sure ram_len is a multiple of 4 bytes,
+    // so that the counters (which are indexed from the back are aligned.
+    uint32_t ram_len = program_len + data_len;
+    if (apf_version > 4) {
+        ram_len += 3; ram_len &= ~3;
+        if (data_len < 20) ram_len += 20;
+    }
+    std::vector<uint32_t> buf((ram_len + 3) / 4, 0);
+    jbyte* jbuf = reinterpret_cast<jbyte*>(buf.data());
 
-    env->GetByteArrayRegion(jprogram, 0, program_len, reinterpret_cast<jbyte*>(buf.data()));
+    env->GetByteArrayRegion(jprogram, 0, program_len, jbuf);
     if (jdata) {
         // Merge program and data into a single buffer.
-        env->GetByteArrayRegion(jdata, 0, data_len,
-                                reinterpret_cast<jbyte*>(buf.data() + program_len));
+        env->GetByteArrayRegion(jdata, 0, data_len, jbuf + ram_len - data_len);
     }
 
     jint result = run_apf_interpreter(
-        apf_version, buf.data(), program_len, program_len + data_len,
+        apf_version, buf.data(), program_len, ram_len,
         reinterpret_cast<const uint8_t *>(packet.get()), packet_len,
         filter_age);
 
     if (jdata) {
-        env->SetByteArrayRegion(jdata, 0, data_len,
-                                reinterpret_cast<jbyte*>(buf.data() + program_len));
+        env->SetByteArrayRegion(jdata, 0, data_len, jbuf + ram_len - data_len);
     }
 
     return result;
@@ -141,7 +148,13 @@ static jboolean com_android_server_ApfTest_compareBpfApf(
     jstring jpcap_filename, jbyteArray japf_program) {
     ScopedUtfChars filter(env, jfilter);
     ScopedUtfChars pcap_filename(env, jpcap_filename);
-    ScopedByteArrayRO apf_program(env, japf_program);
+    uint32_t program_len = env->GetArrayLength(japf_program);
+    uint32_t data_len = (apf_version > 4) ? 20 : 0;
+    uint32_t ram_len = program_len + data_len;
+    if (apf_version > 4) { ram_len += 3; ram_len &= ~3; }
+    std::vector<uint32_t> apf_program((ram_len + 3) / 4, 0);
+    env->GetByteArrayRegion(japf_program, 0, program_len,
+                            reinterpret_cast<jbyte*>(apf_program.data()));
 
     // Open pcap file for BPF filtering
     ScopedFILE bpf_fp(fopen(pcap_filename.c_str(), "rb"));
@@ -183,8 +196,7 @@ static jboolean com_android_server_ApfTest_compareBpfApf(
         do {
             apf_packet = pcap_next(apf_pcap.get(), &apf_header);
         } while (apf_packet != NULL && !run_apf_interpreter(apf_version,
-                reinterpret_cast<uint8_t*>(const_cast<int8_t*>(apf_program.get())),
-                apf_program.size(), 0 /* data_len */,
+                apf_program.data(), program_len, ram_len,
                 apf_packet, apf_header.len, 0 /* filter_age */));
 
         // Make sure both filters matched the same packet.
@@ -208,15 +220,20 @@ static jboolean com_android_server_ApfTest_dropsAllPackets(
     ScopedByteArrayRO apf_program(env, jprogram);
     uint32_t apf_program_len = (uint32_t)apf_program.size();
     uint32_t data_len = env->GetArrayLength(jdata);
+    uint32_t ram_len = apf_program_len + data_len;
+    if (apf_version > 4) {
+        ram_len += 3; ram_len &= ~3;
+        if (data_len < 20) ram_len += 20;
+    }
     pcap_pkthdr apf_header;
     const uint8_t* apf_packet;
     char pcap_error[PCAP_ERRBUF_SIZE];
-    std::vector<uint8_t> buf(apf_program_len + data_len, 0);
+    std::vector<uint32_t> buf((ram_len + 3) / 4, 0);
+    jbyte* jbuf = reinterpret_cast<jbyte*>(buf.data());
 
     // Merge program and data into a single buffer.
-    env->GetByteArrayRegion(jprogram, 0, apf_program_len, reinterpret_cast<jbyte*>(buf.data()));
-    env->GetByteArrayRegion(jdata, 0, data_len,
-                            reinterpret_cast<jbyte*>(buf.data() + apf_program_len));
+    env->GetByteArrayRegion(jprogram, 0, apf_program_len, jbuf);
+    env->GetByteArrayRegion(jdata, 0, data_len, jbuf + ram_len - data_len);
 
     // Open pcap file
     ScopedFILE apf_fp(fopen(pcap_filename.c_str(), "rb"));
@@ -229,19 +246,16 @@ static jboolean com_android_server_ApfTest_dropsAllPackets(
 
     while ((apf_packet = pcap_next(apf_pcap.get(), &apf_header)) != NULL) {
         int result = run_apf_interpreter(
-            apf_version, buf.data(), apf_program_len,
-            apf_program_len + data_len, apf_packet, apf_header.len, 0);
+            apf_version, buf.data(), apf_program_len, ram_len, apf_packet, apf_header.len, 0);
 
         // Return false once packet passes the filter
         if (result) {
-            env->SetByteArrayRegion(jdata, 0, data_len,
-                                    reinterpret_cast<jbyte*>(buf.data() + apf_program_len));
+            env->SetByteArrayRegion(jdata, 0, data_len, jbuf + ram_len - data_len);
             return false;
          }
     }
 
-    env->SetByteArrayRegion(jdata, 0, data_len,
-                            reinterpret_cast<jbyte*>(buf.data() + apf_program_len));
+    env->SetByteArrayRegion(jdata, 0, data_len, jbuf + ram_len - data_len);
     return true;
 }
 

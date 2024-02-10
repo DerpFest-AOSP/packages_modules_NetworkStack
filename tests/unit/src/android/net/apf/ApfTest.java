@@ -877,9 +877,16 @@ public class ApfTest {
         assertDataMemoryContents(DROP, gen.generate(), packet, data, expected_data);
 
         // Same program as before, but this time we're trying to load past the end of the data.
+        // 3 instructions, all normal opcodes (LI, LDDW, JMP) with 1 byte immediate = 6 byte program
+        // 32 byte data length, for a total of 38 byte ram len.
+        // APFv6 needs to round this up to be a multiple of 4, so 40.
         gen = new ApfV4Generator(APF_VERSION_4);
         gen.addLoadImmediate(R0, 20);
-        gen.addLoadData(R1, 15);  // 20 + 15 > 32
+        if (mApfVersion == 4) {
+            gen.addLoadData(R1, 15);  // R0(20)+15+U32[0..3] >= 6 prog + 32 data, so invalid
+        } else {
+            gen.addLoadData(R1, 17);  // R0(20)+17+U32[0..3] >= 6 prog + 2 pad + 32 data, so invalid
+        }
         gen.addJump(DROP_LABEL);  // Not reached.
         assertDataMemoryContents(PASS, gen.generate(), packet, data, expected_data);
 

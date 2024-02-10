@@ -194,17 +194,15 @@ class ApfV5Test {
             ApfJniUtils.disassembleApf(program).map { it.trim() })
 
         gen = ApfV6Generator()
-        gen.addTransmit()
-        gen.addDiscard()
+        gen.addTransmit(-1)
         program = gen.generate()
-        // encoding TRANSMIT/DISCARD opcode: opcode=21(EXT opcode number),
-        // imm=37(TRANSMIT/DISCARD opcode number),
-        // R=0 means discard the buffer. R=1 means transmit the buffer.
+        // encoding TRANSMIT opcode: opcode=21(EXT opcode number),
+        // imm=37(TRANSMIT opcode number),
         assertContentEquals(byteArrayOf(
-                encodeInstruction(opcode = 21, immLength = 1, register = 0), 37,
-                encodeInstruction(opcode = 21, immLength = 1, register = 1), 37,
+                encodeInstruction(opcode = 21, immLength = 1, register = 0),
+                37, 255.toByte(), 255.toByte(),
         ), program)
-         assertContentEquals(listOf("0: discard", "2: transmit"),
+         assertContentEquals(listOf("0: transmit    ip_ofs=255"),
              ApfJniUtils.disassembleApf(program).map { it.trim() })
 
         gen = ApfV6Generator()
@@ -360,7 +358,7 @@ class ApfV5Test {
             .addWriteU8(0x01)
             .addWriteU16(0x0102)
             .addWriteU32(0x01020304)
-            .addTransmit()
+            .addTransmit(-1)
             .generate()
         assertPass(MIN_APF_VERSION_IN_DEV, program, ByteArray(MIN_PKT_SIZE))
         assertContentEquals(byteArrayOf(0x01, 0x01, 0x02, 0x01, 0x02, 0x03, 0x04),
@@ -374,7 +372,7 @@ class ApfV5Test {
             .addWriteU16(R0)
             .addLoadImmediate(R1, 0x04050607)
             .addWriteU32(R1)
-            .addTransmit()
+            .addTransmit(-1)
             .generate()
         assertPass(MIN_APF_VERSION_IN_DEV, program, ByteArray(MIN_PKT_SIZE))
         assertContentEquals(byteArrayOf(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07),
@@ -389,7 +387,7 @@ class ApfV5Test {
             .addDataCopy(2, 2)
             .addPacketCopy(0, 1)
             .addPacketCopy(1, 2)
-            .addTransmit()
+            .addTransmit(-1)
             .generate()
         assertPass(MIN_APF_VERSION_IN_DEV, program, testPacket)
         assertContentEquals(byteArrayOf(33, 34, 1, 2, 3), ApfJniUtils.getTransmittedPacket())

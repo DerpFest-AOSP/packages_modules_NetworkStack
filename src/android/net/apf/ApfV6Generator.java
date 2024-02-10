@@ -15,8 +15,8 @@
  */
 package android.net.apf;
 
-import static android.net.apf.ApfV4Generator.Rbit.Rbit0;
-import static android.net.apf.ApfV4Generator.Rbit.Rbit1;
+import static android.net.apf.BaseApfGenerator.Rbit.Rbit0;
+import static android.net.apf.BaseApfGenerator.Rbit.Rbit1;
 
 import androidx.annotation.NonNull;
 
@@ -27,7 +27,7 @@ import com.android.net.module.util.HexDump;
  *
  * @hide
  */
-public class ApfV6Generator extends ApfV4Generator {
+public class ApfV6Generator extends ApfV4Generator<ApfV6Generator> {
 
     /**
      * Creates an ApfV6Generator instance which is able to emit instructions for the specified
@@ -167,7 +167,7 @@ public class ApfV6Generator extends ApfV4Generator {
      * @param src the offset inside the APF program/data region for where to start copy.
      * @param len the length of bytes needed to be copied, only <= 255 bytes can be copied at
      *               one time.
-     * @return the ApfGenerator object
+     * @return the ApfV6Generator object
      */
     public ApfV6Generator addDataCopy(int src, int len) {
         return append(new Instruction(Opcodes.PKTDATACOPY, Rbit1).addDataOffset(src).addU8(len));
@@ -180,7 +180,7 @@ public class ApfV6Generator extends ApfV4Generator {
      * @param src the offset inside the input packet for where to start copy.
      * @param len the length of bytes needed to be copied, only <= 255 bytes can be copied at
      *               one time.
-     * @return the ApfGenerator object
+     * @return the ApfV6Generator object
      */
     public ApfV6Generator addPacketCopy(int src, int len) {
         return append(new Instruction(Opcodes.PKTDATACOPY, Rbit0).addPacketOffset(src).addU8(len));
@@ -192,7 +192,7 @@ public class ApfV6Generator extends ApfV4Generator {
      * Source offset is stored in R0.
      *
      * @param len the number of bytes to be copied, only <= 255 bytes can be copied at once.
-     * @return the ApfGenerator object
+     * @return the ApfV6Generator object
      */
     public ApfV6Generator addDataCopyFromR0(int len) {
         return append(new Instruction(ExtendedOpcodes.EPKTDATACOPYIMM, Rbit1).addU8(len));
@@ -204,7 +204,7 @@ public class ApfV6Generator extends ApfV4Generator {
      * Source offset is stored in R0.
      *
      * @param len the number of bytes to be copied, only <= 255 bytes can be copied at once.
-     * @return the ApfGenerator object
+     * @return the ApfV6Generator object
      */
     public ApfV6Generator addPacketCopyFromR0(int len) {
         return append(new Instruction(ExtendedOpcodes.EPKTDATACOPYIMM, Rbit0).addU8(len));
@@ -323,10 +323,5 @@ public class ApfV6Generator extends ApfV4Generator {
         if (names[len - 1] != 0) {
             throw new IllegalArgumentException(errorMessage);
         }
-    }
-
-    ApfV6Generator append(Instruction instruction) {
-        super.append(instruction);
-        return this;
     }
 }

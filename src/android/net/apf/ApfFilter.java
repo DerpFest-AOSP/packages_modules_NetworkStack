@@ -16,8 +16,8 @@
 
 package android.net.apf;
 
-import static android.net.apf.ApfV4Generator.Register.R0;
-import static android.net.apf.ApfV4Generator.Register.R1;
+import static android.net.apf.BaseApfGenerator.Register.R0;
+import static android.net.apf.BaseApfGenerator.Register.R1;
 import static android.net.util.SocketUtils.makePacketSocketAddress;
 import static android.os.PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED;
 import static android.os.PowerManager.ACTION_DEVICE_LIGHT_IDLE_MODE_CHANGED;
@@ -48,7 +48,7 @@ import android.net.LinkProperties;
 import android.net.NattKeepalivePacketDataParcelable;
 import android.net.TcpKeepalivePacketDataParcelable;
 import android.net.apf.ApfCounterTracker.Counter;
-import android.net.apf.ApfV4Generator.IllegalInstructionException;
+import android.net.apf.BaseApfGenerator.IllegalInstructionException;
 import android.net.ip.IpClient.IpClientCallbacksWrapper;
 import android.os.PowerManager;
 import android.os.SystemClock;
@@ -1773,6 +1773,9 @@ public class ApfFilter implements AndroidPacketFilter {
         maybeSetupCounter(gen, Counter.DROPPED_IPV6_MULTICAST_NA);
         gen.addJump(mCountAndDropLabel);
         gen.defineLabel(skipUnsolicitedMulticastNALabel);
+
+        // Note that this is immediately followed emitEpilogue which will:
+        // maybeSetupCounter(gen, Counter.PASSED_IPV6_ICMP);
     }
 
     /** Encodes qname in TLV pattern. */

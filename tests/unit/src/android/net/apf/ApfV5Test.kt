@@ -211,15 +211,19 @@ class ApfV5Test {
 
         gen = ApfV6Generator()
         gen.addTransmit(-1)
+        gen.addTransmitL4(30, 40, 50, 256, true)
         program = gen.generate()
         // encoding TRANSMIT opcode: opcode=21(EXT opcode number),
         // imm=37(TRANSMIT opcode number),
         assertContentEquals(byteArrayOf(
                 encodeInstruction(opcode = 21, immLength = 1, register = 0),
                 37, 255.toByte(), 255.toByte(),
+                encodeInstruction(opcode = 21, immLength = 1, register = 1), 37, 30, 40, 50, 1, 0
         ), program)
-         assertContentEquals(listOf("0: transmit    ip_ofs=255"),
-             ApfJniUtils.disassembleApf(program).map { it.trim() })
+         assertContentEquals(listOf(
+                 "0: transmit    ip_ofs=255",
+                 "4: transmitudp ip_ofs=30, csum_ofs=40, csum_start=50, partial_csum=0x0100",
+         ), ApfJniUtils.disassembleApf(program).map { it.trim() })
 
         gen = ApfV6Generator()
         val largeByteArray = ByteArray(256) { 0x01 }

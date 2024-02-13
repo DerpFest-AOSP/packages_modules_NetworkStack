@@ -315,6 +315,8 @@ public class ApfV6Generator extends ApfV4Generator<ApfV6Generator> {
         int i = 0;
         while (i < len - 1) {
             int label_len = names[i++];
+            // byte == 0xff means it is a '*' wildcard
+            if (label_len == -1) continue;
             if (label_len < 1 || label_len > 63) {
                 throw new IllegalArgumentException(
                         "label len: " + label_len + " must be between 1 and 63");

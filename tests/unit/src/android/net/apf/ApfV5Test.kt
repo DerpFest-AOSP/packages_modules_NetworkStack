@@ -17,6 +17,7 @@ package android.net.apf
 
 import android.net.apf.ApfTestUtils.MIN_PKT_SIZE
 import android.net.apf.ApfTestUtils.assertPass
+import android.net.apf.BaseApfGenerator.DROP_LABEL
 import android.net.apf.BaseApfGenerator.IllegalInstructionException
 import android.net.apf.BaseApfGenerator.MIN_APF_VERSION
 import android.net.apf.BaseApfGenerator.MIN_APF_VERSION_IN_DEV
@@ -133,6 +134,16 @@ class ApfV5Test {
         assertFailsWith<IllegalArgumentException> { gen.addJumpIfPktAtR0ContainDnsA(
                 byteArrayOf(1, 'A'.code.toByte(), 1, 'B'.code.toByte()),
                 ApfV4Generator.DROP_LABEL) }
+    }
+
+    @Test
+    fun testValidateDnsNames() {
+        // '%' is a valid label character in mDNS subtype
+        val program = ApfV6Generator().addJumpIfPktAtR0ContainDnsQ(
+                byteArrayOf(1, '%'.code.toByte(), 0, 0),
+                1,
+                DROP_LABEL)
+                .generate()
     }
 
     @Test

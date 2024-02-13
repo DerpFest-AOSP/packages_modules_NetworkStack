@@ -302,7 +302,7 @@ public class ApfV6Generator extends ApfV4Generator<ApfV6Generator> {
      * Check if the byte is valid dns character: A-Z,0-9,-,_
      */
     private static boolean isValidDnsCharacter(byte c) {
-        return (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_';
+        return (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '%';
     }
 
     private static void validateNames(@NonNull byte[] names) {

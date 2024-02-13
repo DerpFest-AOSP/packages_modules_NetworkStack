@@ -139,10 +139,15 @@ class ApfV5Test {
     @Test
     fun testValidateDnsNames() {
         // '%' is a valid label character in mDNS subtype
+        // byte == 0xff means it is a '*' wildcard, which is a valid encoding.
         val program = ApfV6Generator().addJumpIfPktAtR0ContainDnsQ(
                 byteArrayOf(1, '%'.code.toByte(), 0, 0),
                 1,
                 DROP_LABEL)
+                .addJumpIfPktAtR0ContainDnsA(
+                        byteArrayOf(0xff.toByte(), 1, 'B'.code.toByte(), 0, 0),
+                        DROP_LABEL
+                )
                 .generate()
     }
 

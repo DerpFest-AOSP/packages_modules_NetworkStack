@@ -302,7 +302,7 @@ public class ApfV6Generator extends ApfV4Generator<ApfV6Generator> {
      * Check if the byte is valid dns character: A-Z,0-9,-,_
      */
     private static boolean isValidDnsCharacter(byte c) {
-        return (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_';
+        return (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '%';
     }
 
     private static void validateNames(@NonNull byte[] names) {
@@ -315,6 +315,8 @@ public class ApfV6Generator extends ApfV4Generator<ApfV6Generator> {
         int i = 0;
         while (i < len - 1) {
             int label_len = names[i++];
+            // byte == 0xff means it is a '*' wildcard
+            if (label_len == -1) continue;
             if (label_len < 1 || label_len > 63) {
                 throw new IllegalArgumentException(
                         "label len: " + label_len + " must be between 1 and 63");

@@ -401,7 +401,7 @@ class ApfV5Test {
 
     @Test
     fun testCopyToTxBuffer() {
-        val program = ApfV6Generator()
+        var program = ApfV6Generator()
             .addData(byteArrayOf(33, 34, 35))
             .addAllocate(74)
             .addDataCopy(2, 2)
@@ -411,6 +411,24 @@ class ApfV5Test {
             .generate()
         assertPass(MIN_APF_VERSION_IN_DEV, program, testPacket)
         assertContentEquals(byteArrayOf(33, 34, 1, 2, 3), ApfJniUtils.getTransmittedPacket())
+
+        program = ApfV6Generator()
+                .addData(byteArrayOf(33, 34, 35))
+                .addAllocate(266)
+                .addLoadImmediate(R0, 2) // data copy offset
+                .addDataCopyFromR0(2 /* len */)
+                .addLoadImmediate(R0, 4) // data copy offset
+                .addLoadImmediate(R1, 1) // len
+                .addDataCopyFromR0LenR1()
+                .addLoadImmediate(R0, 0) // packet copy offset
+                .addPacketCopyFromR0(1 /* len */)
+                .addLoadImmediate(R0, 1) // packet copy offset
+                .addLoadImmediate(R1, 2) // len
+                .addPacketCopyFromR0LenR1()
+                .addTransmit(-1)
+                .generate()
+        assertPass(MIN_APF_VERSION_IN_DEV, program, testPacket)
+        assertContentEquals(byteArrayOf(33, 34, 35, 1, 2, 3), ApfJniUtils.getTransmittedPacket())
     }
 
     private fun encodeInstruction(opcode: Int, immLength: Int, register: Int): Byte {

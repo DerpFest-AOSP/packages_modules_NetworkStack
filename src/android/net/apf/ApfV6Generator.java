@@ -251,6 +251,7 @@ public class ApfV6Generator extends ApfV4Generator<ApfV6Generator> {
      * payload's DNS questions do NOT contain the QNAMEs specified in {@code qnames} and qtype
      * equals {@code qtype}. Examines the payload starting at the offset in R0.
      * R = 0 means check for "does not contain".
+     * Drops packets if packets are corrupted.
      */
     public ApfV6Generator addJumpIfPktAtR0DoesNotContainDnsQ(@NonNull byte[] qnames, int qtype,
                                                              @NonNull String tgt) {
@@ -260,10 +261,22 @@ public class ApfV6Generator extends ApfV4Generator<ApfV6Generator> {
     }
 
     /**
+     * Same as {@link #addJumpIfPktAtR0DoesNotContainDnsQ} except passes packets if packets are
+     * corrupted.
+     */
+    public ApfV6Generator addJumpIfPktAtR0DoesNotContainDnsQSafe(@NonNull byte[] qnames, int qtype,
+            @NonNull String tgt) {
+        validateNames(qnames);
+        return append(new Instruction(ExtendedOpcodes.JDNSQMATCHSAFE, Rbit0).setTargetLabel(
+                tgt).addU8(qtype).setBytesImm(qnames));
+    }
+
+    /**
      * Appends a conditional jump instruction to the program: Jumps to {@code tgt} if the UDP
      * payload's DNS questions contain the QNAMEs specified in {@code qnames} and qtype
      * equals {@code qtype}. Examines the payload starting at the offset in R0.
      * R = 1 means check for "contain".
+     * Drops packets if packets are corrupted.
      */
     public ApfV6Generator addJumpIfPktAtR0ContainDnsQ(@NonNull byte[] qnames, int qtype,
                                                       @NonNull String tgt) {
@@ -273,10 +286,22 @@ public class ApfV6Generator extends ApfV4Generator<ApfV6Generator> {
     }
 
     /**
+     * Same as {@link #addJumpIfPktAtR0ContainDnsQ} except passes packets if packets are
+     * corrupted.
+     */
+    public ApfV6Generator addJumpIfPktAtR0ContainDnsQSafe(@NonNull byte[] qnames, int qtype,
+            @NonNull String tgt) {
+        validateNames(qnames);
+        return append(new Instruction(ExtendedOpcodes.JDNSQMATCHSAFE, Rbit1).setTargetLabel(
+                tgt).addU8(qtype).setBytesImm(qnames));
+    }
+
+    /**
      * Appends a conditional jump instruction to the program: Jumps to {@code tgt} if the UDP
      * payload's DNS answers/authority/additional records do NOT contain the NAMEs
      * specified in {@code Names}. Examines the payload starting at the offset in R0.
      * R = 0 means check for "does not contain".
+     * Drops packets if packets are corrupted.
      */
     public ApfV6Generator addJumpIfPktAtR0DoesNotContainDnsA(@NonNull byte[] names,
                                                              @NonNull String tgt) {
@@ -286,15 +311,38 @@ public class ApfV6Generator extends ApfV4Generator<ApfV6Generator> {
     }
 
     /**
+     * Same as {@link #addJumpIfPktAtR0DoesNotContainDnsA} except passes packets if packets are
+     * corrupted.
+     */
+    public ApfV6Generator addJumpIfPktAtR0DoesNotContainDnsASafe(@NonNull byte[] names,
+            @NonNull String tgt) {
+        validateNames(names);
+        return append(new Instruction(ExtendedOpcodes.JDNSAMATCHSAFE, Rbit0).setTargetLabel(tgt)
+                .setBytesImm(names));
+    }
+
+    /**
      * Appends a conditional jump instruction to the program: Jumps to {@code tgt} if the UDP
      * payload's DNS answers/authority/additional records contain the NAMEs
      * specified in {@code Names}. Examines the payload starting at the offset in R0.
      * R = 1 means check for "contain".
+     * Drops packets if packets are corrupted.
      */
     public ApfV6Generator addJumpIfPktAtR0ContainDnsA(@NonNull byte[] names,
                                                       @NonNull String tgt) {
         validateNames(names);
         return append(new Instruction(ExtendedOpcodes.JDNSAMATCH, Rbit1).setTargetLabel(
+                tgt).setBytesImm(names));
+    }
+
+    /**
+     * Same as {@link #addJumpIfPktAtR0ContainDnsA} except passes packets if packets are
+     * corrupted.
+     */
+    public ApfV6Generator addJumpIfPktAtR0ContainDnsASafe(@NonNull byte[] names,
+            @NonNull String tgt) {
+        validateNames(names);
+        return append(new Instruction(ExtendedOpcodes.JDNSAMATCHSAFE, Rbit1).setTargetLabel(
                 tgt).setBytesImm(names));
     }
 

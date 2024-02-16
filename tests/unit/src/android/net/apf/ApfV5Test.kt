@@ -357,6 +357,20 @@ class ApfV5Test {
             ApfJniUtils.disassembleApf(program).map{ it.trim() })
 
         gen = ApfV6Generator()
+        gen.addJumpIfPktAtR0DoesNotContainDnsQSafe(qnames, 0x0c, ApfV4Generator.DROP_LABEL)
+        gen.addJumpIfPktAtR0ContainDnsQSafe(qnames, 0x0c, ApfV4Generator.DROP_LABEL)
+        program = gen.generate()
+        assertContentEquals(byteArrayOf(
+                encodeInstruction(21, 1, 0), 45, 11, 0x0c.toByte(),
+        ) + qnames + byteArrayOf(
+                encodeInstruction(21, 1, 1), 45, 1, 0x0c.toByte(),
+        ) + qnames, program)
+        assertContentEquals(listOf(
+                "0: jdnsqnesafe r0, DROP, 12, (1)A(1)B(0)(0)",
+                "10: jdnsqeqsafe r0, DROP, 12, (1)A(1)B(0)(0)"),
+                ApfJniUtils.disassembleApf(program).map{ it.trim() })
+
+        gen = ApfV6Generator()
         gen.addJumpIfPktAtR0DoesNotContainDnsA(qnames, ApfV4Generator.DROP_LABEL)
         gen.addJumpIfPktAtR0ContainDnsA(qnames, ApfV4Generator.DROP_LABEL)
         program = gen.generate()
@@ -369,6 +383,20 @@ class ApfV5Test {
             "0: jdnsane     r0, DROP, (1)A(1)B(0)(0)",
             "9: jdnsaeq     r0, DROP, (1)A(1)B(0)(0)"),
             ApfJniUtils.disassembleApf(program).map{ it.trim() })
+
+        gen = ApfV6Generator()
+        gen.addJumpIfPktAtR0DoesNotContainDnsASafe(qnames, ApfV4Generator.DROP_LABEL)
+        gen.addJumpIfPktAtR0ContainDnsASafe(qnames, ApfV4Generator.DROP_LABEL)
+        program = gen.generate()
+        assertContentEquals(byteArrayOf(
+                encodeInstruction(21, 1, 0), 46, 10,
+        ) + qnames + byteArrayOf(
+                encodeInstruction(21, 1, 1), 46, 1,
+        ) + qnames, program)
+        assertContentEquals(listOf(
+                "0: jdnsanesafe r0, DROP, (1)A(1)B(0)(0)",
+                "9: jdnsaeqsafe r0, DROP, (1)A(1)B(0)(0)"),
+                ApfJniUtils.disassembleApf(program).map{ it.trim() })
     }
 
     @Test

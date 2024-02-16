@@ -139,26 +139,33 @@ public abstract class BaseApfGenerator {
         // e.g. "epktcopy r0, 16", "edatacopy r0, 16", "epktcopy r0, r1", "edatacopy r0, r1"
         EPKTDATACOPYIMM(41),
         EPKTDATACOPYR1(42),
-        // Jumps if the UDP payload content (starting at R0) does not contain one
-        // of the specified QNAMEs, applying case insensitivity.
-        // R0: Offset to UDP payload content
+        // Jumps if the UDP payload content (starting at R0) does [not] match one
+        // of the specified QNAMEs in question records, applying case insensitivity.
+        // SAFE version PASSES corrupt packets, while the other one DROPS.
         // R=0/1 meaning 'does not match'/'matches'
-        // imm1: Opcode
-        // imm2: Label offset
+        // R0: Offset to UDP payload content
+        // imm1: Extended opcode
+        // imm2: Jump label offset
         // imm3(u8): Question type (PTR/SRV/TXT/A/AAAA)
-        // imm4(bytes): TLV-encoded QNAME list (null-terminated)
-        // e.g.: "jdnsqmatch R0,label,0x0c,\002aa\005local\0\0"
+        // imm4(bytes): null terminated list of null terminated LV-encoded QNAMEs
+        // e.g.: "jdnsqeq R0,label,0xc,\002aa\005local\0\0",
+        //       "jdnsqne R0,label,0xc,\002aa\005local\0\0"
         JDNSQMATCH(43),
-        // Jumps if the UDP payload content (starting at R0) does not contain one
+        JDNSQMATCHSAFE(45),
+        // Jumps if the UDP payload content (starting at R0) does [not] match one
         // of the specified NAMEs in answers/authority/additional records, applying
         // case insensitivity.
+        // SAFE version PASSES corrupt packets, while the other one DROPS.
         // R=0/1 meaning 'does not match'/'matches'
         // R0: Offset to UDP payload content
-        // imm1: Opcode
-        // imm2: Label offset
-        // imm3(bytes): TLV-encoded QNAME list (null-terminated)
-        // e.g.: "jdnsamatch R0,label,0x0c,\002aa\005local\0\0"
-        JDNSAMATCH(44);
+        // imm1: Extended opcode
+        // imm2: Jump label offset
+        // imm3(bytes): null terminated list of null terminated LV-encoded NAMEs
+        // e.g.: "jdnsaeq R0,label,0xc,\002aa\005local\0\0",
+        //       "jdnsane R0,label,0xc,\002aa\005local\0\0"
+
+        JDNSAMATCH(44),
+        JDNSAMATCHSAFE(46);
 
         final int value;
 

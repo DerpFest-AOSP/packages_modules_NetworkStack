@@ -17,6 +17,7 @@
 package android.net.apf;
 
 import android.util.ArrayMap;
+import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 
@@ -90,12 +91,22 @@ public class ApfCounterTracker {
         }
 
         /**
+         * Returns the counter sequence number from the end of the APF data segment for
+         * a given counter.
+         */
+        public int value() {
+            return this.ordinal();
+        }
+
+        /**
          * Returns the total size of the data segment in bytes.
          */
         public static int totalSize() {
             return (Counter.class.getEnumConstants().length - 1) * 4;
         }
     }
+
+    private static final String TAG = ApfCounterTracker.class.getSimpleName();
 
     private final List<Counter> mCounterList;
     // Store the counters' value
@@ -111,17 +122,31 @@ public class ApfCounterTracker {
      */
     public static long getCounterValue(byte[] data, Counter counter)
             throws ArrayIndexOutOfBoundsException {
+        int offset = data.length + Counter.ENDIANNESS.offset();
+        int endianness = 0;
+        for (int i = 0; i < 4; i++) {
+            endianness = endianness << 8 | (data[offset + i]);
+        }
         // Follow the same wrap-around addressing scheme of the interpreter.
-        int offset = counter.offset();
-        if (offset < 0) {
-            offset = data.length + offset;
+        offset = data.length + counter.offset();
+
+        boolean isBe = true;
+        switch (endianness) {
+            case 0:
+            case 0x12345678:
+                isBe = true;
+                break;
+            case 0x78563412:
+                isBe = false;
+                break;
+            default:
+                Log.wtf(TAG, "Unknown endianness: 0x" + Integer.toHexString(endianness));
         }
 
         // Decode 32bit big-endian integer into a long so we can count up beyond 2^31.
         long value = 0;
         for (int i = 0; i < 4; i++) {
-            value = value << 8 | (data[offset] & 0xFF);
-            offset++;
+            value = value << 8 | (data[offset + (isBe ? i : 3 - i)]);
         }
         return value;
     }

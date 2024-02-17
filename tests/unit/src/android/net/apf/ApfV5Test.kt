@@ -15,8 +15,13 @@
  */
 package android.net.apf
 
+import android.net.apf.ApfCounterTracker.Counter
+import android.net.apf.ApfTestUtils.DROP
 import android.net.apf.ApfTestUtils.MIN_PKT_SIZE
+import android.net.apf.ApfTestUtils.PASS
+import android.net.apf.ApfTestUtils.assertDrop
 import android.net.apf.ApfTestUtils.assertPass
+import android.net.apf.ApfTestUtils.assertVerdict
 import android.net.apf.BaseApfGenerator.DROP_LABEL
 import android.net.apf.BaseApfGenerator.IllegalInstructionException
 import android.net.apf.BaseApfGenerator.MIN_APF_VERSION
@@ -26,6 +31,7 @@ import android.net.apf.BaseApfGenerator.Register.R1
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
 import kotlin.test.assertContentEquals
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -457,6 +463,50 @@ class ApfV5Test {
                 .generate()
         assertPass(MIN_APF_VERSION_IN_DEV, program, testPacket)
         assertContentEquals(byteArrayOf(33, 34, 35, 1, 2, 3), ApfJniUtils.getTransmittedPacket())
+    }
+
+    @Test
+    fun testPassDrop() {
+        var program = ApfV6Generator()
+                .addDrop()
+                .addPass()
+                .generate()
+        assertDrop(MIN_APF_VERSION_IN_DEV, program, testPacket)
+
+        var dataRegion = ByteArray(Counter.totalSize()) { 0 }
+        program = ApfV6Generator()
+                .addData(byteArrayOf())
+                .addCountAndDrop(Counter.DROPPED_ETH_BROADCAST.value())
+                .generate()
+        assertVerdict(MIN_APF_VERSION_IN_DEV, DROP, program, testPacket, dataRegion)
+        var counterMap = decodeCountersIntoMap(dataRegion)
+        assertEquals(mapOf<Counter, Long>(
+                Counter.TOTAL_PACKETS to 1,
+                Counter.DROPPED_ETH_BROADCAST to 1), counterMap)
+
+        dataRegion = ByteArray(Counter.totalSize()) { 0 }
+        program = ApfV6Generator()
+                .addData(byteArrayOf())
+                .addCountAndPass(Counter.PASSED_ARP.value())
+                .generate()
+        assertVerdict(MIN_APF_VERSION_IN_DEV, PASS, program, testPacket, dataRegion)
+        counterMap = decodeCountersIntoMap(dataRegion)
+        assertEquals(mapOf<Counter, Long>(
+                Counter.TOTAL_PACKETS to 1,
+                Counter.PASSED_ARP to 1), counterMap)
+    }
+
+    private fun decodeCountersIntoMap(counterBytes: ByteArray): Map<Counter, Long> {
+        val counters = Counter::class.java.enumConstants
+        val ret = HashMap<Counter, Long>()
+        // starting from index 2 to skip the endianness mark
+        for (c in listOf(*counters).subList(2, counters.size)) {
+            val value = ApfCounterTracker.getCounterValue(counterBytes, c)
+            if (value != 0L) {
+                ret[c] = value
+            }
+        }
+        return ret
     }
 
     private fun encodeInstruction(opcode: Int, immLength: Int, register: Int): Byte {

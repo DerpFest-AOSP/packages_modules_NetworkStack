@@ -498,6 +498,25 @@ class ApfV5Test {
                 Counter.PASSED_ALLOCATE_FAILURE to 1), counterMap)
     }
 
+    @Test
+    fun testTransmitFailure() {
+        val program = ApfV6Generator()
+                .addData(byteArrayOf())
+                .addAllocate(14)
+                // len: 13 is less than ETH_HLEN, trigger transmit failure.
+                .addLoadImmediate(R0, 13)
+                .addStoreToMemory(R0, 10)
+                .addTransmitWithoutChecksum()
+                .addDrop()
+                .generate()
+        val dataRegion = ByteArray(Counter.totalSize()) { 0 }
+        assertVerdict(MIN_APF_VERSION_IN_DEV, PASS, program, testPacket, dataRegion)
+        val counterMap = decodeCountersIntoMap(dataRegion)
+        assertEquals(mapOf<Counter, Long>(
+                Counter.TOTAL_PACKETS to 1,
+                Counter.PASSED_TRANSMIT_FAILURE to 1), counterMap)
+    }
+
     private fun decodeCountersIntoMap(counterBytes: ByteArray): Map<Counter, Long> {
         val counters = Counter::class.java.enumConstants
         val ret = HashMap<Counter, Long>()

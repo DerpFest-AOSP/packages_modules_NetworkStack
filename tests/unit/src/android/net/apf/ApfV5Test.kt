@@ -566,6 +566,215 @@ class ApfV5Test {
         assertEquals(0xa73d.toShort(), udpHdr.checksum)
     }
 
+    @Test
+    fun testDnsQuestionMatch() {
+        // needles = { A, B.LOCAL }
+        val needlesMatch = intArrayOf(
+            0x01, 'A'.code,
+            0x00,
+            0x01, 'B'.code,
+            0x05, 'L'.code, 'O'.code, 'C'.code, 'A'.code, 'L'.code,
+            0x00,
+            0x00
+        ).map { it.toByte() }.toByteArray()
+        val udpPayload = intArrayOf(
+            0x00, 0x00, 0x00, 0x00, // tid = 0x00, flags = 0x00,
+            0x00, 0x02, // qdcount = 2
+            0x00, 0x00, // ancount = 0
+            0x00, 0x00, // nscount = 0
+            0x00, 0x00, // arcount = 0
+            0x01, 'a'.code,
+            0x01, 'b'.code,
+            0x05, 'l'.code, 'o'.code, 'c'.code, 'a'.code, 'l'.code,
+            0x00, // qname1 = a.b.local
+            0x00, 0x01, 0x00, 0x01, // type = A, class = 0x0001
+            0xc0, 0x0e, // qname2 = b.local (name compression)
+            0x00, 0x01, 0x00, 0x01 // type = A, class = 0x0001
+        ).map { it.toByte() }.toByteArray()
+
+        var program = ApfV6Generator()
+                .addData(byteArrayOf())
+                .addLoadImmediate(R0, 0)
+                .addJumpIfPktAtR0ContainDnsQ(needlesMatch, 0x01 /* qtype */, DROP_LABEL)
+                .addPass()
+                .generate()
+        assertDrop(MIN_APF_VERSION_IN_DEV, program, udpPayload)
+
+        program = ApfV6Generator()
+                .addData(byteArrayOf())
+                .addLoadImmediate(R0, 0)
+                .addJumpIfPktAtR0ContainDnsQSafe(needlesMatch, 0x01 /* qtype */, DROP_LABEL)
+                .addPass()
+                .generate()
+        assertDrop(MIN_APF_VERSION_IN_DEV, program, udpPayload)
+
+        program = ApfV6Generator()
+                .addData(byteArrayOf())
+                .addLoadImmediate(R0, 0)
+                .addJumpIfPktAtR0DoesNotContainDnsQ(needlesMatch, 0x01 /* qtype */, DROP_LABEL)
+                .addPass()
+                .generate()
+        assertPass(MIN_APF_VERSION_IN_DEV, program, udpPayload)
+
+        program = ApfV6Generator()
+                .addData(byteArrayOf())
+                .addLoadImmediate(R0, 0)
+                .addJumpIfPktAtR0DoesNotContainDnsQSafe(needlesMatch, 0x01 /* qtype */, DROP_LABEL)
+                .addPass()
+                .generate()
+        assertPass(MIN_APF_VERSION_IN_DEV, program, udpPayload)
+
+        val badUdpPayload = intArrayOf(
+                0x00, 0x00, 0x00, 0x00, // tid = 0x00, flags = 0x00,
+                0x00, 0x02, // qdcount = 2
+                0x00, 0x00, // ancount = 0
+                0x00, 0x00, // nscount = 0
+                0x00, 0x00, // arcount = 0
+                0x01, 'a'.code,
+                0x01, 'b'.code,
+                0x05, 'l'.code, 'o'.code, 'c'.code, 'a'.code, 'l'.code,
+                0x00, // qname1 = a.b.local
+                0x00, 0x01, 0x00, 0x01, // type = A, class = 0x0001
+                0xc0, 0x1b, // corrupted pointer cause infinite loop
+                0x00, 0x01, 0x00, 0x01 // type = A, class = 0x0001
+        ).map { it.toByte() }.toByteArray()
+
+        program = ApfV6Generator()
+                .addData(byteArrayOf())
+                .addLoadImmediate(R0, 0)
+                .addJumpIfPktAtR0ContainDnsQ(needlesMatch, 0x01 /* qtype */, DROP_LABEL)
+                .addPass()
+                .generate()
+        var dataRegion = ByteArray(Counter.totalSize()) { 0 }
+        assertVerdict(MIN_APF_VERSION_IN_DEV, DROP, program, badUdpPayload, dataRegion)
+        var counterMap = decodeCountersIntoMap(dataRegion)
+        assertEquals(mapOf<Counter, Long>(
+                Counter.TOTAL_PACKETS to 1,
+                Counter.CORRUPT_DNS_PACKET to 1), counterMap)
+
+        program = ApfV6Generator()
+                .addData(byteArrayOf())
+                .addLoadImmediate(R0, 0)
+                .addJumpIfPktAtR0ContainDnsQSafe(needlesMatch, 0x01 /* qtype */, DROP_LABEL)
+                .addPass()
+                .generate()
+        dataRegion = ByteArray(Counter.totalSize()) { 0 }
+        assertVerdict(MIN_APF_VERSION_IN_DEV, PASS, program, badUdpPayload, dataRegion)
+        counterMap = decodeCountersIntoMap(dataRegion)
+        assertEquals(mapOf<Counter, Long>(
+                Counter.TOTAL_PACKETS to 1,
+                Counter.CORRUPT_DNS_PACKET to 1), counterMap)
+    }
+
+    @Test
+    fun testDnsAnswerMatch() {
+        // needles = { A, B.LOCAL }
+        val needlesMatch = intArrayOf(
+                0x01, 'A'.code,
+                0x00,
+                0x01, 'B'.code,
+                0x05, 'L'.code, 'O'.code, 'C'.code, 'A'.code, 'L'.code,
+                0x00,
+                0x00
+        ).map { it.toByte() }.toByteArray()
+
+        val udpPayload = intArrayOf(
+                0x00, 0x00, 0x84, 0x00, // tid = 0x00, flags = 0x8400,
+                0x00, 0x00, // qdcount = 0
+                0x00, 0x02, // ancount = 2
+                0x00, 0x00, // nscount = 0
+                0x00, 0x00, // arcount = 0
+                0x01, 'a'.code,
+                0x01, 'b'.code,
+                0x05, 'l'.code, 'o'.code, 'c'.code, 'a'.code, 'l'.code,
+                0x00, // name1 = a.b.local
+                0x00, 0x01, 0x80, 0x01, // type = A, class = 0x8001
+                0x00, 0x00, 0x00, 0x78, // ttl = 120
+                0x00, 0x04, 0xc0, 0xa8, 0x01, 0x09, // rdlengh = 4, rdata = 192.168.1.9
+                0xc0, 0x0e, // name2 = b.local (name compression)
+                0x00, 0x01, 0x80, 0x01, // type = A, class = 0x8001
+                0x00, 0x00, 0x00, 0x78, // ttl = 120
+                0x00, 0x04, 0xc0, 0xa8, 0x01, 0x09 // rdlengh = 4, rdata = 192.168.1.9
+        ).map { it.toByte() }.toByteArray()
+
+        var program = ApfV6Generator()
+                .addData(byteArrayOf())
+                .addLoadImmediate(R0, 0)
+                .addJumpIfPktAtR0ContainDnsA(needlesMatch, DROP_LABEL)
+                .addPass()
+                .generate()
+        assertDrop(MIN_APF_VERSION_IN_DEV, program, udpPayload)
+
+        program = ApfV6Generator()
+                .addData(byteArrayOf())
+                .addLoadImmediate(R0, 0)
+                .addJumpIfPktAtR0ContainDnsASafe(needlesMatch, DROP_LABEL)
+                .addPass()
+                .generate()
+        assertDrop(MIN_APF_VERSION_IN_DEV, program, udpPayload)
+
+        program = ApfV6Generator()
+                .addData(byteArrayOf())
+                .addLoadImmediate(R0, 0)
+                .addJumpIfPktAtR0DoesNotContainDnsA(needlesMatch, DROP_LABEL)
+                .addPass()
+                .generate()
+        assertPass(MIN_APF_VERSION_IN_DEV, program, udpPayload)
+
+        program = ApfV6Generator()
+                .addData(byteArrayOf())
+                .addLoadImmediate(R0, 0)
+                .addJumpIfPktAtR0DoesNotContainDnsASafe(needlesMatch, DROP_LABEL)
+                .addPass()
+                .generate()
+        assertPass(MIN_APF_VERSION_IN_DEV, program, udpPayload)
+
+        val badUdpPayload = intArrayOf(
+                0x00, 0x00, 0x84, 0x00, // tid = 0x00, flags = 0x8400,
+                0x00, 0x00, // qdcount = 0
+                0x00, 0x02, // ancount = 2
+                0x00, 0x00, // nscount = 0
+                0x00, 0x00, // arcount = 0
+                0x01, 'a'.code,
+                0x01, 'b'.code,
+                0x05, 'l'.code, 'o'.code, 'c'.code, 'a'.code, 'l'.code,
+                0x00, // name1 = a.b.local
+                0x00, 0x01, 0x80, 0x01, // type = A, class = 0x8001
+                0x00, 0x00, 0x00, 0x78, // ttl = 120
+                0x00, 0x04, 0xc0, 0xa8, 0x01, 0x09, // rdlengh = 4, rdata = 192.168.1.9
+                0xc0, 0x25, // corrupted pointer cause infinite loop
+                0x00, 0x01, 0x80, 0x01, // type = A, class = 0x8001
+                0x00, 0x00, 0x00, 0x78, // ttl = 120
+                0x00, 0x04, 0xc0, 0xa8, 0x01, 0x09 // rdlengh = 4, rdata = 192.168.1.9
+        ).map { it.toByte() }.toByteArray()
+
+        program = ApfV6Generator()
+                .addData(byteArrayOf())
+                .addLoadImmediate(R0, 0)
+                .addJumpIfPktAtR0ContainDnsA(needlesMatch, DROP_LABEL)
+                .addPass()
+                .generate()
+        var dataRegion = ByteArray(Counter.totalSize()) { 0 }
+        assertVerdict(MIN_APF_VERSION_IN_DEV, DROP, program, badUdpPayload, dataRegion)
+        var counterMap = decodeCountersIntoMap(dataRegion)
+        assertEquals(mapOf<Counter, Long>(
+                Counter.TOTAL_PACKETS to 1,
+                Counter.CORRUPT_DNS_PACKET to 1), counterMap)
+
+        program = ApfV6Generator()
+                .addData(byteArrayOf())
+                .addLoadImmediate(R0, 0)
+                .addJumpIfPktAtR0ContainDnsASafe(needlesMatch, DROP_LABEL)
+                .addPass()
+                .generate()
+        dataRegion = ByteArray(Counter.totalSize()) { 0 }
+        assertVerdict(MIN_APF_VERSION_IN_DEV, PASS, program, badUdpPayload, dataRegion)
+        counterMap = decodeCountersIntoMap(dataRegion)
+        assertEquals(mapOf<Counter, Long>(
+                Counter.TOTAL_PACKETS to 1,
+                Counter.CORRUPT_DNS_PACKET to 1), counterMap)
+    }
+
     private fun decodeCountersIntoMap(counterBytes: ByteArray): Map<Counter, Long> {
         val counters = Counter::class.java.enumConstants
         val ret = HashMap<Counter, Long>()

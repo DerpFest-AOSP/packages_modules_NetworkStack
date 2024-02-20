@@ -482,6 +482,22 @@ class ApfV5Test {
                 Counter.PASSED_ARP to 1), counterMap)
     }
 
+    @Test
+    fun testAllocateFailure() {
+        val program = ApfV6Generator()
+                .addData(byteArrayOf())
+                // allocate size: 65535 > sizeof(apf_test_buffer): 1514, trigger allocate failure.
+                .addAllocate(65535)
+                .addDrop()
+                .generate()
+        val dataRegion = ByteArray(Counter.totalSize()) { 0 }
+        assertVerdict(MIN_APF_VERSION_IN_DEV, PASS, program, testPacket, dataRegion)
+        val counterMap = decodeCountersIntoMap(dataRegion)
+        assertEquals(mapOf<Counter, Long>(
+                Counter.TOTAL_PACKETS to 1,
+                Counter.PASSED_ALLOCATE_FAILURE to 1), counterMap)
+    }
+
     private fun decodeCountersIntoMap(counterBytes: ByteArray): Map<Counter, Long> {
         val counters = Counter::class.java.enumConstants
         val ret = HashMap<Counter, Long>()

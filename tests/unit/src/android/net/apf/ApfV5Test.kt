@@ -30,6 +30,11 @@ import android.net.apf.BaseApfGenerator.Register.R0
 import android.net.apf.BaseApfGenerator.Register.R1
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
+import com.android.net.module.util.Struct
+import com.android.net.module.util.structs.EthernetHeader
+import com.android.net.module.util.structs.Ipv4Header
+import com.android.net.module.util.structs.UdpHeader
+import java.nio.ByteBuffer
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -517,6 +522,50 @@ class ApfV5Test {
                 Counter.PASSED_TRANSMIT_FAILURE to 1), counterMap)
     }
 
+    @Test
+    fun testTransmitL4() {
+        val etherIpv4UdpPacket = intArrayOf(
+            0x01, 0x00, 0x5e, 0x00, 0x00, 0xfb,
+            0x38, 0xca, 0x84, 0xb7, 0x7f, 0x16,
+            0x08, 0x00, // end of ethernet header
+            0x45,
+            0x04,
+            0x00, 0x3f,
+            0x43, 0xcd,
+            0x40, 0x00,
+            0xff,
+            0x11,
+            0x00, 0x00, // ipv4 checksum set to 0
+            0xc0, 0xa8, 0x01, 0x03,
+            0xe0, 0x00, 0x00, 0xfb, // end of ipv4 header
+            0x14, 0xe9,
+            0x14, 0xe9,
+            0x00, 0x2b,
+            0x00, 0x2b, // end of udp header. udp checksum set to udp (header + payload) size
+            0x00, 0x00, 0x84, 0x00, 0x00, 0x00,
+            0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x01, 0x62, 0x05, 0x6c, 0x6f, 0x63, 0x61, 0x6c,
+            0x00, 0x00, 0x01, 0x80, 0x01, 0x00, 0x00, 0x00, 0x78, 0x00, 0x04, 0xc0, 0xa8, 0x01,
+            0x09,
+        ).map { it.toByte() }.toByteArray()
+        val program = ApfV6Generator()
+                .addData(etherIpv4UdpPacket)
+                .addAllocate(etherIpv4UdpPacket.size)
+                .addDataCopy(2 /* src */, etherIpv4UdpPacket.size /* len */)
+                .addTransmitL4(ETH_HLEN /* ipOfs */,
+                        ETH_HLEN + IPV4_HLEN + 6 /* csumOfs */,
+                        ETH_HLEN + IPV4_HLEN - 8 /* csumStart */,
+                        IPPROTO_UDP /* partialCsum */,
+                        true /* isUdp */)
+                .generate()
+        assertPass(MIN_APF_VERSION_IN_DEV, program, testPacket)
+        val txBuf = ByteBuffer.wrap(ApfJniUtils.getTransmittedPacket())
+        Struct.parse(EthernetHeader::class.java, txBuf)
+        val ipv4Hdr = Struct.parse(Ipv4Header::class.java, txBuf)
+        val udpHdr = Struct.parse(UdpHeader::class.java, txBuf)
+        assertEquals(0x9535.toShort(), ipv4Hdr.checksum)
+        assertEquals(0xa73d.toShort(), udpHdr.checksum)
+    }
+
     private fun decodeCountersIntoMap(counterBytes: ByteArray): Map<Counter, Long> {
         val counters = Counter::class.java.enumConstants
         val ret = HashMap<Counter, Long>()
@@ -533,5 +582,11 @@ class ApfV5Test {
     private fun encodeInstruction(opcode: Int, immLength: Int, register: Int): Byte {
         val immLengthEncoding = if (immLength == 4) 3 else immLength
         return opcode.shl(3).or(immLengthEncoding.shl(1)).or(register).toByte()
+    }
+
+    companion object {
+        const val ETH_HLEN = 14
+        const val IPV4_HLEN = 20
+        const val IPPROTO_UDP = 17
     }
 }

@@ -100,6 +100,14 @@ public class ApfV6Generator extends ApfV4Generator<ApfV6Generator> {
     }
 
     /**
+     * Add an instruction to the end of the program to transmit the allocated buffer without
+     * checksum.
+     */
+    public ApfV6Generator addTransmitWithoutChecksum() {
+        return addTransmit(-1 /* ipOfs */);
+    }
+
+    /**
      * Add an instruction to the end of the program to transmit the allocated buffer.
      */
     public ApfV6Generator addTransmit(int ipOfs) {

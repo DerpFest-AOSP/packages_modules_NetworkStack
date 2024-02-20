@@ -408,18 +408,10 @@ class ApfV5Test {
     @Test
     fun testWriteToTxBuffer() {
         var program = ApfV6Generator()
-            .addAllocate(74)
+            .addAllocate(14)
             .addWriteU8(0x01)
-            .addWriteU16(0x0102)
-            .addWriteU32(0x01020304)
-            .addTransmitWithoutChecksum()
-            .generate()
-        assertPass(MIN_APF_VERSION_IN_DEV, program, ByteArray(MIN_PKT_SIZE))
-        assertContentEquals(byteArrayOf(0x01, 0x01, 0x02, 0x01, 0x02, 0x03, 0x04),
-          ApfJniUtils.getTransmittedPacket())
-
-        program = ApfV6Generator()
-            .addAllocate(74)
+            .addWriteU16(0x0203)
+            .addWriteU32(0x04050607)
             .addLoadImmediate(R0, 1)
             .addWriteU8(R0)
             .addLoadImmediate(R0, 0x0203)
@@ -429,40 +421,34 @@ class ApfV5Test {
             .addTransmitWithoutChecksum()
             .generate()
         assertPass(MIN_APF_VERSION_IN_DEV, program, ByteArray(MIN_PKT_SIZE))
-        assertContentEquals(byteArrayOf(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07),
-            ApfJniUtils.getTransmittedPacket())
+        assertContentEquals(byteArrayOf(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x01, 0x02, 0x03,
+                0x04, 0x05, 0x06, 0x07), ApfJniUtils.getTransmittedPacket())
     }
 
     @Test
     fun testCopyToTxBuffer() {
         var program = ApfV6Generator()
             .addData(byteArrayOf(33, 34, 35))
-            .addAllocate(74)
-            .addDataCopy(2, 2)
-            .addPacketCopy(0, 1)
-            .addPacketCopy(1, 2)
+            .addAllocate(14)
+            .addDataCopy(2 /* src */, 2 /* len */)
+            .addDataCopy(4 /* src */, 1 /* len */)
+            .addPacketCopy(0 /* src */, 1 /* len */)
+            .addPacketCopy(1 /* src */, 3 /* len */)
+            .addLoadImmediate(R0, 2) // data copy offset
+            .addDataCopyFromR0(2 /* len */)
+            .addLoadImmediate(R0, 4) // data copy offset
+            .addLoadImmediate(R1, 1) // len
+            .addDataCopyFromR0LenR1()
+            .addLoadImmediate(R0, 0) // packet copy offset
+            .addPacketCopyFromR0(1 /* len */)
+            .addLoadImmediate(R0, 1) // packet copy offset
+            .addLoadImmediate(R1, 3) // len
+            .addPacketCopyFromR0LenR1()
             .addTransmitWithoutChecksum()
             .generate()
         assertPass(MIN_APF_VERSION_IN_DEV, program, testPacket)
-        assertContentEquals(byteArrayOf(33, 34, 1, 2, 3), ApfJniUtils.getTransmittedPacket())
-
-        program = ApfV6Generator()
-                .addData(byteArrayOf(33, 34, 35))
-                .addAllocate(266)
-                .addLoadImmediate(R0, 2) // data copy offset
-                .addDataCopyFromR0(2 /* len */)
-                .addLoadImmediate(R0, 4) // data copy offset
-                .addLoadImmediate(R1, 1) // len
-                .addDataCopyFromR0LenR1()
-                .addLoadImmediate(R0, 0) // packet copy offset
-                .addPacketCopyFromR0(1 /* len */)
-                .addLoadImmediate(R0, 1) // packet copy offset
-                .addLoadImmediate(R1, 2) // len
-                .addPacketCopyFromR0LenR1()
-                .addTransmitWithoutChecksum()
-                .generate()
-        assertPass(MIN_APF_VERSION_IN_DEV, program, testPacket)
-        assertContentEquals(byteArrayOf(33, 34, 35, 1, 2, 3), ApfJniUtils.getTransmittedPacket())
+        assertContentEquals(byteArrayOf(33, 34, 35, 1, 2, 3, 4, 33, 34, 35, 1, 2, 3, 4),
+                ApfJniUtils.getTransmittedPacket())
     }
 
     @Test

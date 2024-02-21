@@ -82,7 +82,9 @@ class NetworkStatsIntegrationTest {
     private val TEST_DOWNLOAD_SIZE = 10000L
     private val TEST_UPLOAD_SIZE = 20000L
     private val HTTP_SERVER_NAME = "test.com"
-    private val DNS_SERVER_PORT = 53
+    private val HTTP_SERVER_PORT = 8080 // Use port > 1024 to avoid restrictions on system ports
+    private val DNS_INTERNAL_SERVER_PORT = 53
+    private val DNS_EXTERNAL_SERVER_PORT = 1053
     private val TCP_ACK_SIZE = 72
 
     // Packet overheads that are not part of the actual data transmission, these
@@ -99,13 +101,21 @@ class NetworkStatsIntegrationTest {
     private val inst = InstrumentationRegistry.getInstrumentation()
     private val context = inst.getContext()
     private val packetBridge = runAsShell(MANAGE_TEST_NETWORKS) {
-        PacketBridge(context, listOf(LOCAL_V6ADDR), REMOTE_V6ADDR.address)
+        PacketBridge(
+            context,
+            listOf(LOCAL_V6ADDR),
+            REMOTE_V6ADDR.address,
+            listOf(
+                Pair(DNS_INTERNAL_SERVER_PORT, DNS_EXTERNAL_SERVER_PORT)
+            )
+        )
     }
     private val cm = context.getSystemService(ConnectivityManager::class.java)!!
 
     // Set up DNS server for testing server and DNS64.
     private val fakeDns = TestDnsServer(
-        packetBridge.externalNetwork, InetSocketAddress(LOCAL_V6ADDR.address, DNS_SERVER_PORT)
+        packetBridge.externalNetwork,
+        InetSocketAddress(LOCAL_V6ADDR.address, DNS_EXTERNAL_SERVER_PORT)
     ).apply {
         start()
         setAnswer(
@@ -116,7 +126,10 @@ class NetworkStatsIntegrationTest {
     }
 
     // Start up test http server.
-    private val httpServer = TestHttpServer(LOCAL_V6ADDR.address.hostAddress).apply {
+    private val httpServer = TestHttpServer(
+        LOCAL_V6ADDR.address.hostAddress,
+        HTTP_SERVER_PORT
+    ).apply {
         start()
     }
 

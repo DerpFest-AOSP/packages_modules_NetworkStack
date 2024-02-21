@@ -792,7 +792,9 @@ public class TcpSocketTracker {
          * to deal with flag values changing at runtime.
          */
         public boolean shouldIgnoreTcpInfoForBlockedUids() {
-            return SdkLevel.isAtLeastT() && DeviceConfigUtils.isFeatureSupported(
+            // Note b/326143935 - can trigger crash due to kernel bug / missing
+            // feature on some T devices.
+            return SdkLevel.isAtLeastU() && DeviceConfigUtils.isFeatureSupported(
                     mContext, FEATURE_IS_UID_NETWORKING_BLOCKED)
                     && DeviceConfigUtils.isNetworkStackFeatureNotChickenedOut(mContext,
                     IGNORE_TCP_INFO_FOR_BLOCKED_UIDS);

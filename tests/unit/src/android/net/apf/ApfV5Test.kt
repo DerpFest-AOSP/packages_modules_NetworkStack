@@ -775,6 +775,13 @@ class ApfV5Test {
                 Counter.CORRUPT_DNS_PACKET to 1), counterMap)
     }
 
+    @Test
+    fun testGetCounterValue() {
+        val counterBytes = intArrayOf(0xff, 0, 0, 0, 0x78, 0x56, 0x34, 0x12)
+                .map { it.toByte() }.toByteArray()
+        assertEquals(0xff, ApfCounterTracker.getCounterValue(counterBytes, Counter.TOTAL_PACKETS))
+    }
+
     private fun decodeCountersIntoMap(counterBytes: ByteArray): Map<Counter, Long> {
         val counters = Counter::class.java.enumConstants
         val ret = HashMap<Counter, Long>()

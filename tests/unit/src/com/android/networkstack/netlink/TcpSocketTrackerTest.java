@@ -332,15 +332,17 @@ public class TcpSocketTrackerTest {
         assertFalse(tst.isDataStallSuspected());
     }
 
-    @IgnoreAfter(Build.VERSION_CODES.S_V2)
+    // b/326143935 isUidNetworkingBlocked is not supported on pre-U device.
+    @IgnoreAfter(Build.VERSION_CODES.TIRAMISU)
     @Test
-    public void testPollSocketsInfo_ignoreBlockedUid_featureDisabled_beforeT() throws Exception {
+    public void testPollSocketsInfo_ignoreBlockedUid_featureDisabled_beforeU() throws Exception {
         doTestPollSocketsInfo_ignoreBlockedUid_featureDisabled();
     }
 
-    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    // b/326143935 isUidNetworkingBlocked is not supported on pre-U device.
+    @IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
     @Test
-    public void testPollSocketsInfo_ignoreBlockedUid_featureDisabled_TOrAbove() throws Exception {
+    public void testPollSocketsInfo_ignoreBlockedUid_featureDisabled_UOrAbove() throws Exception {
         doTestPollSocketsInfo_ignoreBlockedUid_featureDisabled();
         verify(mCm, never()).isUidNetworkingBlocked(anyInt(), anyBoolean());
     }
@@ -371,8 +373,8 @@ public class TcpSocketTrackerTest {
         assertTrue(tst.isDataStallSuspected());
     }
 
-    // The feature is not enabled on pre-T device, because it needs bpf support.
-    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    // b/326143935 isUidNetworkingBlocked is not supported on pre-U device.
+    @IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
     @Test
     public void testPollSocketsInfo_ignoreBlockedUid_featureEnabled() throws Exception {
         doReturn(true).when(mDependencies).shouldIgnoreTcpInfoForBlockedUids();
@@ -403,8 +405,8 @@ public class TcpSocketTrackerTest {
         assertTrue(tst.isDataStallSuspected());
     }
 
-    // The feature is not enabled on pre-T device, because it needs bpf support.
-    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    // b/326143935 isUidNetworkingBlocked is not supported on pre-U device.
+    @IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
     @Test
     public void testPollSocketsInfo_ignoreBlockedUid_featureEnabled_dataSaver() throws Exception {
         doReturn(true).when(mDependencies).shouldIgnoreTcpInfoForBlockedUids();

@@ -125,7 +125,7 @@ public class ApfCounterTracker {
         int offset = data.length + Counter.ENDIANNESS.offset();
         int endianness = 0;
         for (int i = 0; i < 4; i++) {
-            endianness = endianness << 8 | (data[offset + i]);
+            endianness = endianness << 8 | (data[offset + i] & 0xff);
         }
         // Follow the same wrap-around addressing scheme of the interpreter.
         offset = data.length + counter.offset();
@@ -146,7 +146,7 @@ public class ApfCounterTracker {
         // Decode 32bit big-endian integer into a long so we can count up beyond 2^31.
         long value = 0;
         for (int i = 0; i < 4; i++) {
-            value = value << 8 | (data[offset + (isBe ? i : 3 - i)]);
+            value = value << 8 | (data[offset + (isBe ? i : 3 - i)] & 0xff);
         }
         return value;
     }

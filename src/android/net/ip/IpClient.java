@@ -952,7 +952,7 @@ public class IpClient extends StateMachine {
                 IPCLIENT_POPULATE_LINK_ADDRESS_LIFETIME_VERSION);
 
         IpClientLinkObserver.Configuration config = new IpClientLinkObserver.Configuration(
-                mMinRdnssLifetimeSec);
+                mMinRdnssLifetimeSec, mPopulateLinkAddressLifetime);
 
         mLinkObserver = new IpClientLinkObserver(
                 mContext, getHandler(),

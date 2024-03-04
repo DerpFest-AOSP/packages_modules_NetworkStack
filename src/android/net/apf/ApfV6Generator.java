@@ -27,7 +27,7 @@ import com.android.net.module.util.HexDump;
  *
  * @hide
  */
-public class ApfV6Generator extends ApfV4Generator<ApfV6Generator> {
+public class ApfV6Generator extends ApfV4GeneratorBase<ApfV6Generator> {
 
     /**
      * Creates an ApfV6Generator instance which is able to emit instructions for the specified

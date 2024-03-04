@@ -22,7 +22,7 @@ import com.android.internal.annotations.VisibleForTesting;
  *
  * @hide
  */
-public class ApfV4Generator extends ApfV4GeneratorBase<ApfV4Generator> {
+public final class ApfV4Generator extends ApfV4GeneratorBase<ApfV4Generator> {
     /**
      * Creates an ApfV4Generator instance which is able to emit instructions for the specified
      * {@code version} of the APF interpreter. Throws {@code IllegalInstructionException} if

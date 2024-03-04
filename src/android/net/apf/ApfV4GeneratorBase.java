@@ -17,6 +17,7 @@
 package android.net.apf;
 
 import static android.net.apf.BaseApfGenerator.Rbit.Rbit0;
+import static android.net.apf.BaseApfGenerator.Register.R0;
 import static android.net.apf.BaseApfGenerator.Register.R1;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -145,6 +146,7 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
      * Add an instruction to the end of the program to add {@code value} to register R0.
      */
     public Type addAdd(long val) {
+        if (val == 0) return self();  // nop, as APFv6 would '+= R1'
         return append(new Instruction(Opcodes.ADD).addTwosCompUnsigned(val));
     }
 
@@ -152,6 +154,7 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
      * Add an instruction to the end of the program to multiply register R0 by {@code value}.
      */
     public Type addMul(long val) {
+        if (val == 0) return addLoadImmediate(R0, 0);  // equivalent, as APFv6 would '*= R1'
         return append(new Instruction(Opcodes.MUL).addUnsigned(val));
     }
 
@@ -159,6 +162,7 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
      * Add an instruction to the end of the program to divide register R0 by {@code value}.
      */
     public Type addDiv(long val) {
+        if (val == 0) return addPass();  // equivalent, as APFv6 would '/= R1'
         return append(new Instruction(Opcodes.DIV).addUnsigned(val));
     }
 
@@ -166,6 +170,7 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
      * Add an instruction to the end of the program to logically and register R0 with {@code value}.
      */
     public Type addAnd(long val) {
+        if (val == 0) return addLoadImmediate(R0, 0);  // equivalent, as APFv6 would '+= R1'
         return append(new Instruction(Opcodes.AND).addTwosCompUnsigned(val));
     }
 
@@ -173,6 +178,7 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
      * Add an instruction to the end of the program to logically or register R0 with {@code value}.
      */
     public Type addOr(long val) {
+        if (val == 0) return self();  // nop, as APFv6 would '|= R1'
         return append(new Instruction(Opcodes.OR).addTwosCompUnsigned(val));
     }
 
@@ -181,6 +187,7 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
      */
     // TODO: consider whether should change the argument type to byte
     public Type addLeftShift(int val) {
+        if (val == 0) return self();  // nop, as APFv6 would '<<= R1'
         return append(new Instruction(Opcodes.SH).addSigned(val));
     }
 

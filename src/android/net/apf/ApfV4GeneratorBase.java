@@ -151,6 +151,13 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
     }
 
     /**
+     * Add an instruction to the end of the program to subtract {@code value} from register R0.
+     */
+    public Type addSub(long val) {
+        return addAdd(-val);  // note: addSub(4 billion) isn't valid, as addAdd(-4 billion) isn't
+    }
+
+    /**
      * Add an instruction to the end of the program to multiply register R0 by {@code value}.
      */
     public Type addMul(long val) {

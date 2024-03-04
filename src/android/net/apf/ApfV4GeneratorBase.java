@@ -207,25 +207,33 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
         return addLeftShift(-val);
     }
 
+    // Argument should be one of Opcodes.{ADD,MUL,DIV,AND,OR,SH}
+    protected void addArithR1(Opcodes opcode) {
+        append(new Instruction(opcode, R1));
+    }
+
     /**
      * Add an instruction to the end of the program to add register R1 to register R0.
      */
     public Type addAddR1() {
-        return append(new Instruction(Opcodes.ADD, R1));
+        addArithR1(Opcodes.ADD);
+        return self();
     }
 
     /**
      * Add an instruction to the end of the program to multiply register R0 by register R1.
      */
     public Type addMulR1() {
-        return append(new Instruction(Opcodes.MUL, R1));
+        addArithR1(Opcodes.MUL);
+        return self();
     }
 
     /**
      * Add an instruction to the end of the program to divide register R0 by register R1.
      */
     public Type addDivR1() {
-        return append(new Instruction(Opcodes.DIV, R1));
+        addArithR1(Opcodes.DIV);
+        return self();
     }
 
     /**
@@ -233,7 +241,8 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
      * and store the result back into register R0.
      */
     public Type addAndR1() {
-        return append(new Instruction(Opcodes.AND, R1));
+        addArithR1(Opcodes.AND);
+        return self();
     }
 
     /**
@@ -241,7 +250,8 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
      * and store the result back into register R0.
      */
     public Type addOrR1() {
-        return append(new Instruction(Opcodes.OR, R1));
+        addArithR1(Opcodes.OR);
+        return self();
     }
 
     /**
@@ -249,7 +259,8 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
      * register R1.
      */
     public Type addLeftShiftR1() {
-        return append(new Instruction(Opcodes.SH, R1));
+        addArithR1(Opcodes.SH);
+        return self();
     }
 
     /**

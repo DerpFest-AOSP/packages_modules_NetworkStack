@@ -190,7 +190,7 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
      */
     // TODO: consider whether should change the argument type to byte
     public Type addRightShift(int val) {
-        return append(new Instruction(Opcodes.SH).addSigned(-val));
+        return addLeftShift(-val);
     }
 
     /**

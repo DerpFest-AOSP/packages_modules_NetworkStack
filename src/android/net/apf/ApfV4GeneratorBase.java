@@ -17,6 +17,7 @@
 package android.net.apf;
 
 import static android.net.apf.BaseApfGenerator.Rbit.Rbit0;
+import static android.net.apf.BaseApfGenerator.Register.R0;
 import static android.net.apf.BaseApfGenerator.Register.R1;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -45,12 +46,16 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
         requireApfVersion(MIN_APF_VERSION);
     }
 
+    protected Type self() {
+        return (Type) this;
+    }
+
     Type append(Instruction instruction) {
         if (mGenerated) {
             throw new IllegalStateException("Program already generated");
         }
         mInstructions.add(instruction);
-        return (Type) this;
+        return self();
     }
 
     /**
@@ -140,14 +145,23 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
     /**
      * Add an instruction to the end of the program to add {@code value} to register R0.
      */
-    public Type addAdd(int val) {
+    public Type addAdd(long val) {
+        if (val == 0) return self();  // nop, as APFv6 would '+= R1'
         return append(new Instruction(Opcodes.ADD).addTwosCompUnsigned(val));
+    }
+
+    /**
+     * Add an instruction to the end of the program to subtract {@code value} from register R0.
+     */
+    public Type addSub(long val) {
+        return addAdd(-val);  // note: addSub(4 billion) isn't valid, as addAdd(-4 billion) isn't
     }
 
     /**
      * Add an instruction to the end of the program to multiply register R0 by {@code value}.
      */
     public Type addMul(long val) {
+        if (val == 0) return addLoadImmediate(R0, 0);  // equivalent, as APFv6 would '*= R1'
         return append(new Instruction(Opcodes.MUL).addUnsigned(val));
     }
 
@@ -155,20 +169,23 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
      * Add an instruction to the end of the program to divide register R0 by {@code value}.
      */
     public Type addDiv(long val) {
+        if (val == 0) return addPass();  // equivalent, as APFv6 would '/= R1'
         return append(new Instruction(Opcodes.DIV).addUnsigned(val));
     }
 
     /**
      * Add an instruction to the end of the program to logically and register R0 with {@code value}.
      */
-    public Type addAnd(int val) {
+    public Type addAnd(long val) {
+        if (val == 0) return addLoadImmediate(R0, 0);  // equivalent, as APFv6 would '+= R1'
         return append(new Instruction(Opcodes.AND).addTwosCompUnsigned(val));
     }
 
     /**
      * Add an instruction to the end of the program to logically or register R0 with {@code value}.
      */
-    public Type addOr(int val) {
+    public Type addOr(long val) {
+        if (val == 0) return self();  // nop, as APFv6 would '|= R1'
         return append(new Instruction(Opcodes.OR).addTwosCompUnsigned(val));
     }
 
@@ -177,6 +194,7 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
      */
     // TODO: consider whether should change the argument type to byte
     public Type addLeftShift(int val) {
+        if (val == 0) return self();  // nop, as APFv6 would '<<= R1'
         return append(new Instruction(Opcodes.SH).addSigned(val));
     }
 
@@ -186,28 +204,36 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
      */
     // TODO: consider whether should change the argument type to byte
     public Type addRightShift(int val) {
-        return append(new Instruction(Opcodes.SH).addSigned(-val));
+        return addLeftShift(-val);
+    }
+
+    // Argument should be one of Opcodes.{ADD,MUL,DIV,AND,OR,SH}
+    protected void addArithR1(Opcodes opcode) {
+        append(new Instruction(opcode, R1));
     }
 
     /**
      * Add an instruction to the end of the program to add register R1 to register R0.
      */
     public Type addAddR1() {
-        return append(new Instruction(Opcodes.ADD, R1));
+        addArithR1(Opcodes.ADD);
+        return self();
     }
 
     /**
      * Add an instruction to the end of the program to multiply register R0 by register R1.
      */
     public Type addMulR1() {
-        return append(new Instruction(Opcodes.MUL, R1));
+        addArithR1(Opcodes.MUL);
+        return self();
     }
 
     /**
      * Add an instruction to the end of the program to divide register R0 by register R1.
      */
     public Type addDivR1() {
-        return append(new Instruction(Opcodes.DIV, R1));
+        addArithR1(Opcodes.DIV);
+        return self();
     }
 
     /**
@@ -215,7 +241,8 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
      * and store the result back into register R0.
      */
     public Type addAndR1() {
-        return append(new Instruction(Opcodes.AND, R1));
+        addArithR1(Opcodes.AND);
+        return self();
     }
 
     /**
@@ -223,7 +250,8 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
      * and store the result back into register R0.
      */
     public Type addOrR1() {
-        return append(new Instruction(Opcodes.OR, R1));
+        addArithR1(Opcodes.OR);
+        return self();
     }
 
     /**
@@ -231,7 +259,8 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
      * register R1.
      */
     public Type addLeftShiftR1() {
-        return append(new Instruction(Opcodes.SH, R1));
+        addArithR1(Opcodes.SH);
+        return self();
     }
 
     /**

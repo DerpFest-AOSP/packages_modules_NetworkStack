@@ -45,12 +45,16 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
         requireApfVersion(MIN_APF_VERSION);
     }
 
+    protected Type self() {
+        return (Type) this;
+    }
+
     Type append(Instruction instruction) {
         if (mGenerated) {
             throw new IllegalStateException("Program already generated");
         }
         mInstructions.add(instruction);
-        return (Type) this;
+        return self();
     }
 
     /**

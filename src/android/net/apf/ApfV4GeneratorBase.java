@@ -213,7 +213,7 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
     /**
      * Add an instruction to the end of the program to add register R1 to register R0.
      */
-    public final Type addAddR1() {
+    public final Type addAddR1ToR0() {
         addArithR1(Opcodes.ADD);
         return self();
     }
@@ -221,7 +221,7 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
     /**
      * Add an instruction to the end of the program to multiply register R0 by register R1.
      */
-    public final Type addMulR1() {
+    public final Type addMulR0ByR1() {
         addArithR1(Opcodes.MUL);
         return self();
     }
@@ -229,7 +229,7 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
     /**
      * Add an instruction to the end of the program to divide register R0 by register R1.
      */
-    public final Type addDivR1() {
+    public final Type addDivR0ByR1() {
         addArithR1(Opcodes.DIV);
         return self();
     }
@@ -238,7 +238,7 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
      * Add an instruction to the end of the program to logically and register R0 with register R1
      * and store the result back into register R0.
      */
-    public final Type addAndR1() {
+    public final Type addAndR0WithR1() {
         addArithR1(Opcodes.AND);
         return self();
     }
@@ -247,7 +247,7 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
      * Add an instruction to the end of the program to logically or register R0 with register R1
      * and store the result back into register R0.
      */
-    public final Type addOrR1() {
+    public final Type addOrR0WithR1() {
         addArithR1(Opcodes.OR);
         return self();
     }
@@ -256,7 +256,7 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
      * Add an instruction to the end of the program to shift register R0 left by the value in
      * register R1.
      */
-    public final Type addLeftShiftR1() {
+    public final Type addLeftShiftR0ByR1() {
         addArithR1(Opcodes.SH);
         return self();
     }

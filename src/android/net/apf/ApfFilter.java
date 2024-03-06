@@ -1526,9 +1526,15 @@ public class ApfFilter implements AndroidPacketFilter {
         maybeSetupCounter(gen, Counter.DROPPED_ARP_NON_IPV4);
         gen.addJumpIfBytesAtR0NotEqual(ARP_IPV4_HEADER, mCountAndDropLabel);
 
-        // Drop if unknown ARP opcode.
         gen.addLoad16(R0, ARP_OPCODE_OFFSET);
-        gen.addJumpIfR0Equals(ARP_OPCODE_REQUEST, checkTargetIPv4); // Skip to unicast check
+        if (mIPv4Address == null) {
+            // Drop if ARP REQUEST and we do not have an IPv4 address
+            maybeSetupCounter(gen, Counter.DROPPED_ARP_REQUEST_NO_ADDRESS);
+            gen.addJumpIfR0Equals(ARP_OPCODE_REQUEST, mCountAndDropLabel);
+        } else {
+            gen.addJumpIfR0Equals(ARP_OPCODE_REQUEST, checkTargetIPv4); // Skip to unicast check
+        }
+        // Drop if unknown ARP opcode.
         maybeSetupCounter(gen, Counter.DROPPED_ARP_UNKNOWN);
         gen.addJumpIfR0NotEquals(ARP_OPCODE_REPLY, mCountAndDropLabel);
 

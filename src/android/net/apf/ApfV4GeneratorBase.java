@@ -208,9 +208,7 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
     }
 
     // Argument should be one of Opcodes.{ADD,MUL,DIV,AND,OR,SH}
-    final void addArithR1(Opcodes opcode) {
-        append(new Instruction(opcode, R1));
-    }
+    abstract void addArithR1(Opcodes opcode);
 
     /**
      * Add an instruction to the end of the program to add register R1 to register R0.

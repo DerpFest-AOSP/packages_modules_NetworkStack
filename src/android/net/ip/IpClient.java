@@ -2429,6 +2429,10 @@ public class IpClient extends StateMachine {
     private AndroidPacketFilter maybeCreateApfFilter(final ApfCapabilities apfCapabilities) {
         ApfFilter.ApfConfiguration apfConfig = new ApfFilter.ApfConfiguration();
         apfConfig.apfCapabilities = apfCapabilities;
+        if (apfCapabilities != null && !SdkLevel.isAtLeastV()
+                && apfCapabilities.apfVersionSupported <= 4) {
+            apfConfig.installableProgramSizeClamp = 2000;
+        }
         apfConfig.multicastFilter = mMulticastFiltering;
         // Get the Configuration for ApfFilter from Context
         // Resource settings were moved from ApfCapabilities APIs to NetworkStack resources in S

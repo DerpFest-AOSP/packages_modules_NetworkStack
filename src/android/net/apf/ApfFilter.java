@@ -337,6 +337,11 @@ public class ApfFilter implements AndroidPacketFilter {
     @GuardedBy("this")
     private int mIPv4PrefixLength;
 
+    // mIsRunning is reflects the state of the ApfFilter during integration tests. ApfFilter can be
+    // paused using "adb shell cmd apf <iface> <cmd>" commands. A paused ApfFilter will not install
+    // any new programs, but otherwise operate normally.
+    private volatile boolean mIsRunning = true;
+
     private final Dependencies mDependencies;
 
     public ApfFilter(Context context, ApfConfiguration config, InterfaceParams ifParams,
@@ -498,7 +503,7 @@ public class ApfFilter implements AndroidPacketFilter {
                 // Clear the APF memory to reset all counters upon connecting to the first AP
                 // in an SSID. This is limited to APFv4 devices because this large write triggers
                 // a crash on some older devices (b/78905546).
-                if (mApfCapabilities.hasDataAccess()) {
+                if (mIsRunning && mApfCapabilities.hasDataAccess()) {
                     byte[] zeroes = new byte[mApfCapabilities.maximumApfProgramSize];
                     if (!mIpClientCallback.installPacketFilter(zeroes)) {
                         sendNetworkQuirkMetrics(NetworkQuirkEvent.QE_APF_INSTALL_FAILURE);
@@ -2120,10 +2125,12 @@ public class ApfFilter implements AndroidPacketFilter {
             sendNetworkQuirkMetrics(NetworkQuirkEvent.QE_APF_GENERATE_FILTER_EXCEPTION);
             return;
         }
-        // Update data snapshot every time we install a new program
-        mIpClientCallback.startReadPacketFilter();
-        if (!mIpClientCallback.installPacketFilter(program)) {
-            sendNetworkQuirkMetrics(NetworkQuirkEvent.QE_APF_INSTALL_FAILURE);
+        if (mIsRunning) {
+            // Update data snapshot every time we install a new program
+            mIpClientCallback.startReadPacketFilter();
+            if (!mIpClientCallback.installPacketFilter(program)) {
+                sendNetworkQuirkMetrics(NetworkQuirkEvent.QE_APF_INSTALL_FAILURE);
+            }
         }
         mLastTimeInstalledProgram = timeSeconds;
         mLastInstalledProgramMinLifetime = programMinLft;
@@ -2418,6 +2425,7 @@ public class ApfFilter implements AndroidPacketFilter {
     public synchronized void dump(IndentingPrintWriter pw) {
         pw.println("Capabilities: " + mApfCapabilities);
         pw.println("InstallableProgramSizeClamp: " + mInstallableProgramSizeClamp);
+        pw.println("Filter update status: " + (mIsRunning ? "RUNNING" : "PAUSED"));
         pw.println("Receive thread: " + (mReceiveThread != null ? "RUNNING" : "STOPPED"));
         pw.println("Multicast: " + (mMulticastFilter ? "DROP" : "ALLOW"));
         pw.println("Minimum RDNSS lifetime: " + mMinRdnssLifetimeSec);
@@ -2521,6 +2529,11 @@ public class ApfFilter implements AndroidPacketFilter {
             }
         }
         pw.decreaseIndent();
+    }
+
+    /** Return ApfFilter update status for testing purposes. */
+    public boolean isRunning() {
+        return mIsRunning;
     }
 
     // TODO: move to android.net.NetworkUtils

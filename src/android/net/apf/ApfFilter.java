@@ -16,6 +16,11 @@
 
 package android.net.apf;
 
+import static android.net.apf.BaseApfGenerator.DROP_LABEL;
+import static android.net.apf.BaseApfGenerator.FILTER_AGE_MEMORY_SLOT;
+import static android.net.apf.BaseApfGenerator.IPV4_HEADER_SIZE_MEMORY_SLOT;
+import static android.net.apf.BaseApfGenerator.PACKET_SIZE_MEMORY_SLOT;
+import static android.net.apf.BaseApfGenerator.PASS_LABEL;
 import static android.net.apf.BaseApfGenerator.Register.R0;
 import static android.net.apf.BaseApfGenerator.Register.R1;
 import static android.net.util.SocketUtils.makePacketSocketAddress;
@@ -81,7 +86,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.net.Inet4Address;
-import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.SocketAddress;
 import java.net.SocketException;
@@ -99,7 +103,7 @@ import java.util.Map;
  * For networks that support packet filtering via APF programs, {@code ApfFilter}
  * listens for IPv6 ICMPv6 router advertisements (RAs) and generates APF programs to
  * filter out redundant duplicate ones.
- *
+ * <p>
  * Threading model:
  * A collection of RAs we've received is kept in mRas. Generating APF programs uses mRas to
  * know what RAs to filter for, thus generating APF programs is dependent on mRas.
@@ -205,7 +209,6 @@ public class ApfFilter implements AndroidPacketFilter {
     private static final int IPV4_DEST_ADDR_OFFSET = ETH_HEADER_LEN + 16;
     private static final int IPV4_ANY_HOST_ADDRESS = 0;
     private static final int IPV4_BROADCAST_ADDRESS = -1; // 255.255.255.255
-    private static final int IPV4_HEADER_LEN = 20; // Without options
 
     // Traffic class and Flow label are not byte aligned. Luckily we
     // don't care about either value so we'll consider bytes 1-3 of the
@@ -289,7 +292,7 @@ public class ApfFilter implements AndroidPacketFilter {
     private final Clock mClock;
     private final ApfCounterTracker mApfCounterTracker = new ApfCounterTracker();
     @GuardedBy("this")
-    private long mSessionStartMs = 0;
+    private final long mSessionStartMs;
     @GuardedBy("this")
     private int mNumParseErrorRas = 0;
     @GuardedBy("this")
@@ -362,7 +365,6 @@ public class ApfFilter implements AndroidPacketFilter {
             }
         }
     };
-    private final Context mContext;
 
     // Our IPv4 address, if we have just one, otherwise null.
     @GuardedBy("this")
@@ -398,7 +400,6 @@ public class ApfFilter implements AndroidPacketFilter {
         mDrop802_3Frames = config.ieee802_3Filter;
         mMinRdnssLifetimeSec = config.minRdnssLifetimeSec;
         mAcceptRaMinLft = config.acceptRaMinLft;
-        mContext = context;
         mShouldHandleLightDoze = config.shouldHandleLightDoze;
         mDependencies = dependencies;
         mNetworkQuirkMetrics = networkQuirkMetrics;
@@ -414,8 +415,8 @@ public class ApfFilter implements AndroidPacketFilter {
         } else {
             // APFv4 unsupported: turn jumps to the counter trampolines to immediately PASS or DROP,
             // preserving the original pre-APFv4 behavior.
-            mCountAndPassLabel = ApfV4Generator.PASS_LABEL;
-            mCountAndDropLabel = ApfV4Generator.DROP_LABEL;
+            mCountAndPassLabel = PASS_LABEL;
+            mCountAndDropLabel = DROP_LABEL;
         }
 
         // Now fill the black list from the passed array
@@ -492,7 +493,7 @@ public class ApfFilter implements AndroidPacketFilter {
     }
 
     private static int[] filterEthTypeBlackList(int[] ethTypeBlackList) {
-        ArrayList<Integer> bl = new ArrayList<Integer>();
+        ArrayList<Integer> bl = new ArrayList<>();
 
         for (int p : ethTypeBlackList) {
             // Check if the protocol is a valid ether type
@@ -631,10 +632,8 @@ public class ApfFilter implements AndroidPacketFilter {
         private static final int ICMP6_RA_ROUTER_LIFETIME_LEN = 2;
         // Prefix information option.
         private static final int ICMP6_PREFIX_OPTION_TYPE = 3;
-        private static final int ICMP6_PREFIX_OPTION_LEN = 32;
         private static final int ICMP6_PREFIX_OPTION_VALID_LIFETIME_OFFSET = 4;
         private static final int ICMP6_PREFIX_OPTION_VALID_LIFETIME_LEN = 4;
-        private static final int ICMP6_PREFIX_OPTION_PREFERRED_LIFETIME_OFFSET = 8;
         private static final int ICMP6_PREFIX_OPTION_PREFERRED_LIFETIME_LEN = 4;
 
         // From RFC4861: source link-layer address
@@ -701,7 +700,7 @@ public class ApfFilter implements AndroidPacketFilter {
                     return "???";
                 }
                 byte[] addressBytes = Arrays.copyOfRange(array, pos, pos + 16);
-                InetAddress address = (Inet6Address) InetAddress.getByAddress(addressBytes);
+                InetAddress address = InetAddress.getByAddress(addressBytes);
                 return address.getHostAddress();
             } catch (UnsupportedOperationException e) {
                 // array() failed. Cannot happen, mPacket is array-backed and read-write.
@@ -747,7 +746,7 @@ public class ApfFilter implements AndroidPacketFilter {
             System.arraycopy(mPacket.array(), offset + 8, prefix, 0, optLen - 8);
             sb.append("RIO ").append(lifetime).append("s ");
             try {
-                InetAddress address = (Inet6Address) InetAddress.getByAddress(prefix);
+                InetAddress address = InetAddress.getByAddress(prefix);
                 sb.append(address.getHostAddress());
             } catch (UnknownHostException impossible) {
                 sb.append("???");
@@ -1125,7 +1124,7 @@ public class ApfFilter implements AndroidPacketFilter {
 
         // Filter for a fraction of the lifetime and adjust for the age of the RA.
         int getRemainingFilterLft(int currentTimeSeconds) {
-            int filterLifetime = (int) ((mMinLifetime / FRACTION_OF_LIFETIME_TO_FILTER)
+            int filterLifetime = ((mMinLifetime / FRACTION_OF_LIFETIME_TO_FILTER)
                     - (currentTimeSeconds - mLastSeen));
             filterLifetime = Math.max(0, filterLifetime);
             // Clamp filterLifetime to <= 65535, so it fits in 2 bytes.
@@ -1139,10 +1138,10 @@ public class ApfFilter implements AndroidPacketFilter {
                 throws IllegalInstructionException {
             String nextFilterLabel = "Ra" + getUniqueNumberLocked();
             // Skip if packet is not the right size
-            gen.addLoadFromMemory(R0, gen.PACKET_SIZE_MEMORY_SLOT);
+            gen.addLoadFromMemory(R0, PACKET_SIZE_MEMORY_SLOT);
             gen.addJumpIfR0NotEquals(mPacket.capacity(), nextFilterLabel);
             // Skip filter if expired
-            gen.addLoadFromMemory(R0, gen.FILTER_AGE_MEMORY_SLOT);
+            gen.addLoadFromMemory(R0, FILTER_AGE_MEMORY_SLOT);
             gen.addJumpIfR0GreaterThan(getRemainingFilterLft(timeSeconds), nextFilterLabel);
             for (PacketSection section : mPacketSections) {
                 // Generate code to match the packet bytes.
@@ -1242,7 +1241,6 @@ public class ApfFilter implements AndroidPacketFilter {
 
     // A class to hold NAT-T keepalive ack information.
     private class NattKeepaliveResponse extends KeepalivePacket {
-        static final int UDP_LENGTH_OFFSET = 4;
         static final int UDP_HEADER_LEN = 8;
 
         protected class NattKeepaliveResponseData {
@@ -1289,7 +1287,7 @@ public class ApfFilter implements AndroidPacketFilter {
 
             // A NAT-T keepalive packet contains 1 byte payload with the value 0xff
             // Check payload length is 1
-            gen.addLoadFromMemory(R0, gen.IPV4_HEADER_SIZE_MEMORY_SLOT);
+            gen.addLoadFromMemory(R0, IPV4_HEADER_SIZE_MEMORY_SLOT);
             gen.addAdd(UDP_HEADER_LEN);
             gen.addSwap();
             gen.addLoad16(R0, IPV4_TOTAL_LENGTH_OFFSET);
@@ -1298,7 +1296,7 @@ public class ApfFilter implements AndroidPacketFilter {
             gen.addJumpIfR0NotEquals(1, nextFilterLabel);
 
             // Check that the ports match
-            gen.addLoadFromMemory(R0, gen.IPV4_HEADER_SIZE_MEMORY_SLOT);
+            gen.addLoadFromMemory(R0, IPV4_HEADER_SIZE_MEMORY_SLOT);
             gen.addAdd(ETH_HEADER_LEN);
             gen.addJumpIfBytesAtR0NotEqual(mPortFingerprint, nextFilterLabel);
 
@@ -1407,7 +1405,7 @@ public class ApfFilter implements AndroidPacketFilter {
             // Skip to the next filter if it's not zero-sized :
             // TCP_HEADER_SIZE + IPV4_HEADER_SIZE - ipv4_total_length == 0
             // Load the IP header size into R1
-            gen.addLoadFromMemory(R1, gen.IPV4_HEADER_SIZE_MEMORY_SLOT);
+            gen.addLoadFromMemory(R1, IPV4_HEADER_SIZE_MEMORY_SLOT);
             // Load the TCP header size into R0 (it's indexed by R1)
             gen.addLoad8Indexed(R0, ETH_HEADER_LEN + TCP_HEADER_SIZE_OFFSET);
             // Size offset is in the top nibble, but it must be multiplied by 4, and the two
@@ -1421,7 +1419,7 @@ public class ApfFilter implements AndroidPacketFilter {
             gen.addAddR1();
             gen.addJumpIfR0NotEquals(0, nextFilterLabel);
             // Add IPv4 header length
-            gen.addLoadFromMemory(R1, gen.IPV4_HEADER_SIZE_MEMORY_SLOT);
+            gen.addLoadFromMemory(R1, IPV4_HEADER_SIZE_MEMORY_SLOT);
             gen.addLoadImmediate(R0, ETH_HEADER_LEN);
             gen.addAddR1();
             gen.addJumpIfBytesAtR0NotEqual(mPortSeqAckFingerprint, nextFilterLabel);
@@ -1432,7 +1430,7 @@ public class ApfFilter implements AndroidPacketFilter {
         }
     }
 
-    private class TcpKeepaliveAckV6 extends TcpKeepaliveAck {
+    private static class TcpKeepaliveAckV6 extends TcpKeepaliveAck {
         TcpKeepaliveAckV6(final TcpKeepalivePacketDataParcelable sentKeepalivePacket) {
             this(new TcpKeepaliveAckData(sentKeepalivePacket));
         }
@@ -1441,7 +1439,7 @@ public class ApfFilter implements AndroidPacketFilter {
         }
 
         @Override
-        void generateFilterLocked(ApfV4GeneratorBase<?> gen) throws IllegalInstructionException {
+        void generateFilterLocked(ApfV4GeneratorBase<?> gen) {
             throw new UnsupportedOperationException("IPv6 TCP Keepalive is not supported yet");
         }
     }
@@ -1450,9 +1448,9 @@ public class ApfFilter implements AndroidPacketFilter {
     private static final int MAX_RAS = 10;
 
     @GuardedBy("this")
-    private ArrayList<Ra> mRas = new ArrayList<>();
+    private final ArrayList<Ra> mRas = new ArrayList<>();
     @GuardedBy("this")
-    private SparseArray<KeepalivePacket> mKeepalivePackets = new SparseArray<>();
+    private final SparseArray<KeepalivePacket> mKeepalivePackets = new SparseArray<>();
     @GuardedBy("this")
     private final List<String[]> mMdnsAllowList = new ArrayList<>();
 
@@ -1474,7 +1472,7 @@ public class ApfFilter implements AndroidPacketFilter {
 
     /**
      * For debugging only. Contains the latest APF buffer snapshot captured from the firmware.
-     *
+     * <p>
      * A typical size for this buffer is 4KB. It is present only if the WiFi HAL supports
      * IWifiStaIface#readApfPacketFilterData(), and the APF interpreter advertised support for
      * the opcodes to access the data buffer (LDDW and STDW).
@@ -1491,9 +1489,6 @@ public class ApfFilter implements AndroidPacketFilter {
     // The maximum number of distinct RAs
     @GuardedBy("this")
     private int mMaxDistinctRas = 0;
-    // How many times the program was updated since we started for allowing multicast traffic.
-    @GuardedBy("this")
-    private int mNumProgramUpdatesAllowingMulticast = 0;
 
     /**
      * Generate filter code to process ARP packets. Execution of this code ends in either the
@@ -1599,7 +1594,7 @@ public class ApfFilter implements AndroidPacketFilter {
             gen.addLoad16(R0, IPV4_FRAGMENT_OFFSET_OFFSET);
             gen.addJumpIfR0AnyBitsSet(IPV4_FRAGMENT_OFFSET_MASK, skipDhcpv4Filter);
             // Check it's addressed to DHCP client port.
-            gen.addLoadFromMemory(R1, gen.IPV4_HEADER_SIZE_MEMORY_SLOT);
+            gen.addLoadFromMemory(R1, IPV4_HEADER_SIZE_MEMORY_SLOT);
             gen.addLoad16Indexed(R0, TCP_UDP_DESTINATION_PORT_OFFSET);
             gen.addJumpIfR0NotEquals(DHCP_CLIENT_PORT, skipDhcpv4Filter);
             // Check it's DHCP to our MAC address.
@@ -1659,7 +1654,7 @@ public class ApfFilter implements AndroidPacketFilter {
     private void generateKeepaliveFilters(ApfV4GeneratorBase<?> gen, Class<?> filterType, int proto,
             int offset, String label) throws IllegalInstructionException {
         final boolean haveKeepaliveResponses = CollectionUtils.any(mKeepalivePackets,
-                ack -> filterType.isInstance(ack));
+                filterType::isInstance);
 
         // If no keepalive packets of this type
         if (!haveKeepaliveResponses) return;
@@ -1850,7 +1845,7 @@ public class ApfFilter implements AndroidPacketFilter {
         gen.addJumpIfR0NotEquals(IPPROTO_UDP, skipMdnsFilter);
 
         // Set R1 to IPv4 header.
-        gen.addLoadFromMemory(R1, gen.IPV4_HEADER_SIZE_MEMORY_SLOT);
+        gen.addLoadFromMemory(R1, IPV4_HEADER_SIZE_MEMORY_SLOT);
         gen.addJump(checkMdnsUdpPort);
 
         gen.defineLabel(skipMdnsv4Filter);
@@ -1909,8 +1904,8 @@ public class ApfFilter implements AndroidPacketFilter {
 
     /**
      * Generate filter code to drop IPv4 TCP packets on port 7.
-     *
-     * On entry we know it is IPv4 ethertype, but don't know anything else.
+     * <p>
+     * On entry, we know it is IPv4 ethertype, but don't know anything else.
      * R0/R1 have nothing useful in them, and can be clobbered.
      */
     @GuardedBy("this")
@@ -1927,7 +1922,7 @@ public class ApfFilter implements AndroidPacketFilter {
         gen.addJumpIfR0AnyBitsSet(IPV4_FRAGMENT_OFFSET_MASK, skipPort7V4Filter);
 
         // Check it's destination port 7.
-        gen.addLoadFromMemory(R1, gen.IPV4_HEADER_SIZE_MEMORY_SLOT);
+        gen.addLoadFromMemory(R1, IPV4_HEADER_SIZE_MEMORY_SLOT);
         gen.addLoad16Indexed(R0, TCP_UDP_DESTINATION_PORT_OFFSET);
         gen.addJumpIfR0NotEquals(ECHO_PORT, skipPort7V4Filter);
 
@@ -2058,7 +2053,7 @@ public class ApfFilter implements AndroidPacketFilter {
 
     /**
      * Append packet counting epilogue to the APF program.
-     *
+     * <p>
      * Currently, the epilogue consists of two trampolines which count passed and dropped packets
      * before jumping to the actual PASS and DROP labels.
      */
@@ -2079,14 +2074,14 @@ public class ApfFilter implements AndroidPacketFilter {
         gen.addLoadData(R0, 0);   // R0 = *(R1 + 0)
         gen.addAdd(1);                     // R0++
         gen.addStoreData(R0, 0);  // *(R1 + 0) = R0
-        gen.addJump(gen.PASS_LABEL);
+        gen.addJump(PASS_LABEL);
 
         // Same as above for the count & drop trampoline.
         gen.defineLabel(mCountAndDropLabel);
         gen.addLoadData(R0, 0);   // R0 = *(R1 + 0)
         gen.addAdd(1);                     // R0++
         gen.addStoreData(R0, 0);  // *(R1 + 0) = R0
-        gen.addJump(gen.DROP_LABEL);
+        gen.addJump(DROP_LABEL);
     }
 
     /**
@@ -2330,9 +2325,6 @@ public class ApfFilter implements AndroidPacketFilter {
     public synchronized void setMulticastFilter(boolean isEnabled) {
         if (mMulticastFilter == isEnabled) return;
         mMulticastFilter = isEnabled;
-        if (!isEnabled) {
-            mNumProgramUpdatesAllowingMulticast++;
-        }
         installNewProgramLocked();
     }
 

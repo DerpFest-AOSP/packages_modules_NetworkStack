@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,46 @@
 
 package android.net.apf;
 
+import static android.net.apf.ApfConstant.APF_MAX_ETH_TYPE_BLACK_LIST_LEN;
+import static android.net.apf.ApfConstant.ARP_HEADER_OFFSET;
+import static android.net.apf.ApfConstant.ARP_IPV4_HEADER;
+import static android.net.apf.ApfConstant.ARP_OPCODE_OFFSET;
+import static android.net.apf.ApfConstant.ARP_OPCODE_REPLY;
+import static android.net.apf.ApfConstant.ARP_OPCODE_REQUEST;
+import static android.net.apf.ApfConstant.ARP_SOURCE_IP_ADDRESS_OFFSET;
+import static android.net.apf.ApfConstant.ARP_TARGET_IP_ADDRESS_OFFSET;
+import static android.net.apf.ApfConstant.DHCP_CLIENT_MAC_OFFSET;
+import static android.net.apf.ApfConstant.DHCP_CLIENT_PORT;
+import static android.net.apf.ApfConstant.ECHO_PORT;
+import static android.net.apf.ApfConstant.ETH_DEST_ADDR_OFFSET;
+import static android.net.apf.ApfConstant.ETH_ETHERTYPE_OFFSET;
+import static android.net.apf.ApfConstant.ETH_HEADER_LEN;
+import static android.net.apf.ApfConstant.ETH_MULTICAST_MDNS_V4_MAC_ADDRESS;
+import static android.net.apf.ApfConstant.ETH_MULTICAST_MDNS_V6_MAC_ADDRESS;
+import static android.net.apf.ApfConstant.ETH_TYPE_MAX;
+import static android.net.apf.ApfConstant.ETH_TYPE_MIN;
+import static android.net.apf.ApfConstant.ICMP6_TYPE_OFFSET;
+import static android.net.apf.ApfConstant.IPPROTO_HOPOPTS;
+import static android.net.apf.ApfConstant.IPV4_ANY_HOST_ADDRESS;
+import static android.net.apf.ApfConstant.IPV4_BROADCAST_ADDRESS;
+import static android.net.apf.ApfConstant.IPV4_DEST_ADDR_OFFSET;
+import static android.net.apf.ApfConstant.IPV4_FRAGMENT_MORE_FRAGS_MASK;
+import static android.net.apf.ApfConstant.IPV4_FRAGMENT_OFFSET_MASK;
+import static android.net.apf.ApfConstant.IPV4_FRAGMENT_OFFSET_OFFSET;
+import static android.net.apf.ApfConstant.IPV4_PROTOCOL_OFFSET;
+import static android.net.apf.ApfConstant.IPV4_TOTAL_LENGTH_OFFSET;
+import static android.net.apf.ApfConstant.IPV6_ALL_NODES_ADDRESS;
+import static android.net.apf.ApfConstant.IPV6_DEST_ADDR_OFFSET;
+import static android.net.apf.ApfConstant.IPV6_FLOW_LABEL_LEN;
+import static android.net.apf.ApfConstant.IPV6_FLOW_LABEL_OFFSET;
+import static android.net.apf.ApfConstant.IPV6_HEADER_LEN;
+import static android.net.apf.ApfConstant.IPV6_NEXT_HEADER_OFFSET;
+import static android.net.apf.ApfConstant.IPV6_SRC_ADDR_OFFSET;
+import static android.net.apf.ApfConstant.MDNS_PORT;
+import static android.net.apf.ApfConstant.MDNS_QDCOUNT_OFFSET;
+import static android.net.apf.ApfConstant.MDNS_QNAME_OFFSET;
+import static android.net.apf.ApfConstant.TCP_HEADER_SIZE_OFFSET;
+import static android.net.apf.ApfConstant.TCP_UDP_DESTINATION_PORT_OFFSET;
 import static android.net.apf.BaseApfGenerator.DROP_LABEL;
 import static android.net.apf.BaseApfGenerator.FILTER_AGE_MEMORY_SLOT;
 import static android.net.apf.BaseApfGenerator.IPV4_HEADER_SIZE_MEMORY_SLOT;
@@ -192,84 +232,6 @@ public class ApfFilter implements AndroidPacketFilter {
     private static final String TAG = "ApfFilter";
     private static final boolean DBG = true;
     private static final boolean VDBG = false;
-
-    private static final int ETH_HEADER_LEN = 14;
-    private static final int ETH_DEST_ADDR_OFFSET = 0;
-    private static final int ETH_ETHERTYPE_OFFSET = 12;
-    private static final int ETH_TYPE_MIN = 0x0600;
-    private static final int ETH_TYPE_MAX = 0xFFFF;
-    // TODO: Make these offsets relative to end of link-layer header; don't include ETH_HEADER_LEN.
-    private static final int IPV4_TOTAL_LENGTH_OFFSET = ETH_HEADER_LEN + 2;
-    private static final int IPV4_FRAGMENT_OFFSET_OFFSET = ETH_HEADER_LEN + 6;
-    // Endianness is not an issue for this constant because the APF interpreter always operates in
-    // network byte order.
-    private static final int IPV4_FRAGMENT_OFFSET_MASK = 0x1fff;
-    private static final int IPV4_FRAGMENT_MORE_FRAGS_MASK = 0x2000;
-    private static final int IPV4_PROTOCOL_OFFSET = ETH_HEADER_LEN + 9;
-    private static final int IPV4_DEST_ADDR_OFFSET = ETH_HEADER_LEN + 16;
-    private static final int IPV4_ANY_HOST_ADDRESS = 0;
-    private static final int IPV4_BROADCAST_ADDRESS = -1; // 255.255.255.255
-
-    // Traffic class and Flow label are not byte aligned. Luckily we
-    // don't care about either value so we'll consider bytes 1-3 of the
-    // IPv6 header as don't care.
-    private static final int IPV6_FLOW_LABEL_OFFSET = ETH_HEADER_LEN + 1;
-    private static final int IPV6_FLOW_LABEL_LEN = 3;
-    private static final int IPV6_NEXT_HEADER_OFFSET = ETH_HEADER_LEN + 6;
-    private static final int IPV6_SRC_ADDR_OFFSET = ETH_HEADER_LEN + 8;
-    private static final int IPV6_DEST_ADDR_OFFSET = ETH_HEADER_LEN + 24;
-    private static final int IPV6_HEADER_LEN = 40;
-    // The IPv6 all nodes address ff02::1
-    private static final byte[] IPV6_ALL_NODES_ADDRESS =
-            { (byte) 0xff, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
-
-    private static final int ICMP6_TYPE_OFFSET = ETH_HEADER_LEN + IPV6_HEADER_LEN;
-
-    private static final int IPPROTO_HOPOPTS = 0;
-
-    // NOTE: this must be added to the IPv4 header length in IPV4_HEADER_SIZE_MEMORY_SLOT
-    private static final int TCP_UDP_DESTINATION_PORT_OFFSET = ETH_HEADER_LEN + 2;
-    private static final int UDP_HEADER_LEN = 8;
-
-    private static final int TCP_HEADER_SIZE_OFFSET = 12;
-
-    private static final int DHCP_CLIENT_PORT = 68;
-    // NOTE: this must be added to the IPv4 header length in IPV4_HEADER_SIZE_MEMORY_SLOT
-    private static final int DHCP_CLIENT_MAC_OFFSET = ETH_HEADER_LEN + UDP_HEADER_LEN + 28;
-
-    private static final int ARP_HEADER_OFFSET = ETH_HEADER_LEN;
-    private static final byte[] ARP_IPV4_HEADER = {
-            0, 1, // Hardware type: Ethernet (1)
-            8, 0, // Protocol type: IP (0x0800)
-            6,    // Hardware size: 6
-            4,    // Protocol size: 4
-    };
-    private static final int ARP_OPCODE_OFFSET = ARP_HEADER_OFFSET + 6;
-    // Opcode: ARP request (0x0001), ARP reply (0x0002)
-    private static final short ARP_OPCODE_REQUEST = 1;
-    private static final short ARP_OPCODE_REPLY = 2;
-    private static final int ARP_SOURCE_IP_ADDRESS_OFFSET = ARP_HEADER_OFFSET + 14;
-    private static final int ARP_TARGET_IP_ADDRESS_OFFSET = ARP_HEADER_OFFSET + 24;
-    // Limit on the Black List size to cap on program usage for this
-    // TODO: Select a proper max length
-    private static final int APF_MAX_ETH_TYPE_BLACK_LIST_LEN = 20;
-
-    private static final byte[] ETH_MULTICAST_MDNS_V4_MAC_ADDRESS =
-            {(byte) 0x01, (byte) 0x00, (byte) 0x5e, (byte) 0x00, (byte) 0x00, (byte) 0xfb};
-    private static final byte[] ETH_MULTICAST_MDNS_V6_MAC_ADDRESS =
-            {(byte) 0x33, (byte) 0x33, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0xfb};
-    private static final int MDNS_PORT = 5353;
-
-    private static final int ECHO_PORT = 7;
-    private static final int DNS_HEADER_LEN = 12;
-    private static final int DNS_QDCOUNT_OFFSET = 4;
-    // NOTE: this must be added to the IPv4 header length in IPV4_HEADER_SIZE_MEMORY_SLOT, or the
-    // IPv6 header length.
-    private static final int MDNS_QDCOUNT_OFFSET =
-            ETH_HEADER_LEN + UDP_HEADER_LEN + DNS_QDCOUNT_OFFSET;
-    private static final int MDNS_QNAME_OFFSET =
-            ETH_HEADER_LEN + UDP_HEADER_LEN + DNS_HEADER_LEN;
-
 
     private final ApfCapabilities mApfCapabilities;
     private final IpClientCallbacksWrapper mIpClientCallback;

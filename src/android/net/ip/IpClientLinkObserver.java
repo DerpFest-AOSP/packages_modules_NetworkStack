@@ -64,7 +64,6 @@ import com.android.net.module.util.netlink.StructNdOptPref64;
 import com.android.net.module.util.netlink.StructNdOptRdnss;
 import com.android.networkstack.apishim.NetworkInformationShimImpl;
 import com.android.networkstack.apishim.common.NetworkInformationShim;
-import com.android.server.NetworkObserver;
 
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -79,10 +78,9 @@ import java.util.concurrent.TimeUnit;
 /**
  * Keeps track of link configuration received from Netd.
  *
- * An instance of this class is constructed by passing in an interface name and a callback. The
- * owner is then responsible for registering the tracker with NetworkObserverRegistry. When the
- * class receives update notifications, it applies the update to its local LinkProperties, and if
- * something has changed, notifies its owner of the update via the callback.
+ * An instance of this class is constructed by passing in an interface name and a callback. When
+ * the class receives update notifications, it applies the update to its local LinkProperties, and
+ * if something has changed, notifies its owner of the update via the callback.
  *
  * The owner can then call {@code getLinkProperties()} in order to find out
  * what changed. If in the meantime the LinkProperties stored here have changed,
@@ -95,18 +93,15 @@ import java.util.concurrent.TimeUnit;
  *
  * - The owner of this class is expected to create it, register it, and call
  *   getLinkProperties or clearLinkProperties on its thread.
- * - Most of the methods in the class are implementing NetworkObserver and are called
- *   on the handler used to register the observer.
  * - All accesses to mLinkProperties must be synchronized(this). All the other
  *   member variables are immutable once the object is constructed.
  *
  * TODO: Now that all the methods are called on the handler thread, remove synchronization and
  *       pass the LinkProperties to the update() callback.
- * TODO: Stop extending NetworkObserver and get events from netlink directly.
  *
  * @hide
  */
-public class IpClientLinkObserver implements NetworkObserver {
+public class IpClientLinkObserver {
     private final String mTag;
 
     /**

@@ -16,6 +16,8 @@
 
 package android.net.ip;
 
+import static android.net.ip.IpClientLinkObserver.CONFIG_SOCKET_RECV_BUFSIZE;
+import static android.net.ip.IpClientLinkObserver.SOCKET_RECV_BUFSIZE;
 import static android.system.OsConstants.RT_SCOPE_UNIVERSE;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -27,6 +29,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doReturn;
@@ -57,6 +60,7 @@ import android.net.NetworkStackIpMemoryStore;
 import android.net.RouteInfo;
 import android.net.apf.ApfCapabilities;
 import android.net.apf.ApfFilter.ApfConfiguration;
+import android.net.ip.IpClientLinkObserver.IpClientNetlinkMonitor;
 import android.net.ipmemorystore.NetworkAttributes;
 import android.net.metrics.IpConnectivityLog;
 import android.net.shared.InitialConfiguration;
@@ -152,6 +156,7 @@ public class IpClientTest {
     @Mock private IpConnectivityLog mMetricsLog;
     @Mock private FileDescriptor mFd;
     @Mock private PrintWriter mWriter;
+    @Mock private IpClientNetlinkMonitor mNetlinkMonitor;
 
     private NetworkObserver mObserver;
     private InterfaceParams mIfParams;
@@ -172,6 +177,11 @@ public class IpClientTest {
         when(mDependencies.getIpMemoryStore(mContext, mNetworkStackServiceManager))
                 .thenReturn(mIpMemoryStore);
         when(mDependencies.getIpConnectivityLog()).thenReturn(mMetricsLog);
+        when(mDependencies.getDeviceConfigPropertyInt(eq(CONFIG_SOCKET_RECV_BUFSIZE), anyInt()))
+                .thenReturn(SOCKET_RECV_BUFSIZE);
+        when(mDependencies.makeIpClientNetlinkMonitor(
+                any(), any(), any(), anyInt(), anyBoolean(), any())).thenReturn(mNetlinkMonitor);
+        when(mNetlinkMonitor.start()).thenReturn(true);
 
         mIfParams = null;
     }

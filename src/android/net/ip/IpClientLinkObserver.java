@@ -520,8 +520,7 @@ public class IpClientLinkObserver {
         }
     }
 
-    private void updateClatInterfaceLinkState(@NonNull final StructIfinfoMsg ifinfoMsg,
-            @Nullable final String ifname, short nlMsgType) {
+    private void updateClatInterfaceLinkState(@Nullable final String ifname, short nlMsgType) {
         switch (nlMsgType) {
             case NetlinkConstants.RTM_NEWLINK:
                 if (mClatInterfaceExists) break;
@@ -549,7 +548,7 @@ public class IpClientLinkObserver {
         final short nlMsgType = msg.getHeader().nlmsg_type;
         final StructIfinfoMsg ifinfoMsg = msg.getIfinfoHeader();
         if (mClatInterfaceName.equals(ifname)) {
-            updateClatInterfaceLinkState(ifinfoMsg, ifname, nlMsgType);
+            updateClatInterfaceLinkState(ifname, nlMsgType);
             return;
         }
 

@@ -1425,6 +1425,14 @@ public class IpClient extends StateMachine {
                 case "status":
                     result.complete(mApfFilter.isRunning() ? "running" : "paused");
                     break;
+                case "pause":
+                    mApfFilter.pause();
+                    result.complete("success");
+                    break;
+                case "resume":
+                    mApfFilter.resume();
+                    result.complete("success");
+                    break;
                 default:
                     result.completeExceptionally(
                             new IllegalArgumentException("Invalid apf read command: " + cmd));

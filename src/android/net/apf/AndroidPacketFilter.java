@@ -85,4 +85,10 @@ public interface AndroidPacketFilter {
     default boolean isRunning() {
         return true;
     }
+
+    /** Pause ApfFilter updates for testing purposes. */
+    default void pause() {}
+
+    /** Resume ApfFilter updates for testing purposes. */
+    default void resume() {}
 }

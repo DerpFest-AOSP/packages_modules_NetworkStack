@@ -597,6 +597,10 @@ public class NetworkStackService extends Service {
                 pw.println("    <cmd>: [status]");
                 pw.println("      status");
                 pw.println("        returns whether the APF filter is \"running\" or \"paused\".");
+                pw.println("      pause");
+                pw.println("        pause APF filter generation.");
+                pw.println("      resume");
+                pw.println("        resume APF filter generation.");
             }
         }
 

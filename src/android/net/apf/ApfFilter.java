@@ -2536,6 +2536,16 @@ public class ApfFilter implements AndroidPacketFilter {
         return mIsRunning;
     }
 
+    /** Pause ApfFilter updates for testing purposes. */
+    public void pause() {
+        mIsRunning = false;
+    }
+
+    /** Resume ApfFilter updates for testing purposes. */
+    public void resume() {
+        mIsRunning = true;
+    }
+
     // TODO: move to android.net.NetworkUtils
     @VisibleForTesting
     public static int ipv4BroadcastAddress(byte[] addrBytes, int prefixLength) {

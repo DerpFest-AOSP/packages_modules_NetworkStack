@@ -604,6 +604,9 @@ public class NetworkStackService extends Service {
                 pw.println("      install <program-hex-string>");
                 pw.println("        install the APF program contained in <program-hex-string>.");
                 pw.println("        The filter must be paused before installing a new program.");
+                pw.println("      capabilities");
+                pw.println("        return the reported APF capabilities.");
+                pw.println("        Format: <apfVersion>,<maxProgramSize>,<packetFormat>");
             }
         }
 

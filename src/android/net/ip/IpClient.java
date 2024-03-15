@@ -173,6 +173,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
@@ -1444,6 +1445,13 @@ public class IpClient extends StateMachine {
                         mCallback.installPacketFilter(HexDump.hexStringToByteArray(optarg));
                         result.complete("success");
                     }
+                    break;
+                case "capabilities":
+                    final StringJoiner joiner = new StringJoiner(",");
+                    joiner.add(Integer.toString(mCurrentApfCapabilities.apfVersionSupported));
+                    joiner.add(Integer.toString(mCurrentApfCapabilities.maximumApfProgramSize));
+                    joiner.add(Integer.toString(mCurrentApfCapabilities.apfPacketFormat));
+                    result.complete(joiner.toString());
                     break;
                 default:
                     result.completeExceptionally(

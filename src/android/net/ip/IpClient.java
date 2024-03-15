@@ -1435,14 +1435,12 @@ public class IpClient extends StateMachine {
                         result.complete("success");
                         break;
                     case "install":
-                        if (optarg == null) {
-                            throw new IllegalArgumentException("No program provided");
-                        } else if (mApfFilter.isRunning()) {
+                        Objects.requireNonNull(optarg, "No program provided");
+                        if (mApfFilter.isRunning()) {
                             throw new IllegalStateException("APF filter must first be paused");
-                        } else {
-                            mCallback.installPacketFilter(HexDump.hexStringToByteArray(optarg));
-                            result.complete("success");
                         }
+                        mCallback.installPacketFilter(HexDump.hexStringToByteArray(optarg));
+                        result.complete("success");
                         break;
                     case "capabilities":
                         final StringJoiner joiner = new StringJoiner(",");

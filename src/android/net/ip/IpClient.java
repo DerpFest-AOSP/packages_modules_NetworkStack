@@ -173,7 +173,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -669,7 +668,6 @@ public class IpClient extends StateMachine {
     @VisibleForTesting
     protected final IpClientCallbacksWrapper mCallback;
     private final Dependencies mDependencies;
-    private final CountDownLatch mShutdownLatch;
     private final ConnectivityManager mCm;
     private final INetd mNetd;
     private final NetworkObserverRegistry mObserverRegistry;
@@ -910,7 +908,6 @@ public class IpClient extends StateMachine {
         mDependencies = deps;
         mMetricsLog = deps.getIpConnectivityLog();
         mNetworkQuirkMetrics = deps.getNetworkQuirkMetrics();
-        mShutdownLatch = new CountDownLatch(1);
         mCm = mContext.getSystemService(ConnectivityManager.class);
         mObserverRegistry = observerRegistry;
         mIpMemoryStore = deps.getIpMemoryStore(context, nssManager);
@@ -1172,7 +1169,6 @@ public class IpClient extends StateMachine {
     @Override
     protected void onQuitting() {
         mCallback.onQuit();
-        mShutdownLatch.countDown();
     }
 
     /**

@@ -220,7 +220,6 @@ import com.android.networkstack.metrics.NetworkQuirkMetrics;
 import com.android.networkstack.packets.NeighborAdvertisement;
 import com.android.networkstack.packets.NeighborSolicitation;
 import com.android.networkstack.util.NetworkStackUtils;
-import com.android.server.NetworkObserverRegistry;
 import com.android.server.NetworkStackService.NetworkStackServiceManager;
 import com.android.testutils.CompatUtil;
 import com.android.testutils.DevSdkIgnoreRule;
@@ -349,7 +348,6 @@ public abstract class IpClientIntegrationTestCommon {
     @Mock private DevicePolicyManager mDevicePolicyManager;
     @Mock private PackageManager mPackageManager;
     @Spy private INetd mNetd;
-    private NetworkObserverRegistry mNetworkObserverRegistry;
 
     protected IpClient mIpc;
     protected Dependencies mDependencies;
@@ -909,8 +907,8 @@ public abstract class IpClientIntegrationTestCommon {
     }
 
     private IpClient makeIpClient() throws Exception {
-        IpClient ipc = new IpClient(mContext, mIfaceName, mCb, mNetworkObserverRegistry,
-                mNetworkStackServiceManager, mDependencies);
+        IpClient ipc =
+                new IpClient(mContext, mIfaceName, mCb, mNetworkStackServiceManager, mDependencies);
         // Wait for IpClient to enter its initial state. Otherwise, additional setup steps or tests
         // that mock IpClient's dependencies might interact with those mocks while IpClient is
         // starting. This would cause UnfinishedStubbingExceptions as mocks cannot be interacted
@@ -927,8 +925,6 @@ public abstract class IpClientIntegrationTestCommon {
         when(mContext.getSystemService(eq(Context.NETD_SERVICE))).thenReturn(netdIBinder);
         assertNotNull(mNetd);
 
-        mNetworkObserverRegistry = new NetworkObserverRegistry();
-        mNetworkObserverRegistry.register(mNetd);
         mIpc = makeIpClient();
 
         // Tell the IpMemoryStore immediately to answer any question about network attributes with a
@@ -2403,9 +2399,8 @@ public abstract class IpClientIntegrationTestCommon {
         final String addr2 = "192.0.2.3";
         final int prefixLength = 26;
 
-        // IpClient gets IP addresses directly from netlink instead of from netd, unnecessary
-        // to rely on the NetworkObserver callbacks to confirm new added address update. Just
-        // add the addresses directly and wait to see if IpClient has seen the address
+        // IpClient gets IP addresses directly from netlink instead of from netd, just
+        // add the addresses directly and wait to see if IpClient has seen the address.
         mNetd.interfaceAddAddress(iface, addr1, prefixLength);
         mNetd.interfaceAddAddress(iface, addr2, prefixLength);
 

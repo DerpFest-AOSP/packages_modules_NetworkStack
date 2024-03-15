@@ -93,7 +93,6 @@ import com.android.net.module.util.netlink.StructNlMsgHdr;
 import com.android.net.module.util.netlink.StructRtMsg;
 import com.android.networkstack.R;
 import com.android.networkstack.ipmemorystore.IpMemoryStoreService;
-import com.android.server.NetworkObserverRegistry;
 import com.android.server.NetworkStackService;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter;
@@ -162,7 +161,6 @@ public class IpClientTest {
 
     @Mock private Context mContext;
     @Mock private ConnectivityManager mCm;
-    @Mock private NetworkObserverRegistry mObserverRegistry;
     @Mock private INetd mNetd;
     @Mock private Resources mResources;
     @Mock private IIpClientCallbacks mCb;
@@ -215,8 +213,8 @@ public class IpClientTest {
 
     private IpClient makeIpClient(String ifname) throws Exception {
         setTestInterfaceParams(ifname);
-        final IpClient ipc = new IpClient(mContext, ifname, mCb, mObserverRegistry,
-                mNetworkStackServiceManager, mDependencies);
+        final IpClient ipc =
+                new IpClient(mContext, ifname, mCb, mNetworkStackServiceManager, mDependencies);
         verify(mNetd, timeout(TEST_TIMEOUT_MS).times(1)).interfaceSetEnableIPv6(ifname, false);
         verify(mNetd, timeout(TEST_TIMEOUT_MS).times(1)).interfaceClearAddrs(ifname);
         final ArgumentCaptor<INetlinkMessageProcessor> processorCaptor =
@@ -224,7 +222,6 @@ public class IpClientTest {
         verify(mDependencies).makeIpClientNetlinkMonitor(any(), any(), any(), anyInt(),
                 processorCaptor.capture());
         mNetlinkMessageProcessor = processorCaptor.getValue();
-        reset(mObserverRegistry);
         reset(mNetd);
         // Verify IpClient doesn't call onLinkPropertiesChange() when it starts.
         verify(mCb, never()).onLinkPropertiesChange(any());
@@ -323,8 +320,8 @@ public class IpClientTest {
     public void testNullInterfaceNameMostDefinitelyThrows() throws Exception {
         setTestInterfaceParams(null);
         try {
-            final IpClient ipc = new IpClient(mContext, null, mCb, mObserverRegistry,
-                    mNetworkStackServiceManager, mDependencies);
+            final IpClient ipc = new IpClient(mContext, null, mCb, mNetworkStackServiceManager,
+                    mDependencies);
             ipc.shutdown();
             fail();
         } catch (NullPointerException npe) {
@@ -337,8 +334,8 @@ public class IpClientTest {
         final String ifname = "lo";
         setTestInterfaceParams(ifname);
         try {
-            final IpClient ipc = new IpClient(mContext, ifname, null, mObserverRegistry,
-                    mNetworkStackServiceManager, mDependencies);
+            final IpClient ipc = new IpClient(mContext, ifname, null, mNetworkStackServiceManager,
+                    mDependencies);
             ipc.shutdown();
             fail();
         } catch (NullPointerException npe) {
@@ -349,8 +346,8 @@ public class IpClientTest {
     @Test
     public void testInvalidInterfaceDoesNotThrow() throws Exception {
         setTestInterfaceParams(TEST_IFNAME);
-        final IpClient ipc = new IpClient(mContext, TEST_IFNAME, mCb, mObserverRegistry,
-                mNetworkStackServiceManager, mDependencies);
+        final IpClient ipc = new IpClient(mContext, TEST_IFNAME, mCb, mNetworkStackServiceManager,
+                mDependencies);
         verifyNoMoreInteractions(mIpMemoryStore);
         ipc.shutdown();
     }
@@ -358,8 +355,8 @@ public class IpClientTest {
     @Test
     public void testInterfaceNotFoundFailsImmediately() throws Exception {
         setTestInterfaceParams(null);
-        final IpClient ipc = new IpClient(mContext, TEST_IFNAME, mCb, mObserverRegistry,
-                mNetworkStackServiceManager, mDependencies);
+        final IpClient ipc = new IpClient(mContext, TEST_IFNAME, mCb, mNetworkStackServiceManager,
+                mDependencies);
         ipc.startProvisioning(new ProvisioningConfiguration());
         verify(mCb, timeout(TEST_TIMEOUT_MS).times(1)).onProvisioningFailure(any());
         verify(mIpMemoryStore, never()).storeNetworkAttributes(any(), any(), any());

@@ -1433,6 +1433,18 @@ public class IpClient extends StateMachine {
                     mApfFilter.resume();
                     result.complete("success");
                     break;
+                case "install":
+                    if (optarg == null) {
+                        result.completeExceptionally(
+                                new IllegalArgumentException("No program provided"));
+                    } else if (mApfFilter.isRunning()) {
+                        result.completeExceptionally(
+                                new IllegalStateException("APF filter must be paused for install"));
+                    } else {
+                        mCallback.installPacketFilter(HexDump.hexStringToByteArray(optarg));
+                        result.complete("success");
+                    }
+                    break;
                 default:
                     result.completeExceptionally(
                             new IllegalArgumentException("Invalid apf read command: " + cmd));

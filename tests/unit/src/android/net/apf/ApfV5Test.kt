@@ -540,7 +540,7 @@ class ApfV5Test {
     }
 
     @Test
-    fun testV2CountAndPssDrop() {
+    fun testV2CountAndPassDrop() {
         var program = ApfV4Generator(MIN_APF_VERSION)
                 .addCountAndDrop(Counter.DROPPED_ETH_BROADCAST)
                 .addCountTrampoline()

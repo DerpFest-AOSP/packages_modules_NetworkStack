@@ -68,6 +68,7 @@ class ApfV5Test {
     @Test
     fun testApfInstructionEncodingSizeCheck() {
         var gen = ApfV6Generator()
+        assertFailsWith<IllegalArgumentException> { gen.addData(ByteArray(65536) { 0x01 }) }
         assertFailsWith<IllegalArgumentException> { gen.addAllocate(65536) }
         assertFailsWith<IllegalArgumentException> { gen.addAllocate(-1) }
         assertFailsWith<IllegalArgumentException> { gen.addDataCopy(-1, 1) }
@@ -572,13 +573,13 @@ class ApfV5Test {
         var program = ApfV6Generator()
             .addData(byteArrayOf(33, 34, 35))
             .addAllocate(14)
-            .addDataCopy(2 /* src */, 2 /* len */)
-            .addDataCopy(4 /* src */, 1 /* len */)
+            .addDataCopy(3 /* src */, 2 /* len */)
+            .addDataCopy(5 /* src */, 1 /* len */)
             .addPacketCopy(0 /* src */, 1 /* len */)
             .addPacketCopy(1 /* src */, 3 /* len */)
-            .addLoadImmediate(R0, 2) // data copy offset
+            .addLoadImmediate(R0, 3) // data copy offset
             .addDataCopyFromR0(2 /* len */)
-            .addLoadImmediate(R0, 4) // data copy offset
+            .addLoadImmediate(R0, 5) // data copy offset
             .addLoadImmediate(R1, 1) // len
             .addDataCopyFromR0LenR1()
             .addLoadImmediate(R0, 0) // packet copy offset
@@ -729,7 +730,7 @@ class ApfV5Test {
         val program = ApfV6Generator()
                 .addData(etherIpv4UdpPacket)
                 .addAllocate(etherIpv4UdpPacket.size)
-                .addDataCopy(2 /* src */, etherIpv4UdpPacket.size /* len */)
+                .addDataCopy(3 /* src */, etherIpv4UdpPacket.size /* len */)
                 .addTransmitL4(ETH_HLEN /* ipOfs */,
                         ETH_HLEN + IPV4_HLEN + 6 /* csumOfs */,
                         ETH_HLEN + IPV4_HLEN - 8 /* csumStart */,

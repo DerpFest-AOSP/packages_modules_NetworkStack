@@ -99,6 +99,13 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
     }
 
     /**
+     * Add an instruction to the beginning of the program to reserve the empty data region.
+     */
+    public final Type addData() throws IllegalInstructionException {
+        return addData(new byte[0]);
+    }
+
+    /**
      * Add an instruction to the beginning of the program to reserve the data region.
      * @param data the actual data byte
      */

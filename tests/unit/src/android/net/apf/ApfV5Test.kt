@@ -571,27 +571,29 @@ class ApfV5Test {
     @Test
     fun testCopyToTxBuffer() {
         var program = ApfV6Generator()
-            .addData(byteArrayOf(33, 34, 35))
-            .addAllocate(14)
-            .addDataCopy(3 /* src */, 2 /* len */)
-            .addDataCopy(5 /* src */, 1 /* len */)
-            .addPacketCopy(0 /* src */, 1 /* len */)
-            .addPacketCopy(1 /* src */, 3 /* len */)
-            .addLoadImmediate(R0, 3) // data copy offset
-            .addDataCopyFromR0(2 /* len */)
-            .addLoadImmediate(R0, 5) // data copy offset
-            .addLoadImmediate(R1, 1) // len
-            .addDataCopyFromR0LenR1()
-            .addLoadImmediate(R0, 0) // packet copy offset
-            .addPacketCopyFromR0(1 /* len */)
-            .addLoadImmediate(R0, 1) // packet copy offset
-            .addLoadImmediate(R1, 3) // len
-            .addPacketCopyFromR0LenR1()
-            .addTransmitWithoutChecksum()
-            .generate()
+                .addData(byteArrayOf(33, 34, 35))
+                .addAllocate(14)
+                .addDataCopy(3, 2) // arg1=src, arg2=len
+                .addDataCopy(5, 1) // arg1=src, arg2=len
+                .addPacketCopy(0, 1) // arg1=src, arg2=len
+                .addPacketCopy(1, 3) // arg1=src, arg2=len
+                .addLoadImmediate(R0, 3) // data copy offset
+                .addDataCopyFromR0(2) // len
+                .addLoadImmediate(R0, 5) // data copy offset
+                .addLoadImmediate(R1, 1) // len
+                .addDataCopyFromR0LenR1()
+                .addLoadImmediate(R0, 0) // packet copy offset
+                .addPacketCopyFromR0(1) // len
+                .addLoadImmediate(R0, 1) // packet copy offset
+                .addLoadImmediate(R1, 3) // len
+                .addPacketCopyFromR0LenR1()
+                .addTransmitWithoutChecksum()
+                .generate()
         assertPass(MIN_APF_VERSION_IN_DEV, program, testPacket)
-        assertContentEquals(byteArrayOf(33, 34, 35, 1, 2, 3, 4, 33, 34, 35, 1, 2, 3, 4),
-                ApfJniUtils.getTransmittedPacket())
+        assertContentEquals(
+                byteArrayOf(33, 34, 35, 1, 2, 3, 4, 33, 34, 35, 1, 2, 3, 4),
+                ApfJniUtils.getTransmittedPacket()
+        )
     }
 
     @Test

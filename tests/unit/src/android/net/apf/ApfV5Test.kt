@@ -760,32 +760,32 @@ class ApfV5Test {
     fun testDnsQuestionMatch() {
         // needles = { A, B.LOCAL }
         val needlesMatch = intArrayOf(
-            0x01, 'A'.code,
-            0x00,
-            0x01, 'B'.code,
-            0x05, 'L'.code, 'O'.code, 'C'.code, 'A'.code, 'L'.code,
-            0x00,
-            0x00
+                0x01, 'A'.code,
+                0x00,
+                0x01, 'B'.code,
+                0x05, 'L'.code, 'O'.code, 'C'.code, 'A'.code, 'L'.code,
+                0x00,
+                0x00
         ).map { it.toByte() }.toByteArray()
         val udpPayload = intArrayOf(
-            0x00, 0x00, 0x00, 0x00, // tid = 0x00, flags = 0x00,
-            0x00, 0x02, // qdcount = 2
-            0x00, 0x00, // ancount = 0
-            0x00, 0x00, // nscount = 0
-            0x00, 0x00, // arcount = 0
-            0x01, 'a'.code,
-            0x01, 'b'.code,
-            0x05, 'l'.code, 'o'.code, 'c'.code, 'a'.code, 'l'.code,
-            0x00, // qname1 = a.b.local
-            0x00, 0x01, 0x00, 0x01, // type = A, class = 0x0001
-            0xc0, 0x0e, // qname2 = b.local (name compression)
-            0x00, 0x01, 0x00, 0x01 // type = A, class = 0x0001
+                0x00, 0x00, 0x00, 0x00, // tid = 0x00, flags = 0x00,
+                0x00, 0x02, // qdcount = 2
+                0x00, 0x00, // ancount = 0
+                0x00, 0x00, // nscount = 0
+                0x00, 0x00, // arcount = 0
+                0x01, 'a'.code,
+                0x01, 'b'.code,
+                0x05, 'l'.code, 'o'.code, 'c'.code, 'a'.code, 'l'.code,
+                0x00, // qname1 = a.b.local
+                0x00, 0x01, 0x00, 0x01, // type = A, class = 0x0001
+                0xc0, 0x0e, // qname2 = b.local (name compression)
+                0x00, 0x01, 0x00, 0x01 // type = A, class = 0x0001
         ).map { it.toByte() }.toByteArray()
 
         var program = ApfV6Generator()
                 .addData(byteArrayOf())
                 .addLoadImmediate(R0, 0)
-                .addJumpIfPktAtR0ContainDnsQ(needlesMatch, 0x01 /* qtype */, DROP_LABEL)
+                .addJumpIfPktAtR0ContainDnsQ(needlesMatch, 0x01, DROP_LABEL) // arg2=qtype
                 .addPass()
                 .generate()
         assertDrop(MIN_APF_VERSION_IN_DEV, program, udpPayload)
@@ -793,7 +793,7 @@ class ApfV5Test {
         program = ApfV6Generator()
                 .addData(byteArrayOf())
                 .addLoadImmediate(R0, 0)
-                .addJumpIfPktAtR0ContainDnsQSafe(needlesMatch, 0x01 /* qtype */, DROP_LABEL)
+                .addJumpIfPktAtR0ContainDnsQSafe(needlesMatch, 0x01, DROP_LABEL)
                 .addPass()
                 .generate()
         assertDrop(MIN_APF_VERSION_IN_DEV, program, udpPayload)
@@ -801,7 +801,7 @@ class ApfV5Test {
         program = ApfV6Generator()
                 .addData(byteArrayOf())
                 .addLoadImmediate(R0, 0)
-                .addJumpIfPktAtR0DoesNotContainDnsQ(needlesMatch, 0x01 /* qtype */, DROP_LABEL)
+                .addJumpIfPktAtR0DoesNotContainDnsQ(needlesMatch, 0x01, DROP_LABEL) // arg2=qtype
                 .addPass()
                 .generate()
         assertPass(MIN_APF_VERSION_IN_DEV, program, udpPayload)
@@ -809,7 +809,7 @@ class ApfV5Test {
         program = ApfV6Generator()
                 .addData(byteArrayOf())
                 .addLoadImmediate(R0, 0)
-                .addJumpIfPktAtR0DoesNotContainDnsQSafe(needlesMatch, 0x01 /* qtype */, DROP_LABEL)
+                .addJumpIfPktAtR0DoesNotContainDnsQSafe(needlesMatch, 0x01, DROP_LABEL) // arg2=qtype
                 .addPass()
                 .generate()
         assertPass(MIN_APF_VERSION_IN_DEV, program, udpPayload)
@@ -832,7 +832,7 @@ class ApfV5Test {
         program = ApfV6Generator()
                 .addData(byteArrayOf())
                 .addLoadImmediate(R0, 0)
-                .addJumpIfPktAtR0ContainDnsQ(needlesMatch, 0x01 /* qtype */, DROP_LABEL)
+                .addJumpIfPktAtR0ContainDnsQ(needlesMatch, 0x01, DROP_LABEL) // arg2=qtype
                 .addPass()
                 .generate()
         var dataRegion = ByteArray(Counter.totalSize()) { 0 }
@@ -840,12 +840,13 @@ class ApfV5Test {
         var counterMap = decodeCountersIntoMap(dataRegion)
         assertEquals(mapOf<Counter, Long>(
                 Counter.TOTAL_PACKETS to 1,
-                Counter.CORRUPT_DNS_PACKET to 1), counterMap)
+                Counter.CORRUPT_DNS_PACKET to 1
+        ), counterMap)
 
         program = ApfV6Generator()
                 .addData(byteArrayOf())
                 .addLoadImmediate(R0, 0)
-                .addJumpIfPktAtR0ContainDnsQSafe(needlesMatch, 0x01 /* qtype */, DROP_LABEL)
+                .addJumpIfPktAtR0ContainDnsQSafe(needlesMatch, 0x01, DROP_LABEL) // arg2=qtype
                 .addPass()
                 .generate()
         dataRegion = ByteArray(Counter.totalSize()) { 0 }
@@ -853,7 +854,8 @@ class ApfV5Test {
         counterMap = decodeCountersIntoMap(dataRegion)
         assertEquals(mapOf<Counter, Long>(
                 Counter.TOTAL_PACKETS to 1,
-                Counter.CORRUPT_DNS_PACKET to 1), counterMap)
+                Counter.CORRUPT_DNS_PACKET to 1
+        ), counterMap)
     }
 
     @Test

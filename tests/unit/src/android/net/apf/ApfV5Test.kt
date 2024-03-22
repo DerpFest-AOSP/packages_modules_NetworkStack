@@ -613,7 +613,8 @@ class ApfV5Test {
         var counterMap = decodeCountersIntoMap(dataRegion)
         assertEquals(mapOf<Counter, Long>(
                 Counter.TOTAL_PACKETS to 1,
-                Counter.DROPPED_ETH_BROADCAST to 1), counterMap)
+                Counter.DROPPED_ETH_BROADCAST to 1
+        ), counterMap)
 
         dataRegion = ByteArray(Counter.totalSize()) { 0 }
         program = ApfV6Generator()
@@ -624,7 +625,8 @@ class ApfV5Test {
         counterMap = decodeCountersIntoMap(dataRegion)
         assertEquals(mapOf<Counter, Long>(
                 Counter.TOTAL_PACKETS to 1,
-                Counter.PASSED_ARP to 1), counterMap)
+                Counter.PASSED_ARP to 1
+        ), counterMap)
     }
 
     @Test
@@ -637,7 +639,8 @@ class ApfV5Test {
         assertVerdict(MIN_APF_VERSION_IN_DEV, DROP, program, testPacket, dataRegion)
         var counterMap = decodeCountersIntoMap(dataRegion)
         assertEquals(mapOf<Counter, Long>(
-                Counter.DROPPED_ETH_BROADCAST to 1), counterMap)
+                Counter.DROPPED_ETH_BROADCAST to 1
+        ), counterMap)
 
         program = ApfV4Generator(APF_VERSION_4)
                 .addCountAndPass(Counter.PASSED_ARP)
@@ -647,7 +650,8 @@ class ApfV5Test {
         assertVerdict(MIN_APF_VERSION_IN_DEV, PASS, program, testPacket, dataRegion)
         counterMap = decodeCountersIntoMap(dataRegion)
         assertEquals(mapOf<Counter, Long>(
-                Counter.PASSED_ARP to 1), counterMap)
+                Counter.PASSED_ARP to 1
+        ), counterMap)
     }
 
     @Test
@@ -682,7 +686,8 @@ class ApfV5Test {
         val counterMap = decodeCountersIntoMap(dataRegion)
         assertEquals(mapOf<Counter, Long>(
                 Counter.TOTAL_PACKETS to 1,
-                Counter.PASSED_ALLOCATE_FAILURE to 1), counterMap)
+                Counter.PASSED_ALLOCATE_FAILURE to 1
+        ), counterMap)
     }
 
     @Test
@@ -701,7 +706,8 @@ class ApfV5Test {
         val counterMap = decodeCountersIntoMap(dataRegion)
         assertEquals(mapOf<Counter, Long>(
                 Counter.TOTAL_PACKETS to 1,
-                Counter.PASSED_TRANSMIT_FAILURE to 1), counterMap)
+                Counter.PASSED_TRANSMIT_FAILURE to 1
+        ), counterMap)
     }
 
     @Test
@@ -941,7 +947,8 @@ class ApfV5Test {
         var counterMap = decodeCountersIntoMap(dataRegion)
         assertEquals(mapOf<Counter, Long>(
                 Counter.TOTAL_PACKETS to 1,
-                Counter.CORRUPT_DNS_PACKET to 1), counterMap)
+                Counter.CORRUPT_DNS_PACKET to 1
+        ), counterMap)
 
         program = ApfV6Generator()
                 .addData(byteArrayOf())
@@ -954,7 +961,8 @@ class ApfV5Test {
         counterMap = decodeCountersIntoMap(dataRegion)
         assertEquals(mapOf<Counter, Long>(
                 Counter.TOTAL_PACKETS to 1,
-                Counter.CORRUPT_DNS_PACKET to 1), counterMap)
+                Counter.CORRUPT_DNS_PACKET to 1
+        ), counterMap)
     }
 
     @Test

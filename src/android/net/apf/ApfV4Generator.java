@@ -39,6 +39,9 @@ public final class ApfV4Generator extends ApfV4GeneratorBase<ApfV4Generator> {
      */
     private static final String COUNT_AND_DROP_LABEL = "__COUNT_AND_DROP__";
 
+    private final String mCountAndDropLabel;
+    private final String mCountAndPassLabel;
+
     /**
      * Creates an ApfV4Generator instance which is able to emit instructions for the specified
      * {@code version} of the APF interpreter. Throws {@code IllegalInstructionException} if
@@ -47,6 +50,8 @@ public final class ApfV4Generator extends ApfV4GeneratorBase<ApfV4Generator> {
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
     public ApfV4Generator(int version) throws IllegalInstructionException {
         super(version);
+        mCountAndDropLabel = version >= 4 ? COUNT_AND_DROP_LABEL : DROP_LABEL;
+        mCountAndPassLabel = version >= 4 ? COUNT_AND_PASS_LABEL : PASS_LABEL;
     }
 
     @Override
@@ -64,8 +69,8 @@ public final class ApfV4Generator extends ApfV4GeneratorBase<ApfV4Generator> {
      */
     @Override
     public ApfV4Generator addCountAndPass(ApfCounterTracker.Counter counter) {
-        if (mVersion < 4) return addJump(PASS_LABEL);
-        return addLoadImmediate(R1, counter.offset()).addJump(COUNT_AND_PASS_LABEL);
+        if (mVersion >= 4)  addLoadImmediate(R1, counter.offset());
+        return addJump(mCountAndPassLabel);
     }
 
     /**
@@ -78,8 +83,8 @@ public final class ApfV4Generator extends ApfV4GeneratorBase<ApfV4Generator> {
      */
     @Override
     public ApfV4Generator addCountAndDrop(ApfCounterTracker.Counter counter) {
-        if (mVersion < 4) return addJump(DROP_LABEL);
-        return addLoadImmediate(R1, counter.offset()).addJump(COUNT_AND_DROP_LABEL);
+        if (mVersion >= 4) addLoadImmediate(R1, counter.offset());
+        return addJump(mCountAndDropLabel);
     }
 
     /**

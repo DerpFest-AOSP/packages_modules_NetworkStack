@@ -277,7 +277,7 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
      * Add an instruction to the end of the program to jump to {@code target} if register R0's
      * value equals {@code value}.
      */
-    public final Type addJumpIfR0Equals(int val, String tgt) {
+    public final Type addJumpIfR0Equals(long val, String tgt) {
         return append(new Instruction(Opcodes.JEQ).addTwosCompUnsigned(val).setTargetLabel(tgt));
     }
 
@@ -285,7 +285,7 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
      * Add an instruction to the end of the program to jump to {@code target} if register R0's
      * value does not equal {@code value}.
      */
-    public final Type addJumpIfR0NotEquals(int val, String tgt) {
+    public final Type addJumpIfR0NotEquals(long val, String tgt) {
         return append(new Instruction(Opcodes.JNE).addTwosCompUnsigned(val).setTargetLabel(tgt));
     }
 
@@ -309,7 +309,7 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
      * Add an instruction to the end of the program to jump to {@code target} if register R0's
      * value has any bits set that are also set in {@code value}.
      */
-    public final Type addJumpIfR0AnyBitsSet(int val, String tgt) {
+    public final Type addJumpIfR0AnyBitsSet(long val, String tgt) {
         return append(new Instruction(Opcodes.JSET).addTwosCompUnsigned(val).setTargetLabel(tgt));
     }
     /**

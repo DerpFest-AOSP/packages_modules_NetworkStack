@@ -563,6 +563,15 @@ public abstract class BaseApfGenerator {
          * the instruction. This size will be stored in the immLen field.
          */
         private int calculateRequiredIndeterminateSize() {
+            int maxSize = mTargetLabelSize;
+            for (IntImmediate imm : mIntImms) {
+                maxSize = Math.max(maxSize, imm.calculateIndeterminateSize());
+            }
+            if (mLenFieldOverride != -1 && maxSize > mLenFieldOverride) {
+                throw new IllegalStateException(String.format(
+                        "maxSize: %d should not be greater than mLenFieldOverride: %d", maxSize,
+                        mLenFieldOverride));
+            }
             // If we already know the size the length field, just use it
             switch (mLenFieldOverride) {
                 case -1:
@@ -576,10 +585,6 @@ public abstract class BaseApfGenerator {
                 default:
                     throw new IllegalStateException(
                             "mLenFieldOverride has invalid value: " + mLenFieldOverride);
-            }
-            int maxSize = mTargetLabelSize;
-            for (IntImmediate imm : mIntImms) {
-                maxSize = Math.max(maxSize, imm.calculateIndeterminateSize());
             }
             return maxSize;
         }

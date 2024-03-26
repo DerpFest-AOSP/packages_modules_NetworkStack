@@ -5776,10 +5776,12 @@ public abstract class IpClientIntegrationTestCommon {
                 TEST_LEASE_DURATION_S, (short) TEST_DEFAULT_MTU,
                 false /* rapidCommit */, null /* captivePortalApiUrl */));
 
-        // Although the IP lease has been refreshed the IPv4 link address lifetime hasn't
-        // been updated, therefore, it ends up deleting the IPv4 address from interface and
-        // trigger onProvisioningFailure.
-        verify(mCb, timeout(TEST_TIMEOUT_MS)).onProvisioningFailure(any());
+        // Once the IPCLIENT_POPULATE_LINK_ADDRESS_LIFETIME_VERSION flag is enabled, the IP
+        // lease will be refreshed as well as the link address lifetime by transiting to
+        // ConfiguringInterfaceState, where IpClient sends a new RTM_NEWADDR message to kernel
+        // to update the IPv4 address, therefore, we should never see provisioning failure any
+        // more.
+        verify(mCb, never()).onProvisioningFailure(any());
     }
 
     private void doDhcpHostnameSettingTest(int hostnameSetting,

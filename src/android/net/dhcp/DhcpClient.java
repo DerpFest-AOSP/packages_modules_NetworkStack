@@ -1016,16 +1016,19 @@ public class DhcpClient extends StateMachine {
         public final List<DhcpOption> options;
         public final boolean isWifiManagedProfile;
         public final int hostnameSetting;
+        public final boolean populateLinkAddressLifetime;
 
         public Configuration(@Nullable final String l2Key, final boolean isPreconnectionEnabled,
                 @NonNull final List<DhcpOption> options,
                 final boolean isWifiManagedProfile,
-                final int hostnameSetting) {
+                final int hostnameSetting,
+                final boolean populateLinkAddressLifetime) {
             this.l2Key = l2Key;
             this.isPreconnectionEnabled = isPreconnectionEnabled;
             this.options = options;
             this.isWifiManagedProfile = isWifiManagedProfile;
             this.hostnameSetting = hostnameSetting;
+            this.populateLinkAddressLifetime = populateLinkAddressLifetime;
         }
     }
 
@@ -1894,8 +1897,23 @@ public class DhcpClient extends StateMachine {
                     // the registered IpManager.Callback.  IP address changes
                     // are not supported here.
                     acceptDhcpResults(results, mLeaseMsg);
-                    notifySuccess();
-                    transitionTo(mDhcpBoundState);
+                    if (mConfiguration.populateLinkAddressLifetime) {
+                        // Transit to ConfiguringInterfaceState and notify address renew
+                        // or rebind with success, and refresh the IPv4 address lifetime
+                        // via netlink message there. Otherwise, the IPv4 address will end
+                        // up being deleted from the interface when the address lifetime
+                        // expires. Transit back to BoundState later and schedule new lease
+                        // expiry once the address lifetime is successfully updated.
+                        // This change is required since the user space updates the deprecationTime
+                        // and expirationTime of IPv4 link address when it receives the netlink
+                        // message from kernel. Previously the lifetime of an IPv4 address was
+                        // always permanent, so we don't need to maintain lifetime updates in
+                        // user space.
+                        transitionTo(mConfiguringInterfaceState);
+                    } else {
+                        notifySuccess();
+                        transitionTo(mDhcpBoundState);
+                    }
                 }
             } else if (packet instanceof DhcpNakPacket) {
                 Log.d(TAG, "Received NAK, returning to StoppedState");

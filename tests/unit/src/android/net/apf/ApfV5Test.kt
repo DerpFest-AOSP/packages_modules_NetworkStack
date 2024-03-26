@@ -31,6 +31,7 @@ import android.net.apf.BaseApfGenerator.Register.R0
 import android.net.apf.BaseApfGenerator.Register.R1
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
+import com.android.net.module.util.HexDump
 import com.android.net.module.util.Struct
 import com.android.net.module.util.structs.EthernetHeader
 import com.android.net.module.util.structs.Ipv4Header
@@ -594,6 +595,31 @@ class ApfV5Test {
                 byteArrayOf(33, 34, 35, 1, 2, 3, 4, 33, 34, 35, 1, 2, 3, 4),
                 ApfJniUtils.getTransmittedPacket()
         )
+    }
+
+    @Test
+    fun testCopyContentToTxBuffer() {
+        val program = ApfV6Generator()
+                .addData()
+                .addAllocate(18)
+                .addDataCopy(HexDump.hexStringToByteArray("112233445566"))
+                .addDataCopy(HexDump.hexStringToByteArray("223344"))
+                .addDataCopy(HexDump.hexStringToByteArray("778899"))
+                .addDataCopy(HexDump.hexStringToByteArray("112233445566"))
+                .addTransmitWithoutChecksum()
+                .generate()
+        assertContentEquals(listOf(
+                "0: data        9, 112233445566778899",
+                "12: allocate    18",
+                "16: datacopy    src=3, len=6",
+                "19: datacopy    src=4, len=3",
+                "22: datacopy    src=9, len=3",
+                "25: datacopy    src=3, len=6",
+                "28: transmit    ip_ofs=255"
+        ), ApfJniUtils.disassembleApf(program).map{ it.trim() })
+        assertPass(MIN_APF_VERSION_IN_DEV, program, testPacket)
+        val transmitPkt = HexDump.toHexString(ApfJniUtils.getTransmittedPacket())
+        assertEquals("112233445566223344778899112233445566", transmitPkt)
     }
 
     @Test

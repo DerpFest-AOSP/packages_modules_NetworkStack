@@ -69,8 +69,7 @@ public final class ApfV4Generator extends ApfV4GeneratorBase<ApfV4Generator> {
      */
     @Override
     public ApfV4Generator addCountAndPass(ApfCounterTracker.Counter counter) {
-        if (mVersion >= 4)  addLoadImmediate(R1, counter.offset());
-        return addJump(mCountAndPassLabel);
+        return maybeAddLoadR1CounterOffset(counter).addJump(mCountAndPassLabel);
     }
 
     /**
@@ -83,8 +82,7 @@ public final class ApfV4Generator extends ApfV4GeneratorBase<ApfV4Generator> {
      */
     @Override
     public ApfV4Generator addCountAndDrop(ApfCounterTracker.Counter counter) {
-        if (mVersion >= 4) addLoadImmediate(R1, counter.offset());
-        return addJump(mCountAndDropLabel);
+        return maybeAddLoadR1CounterOffset(counter).addJump(mCountAndDropLabel);
     }
 
     /**
@@ -108,5 +106,10 @@ public final class ApfV4Generator extends ApfV4GeneratorBase<ApfV4Generator> {
                 .addAdd(1)           // R0++
                 .addStoreData(R0, 0) // *(R1 + 0) = R0
                 .addJump(DROP_LABEL);
+    }
+
+    private ApfV4Generator maybeAddLoadR1CounterOffset(ApfCounterTracker.Counter counter) {
+        if (mVersion >= 4) return addLoadImmediate(R1, counter.offset());
+        return self();
     }
 }

@@ -16,6 +16,8 @@
 
 package android.net.dhcp;
 
+import static android.net.dhcp.DhcpPacket.CONFIG_MINIMUM_LEASE;
+import static android.net.dhcp.DhcpPacket.DEFAULT_MINIMUM_LEASE;
 import static android.net.dhcp.DhcpPacket.DHCP_BROADCAST_ADDRESS;
 import static android.net.dhcp.DhcpPacket.DHCP_CAPTIVE_PORTAL;
 import static android.net.dhcp.DhcpPacket.DHCP_DNS_SERVER;
@@ -474,6 +476,14 @@ public class DhcpClient extends StateMachine {
                 int defaultValue) {
             return DeviceConfigUtils.getDeviceConfigPropertyInt(NAMESPACE_CONNECTIVITY,
                     name, minimumValue, maximumValue, defaultValue);
+        }
+
+        /**
+         * Get the Integer value of relevant DeviceConfig properties of Connectivity namespace.
+         */
+        public int getIntDeviceConfig(final String name, int defaultValue) {
+            return DeviceConfigUtils.getDeviceConfigPropertyInt(NAMESPACE_CONNECTIVITY,
+                    name, defaultValue);
         }
 
         /**
@@ -1112,7 +1122,9 @@ public class DhcpClient extends StateMachine {
     }
 
     public void setDhcpLeaseExpiry(DhcpPacket packet) {
-        long leaseTimeMillis = packet.getLeaseTimeMillis();
+        final int defaultMinimumLease =
+                mDependencies.getIntDeviceConfig(CONFIG_MINIMUM_LEASE, DEFAULT_MINIMUM_LEASE);
+        long leaseTimeMillis = packet.getLeaseTimeMillis(defaultMinimumLease);
         mDhcpLeaseExpiry =
                 (leaseTimeMillis > 0) ? SystemClock.elapsedRealtime() + leaseTimeMillis : 0;
     }

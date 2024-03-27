@@ -2826,6 +2826,17 @@ public abstract class IpClientIntegrationTestCommon {
                 (byte) 0x06, data);
     }
 
+    private void assertDhcpResultsParcelable(final DhcpResultsParcelable lease) {
+        assertNotNull(lease);
+        assertEquals(CLIENT_ADDR, lease.baseConfiguration.getIpAddress().getAddress());
+        assertEquals(SERVER_ADDR, lease.baseConfiguration.getGateway());
+        assertEquals(1, lease.baseConfiguration.getDnsServers().size());
+        assertTrue(lease.baseConfiguration.getDnsServers().contains(SERVER_ADDR));
+        assertEquals(SERVER_ADDR, InetAddresses.parseNumericAddress(lease.serverAddress));
+        assertEquals(TEST_DEFAULT_MTU, lease.mtu);
+        assertEquals(TEST_LEASE_DURATION_S, lease.leaseDuration);
+    }
+
     private void doUpstreamHotspotDetectionTest(final int id, final String displayName,
             final String ssid, final byte[] oui, final byte type, final byte[] data,
             final boolean expectMetered) throws Exception {
@@ -2844,13 +2855,7 @@ public abstract class IpClientIntegrationTestCommon {
                 ArgumentCaptor.forClass(DhcpResultsParcelable.class);
         verify(mCb, timeout(TEST_TIMEOUT_MS)).onNewDhcpResults(captor.capture());
         final DhcpResultsParcelable lease = captor.getValue();
-        assertNotNull(lease);
-        assertEquals(CLIENT_ADDR, lease.baseConfiguration.getIpAddress().getAddress());
-        assertEquals(SERVER_ADDR, lease.baseConfiguration.getGateway());
-        assertEquals(1, lease.baseConfiguration.getDnsServers().size());
-        assertTrue(lease.baseConfiguration.getDnsServers().contains(SERVER_ADDR));
-        assertEquals(SERVER_ADDR, InetAddresses.parseNumericAddress(lease.serverAddress));
-        assertEquals(TEST_DEFAULT_MTU, lease.mtu);
+        assertDhcpResultsParcelable(lease);
 
         if (expectMetered) {
             assertEquals(lease.vendorInfo, DhcpPacket.VENDOR_INFO_ANDROID_METERED);
@@ -5752,7 +5757,7 @@ public abstract class IpClientIntegrationTestCommon {
         final ProvisioningConfiguration cfg = new ProvisioningConfiguration.Builder()
                 .withoutIPv6()
                 .build();
-        setDeviceConfigProperty(CONFIG_MINIMUM_LEASE,  5/* default minimum lease */);
+        setDeviceConfigProperty(CONFIG_MINIMUM_LEASE,  5 /* default minimum lease */);
         startIpClientProvisioning(cfg);
         handleDhcpPackets(true /* isSuccessLease */, 4 /* lease duration */,
                 false /* shouldReplyRapidCommitAck */, TEST_DEFAULT_MTU,
@@ -5767,6 +5772,8 @@ public abstract class IpClientIntegrationTestCommon {
         sendArpReply(request.senderHwAddress.toByteArray() /* dst */, ROUTER_MAC_BYTES /* srcMac */,
                 request.senderIp /* target IP */, SERVER_ADDR /* sender IP */);
 
+        clearInvocations(mCb);
+
         // Then client sends unicast DHCPREQUEST to extend the IPv4 address lifetime, and we reply
         // with DHCPACK to refresh the DHCP lease.
         final DhcpPacket packet = getNextDhcpPacket();
@@ -5776,12 +5783,32 @@ public abstract class IpClientIntegrationTestCommon {
                 TEST_LEASE_DURATION_S, (short) TEST_DEFAULT_MTU,
                 false /* rapidCommit */, null /* captivePortalApiUrl */));
 
-        // Once the IPCLIENT_POPULATE_LINK_ADDRESS_LIFETIME_VERSION flag is enabled, the IP
-        // lease will be refreshed as well as the link address lifetime by transiting to
-        // ConfiguringInterfaceState, where IpClient sends a new RTM_NEWADDR message to kernel
-        // to update the IPv4 address, therefore, we should never see provisioning failure any
-        // more.
-        verify(mCb, never()).onProvisioningFailure(any());
+        // The IPv4 link address lifetime should be also updated after a success DHCP renew, check
+        // that we should never see provisioning failure.
+        verify(mCb, after(100).never()).onProvisioningFailure(any());
+
+        final ArgumentCaptor<DhcpResultsParcelable> dhcpResultsCaptor =
+                ArgumentCaptor.forClass(DhcpResultsParcelable.class);
+        verify(mCb, timeout(TEST_TIMEOUT_MS)).onNewDhcpResults(dhcpResultsCaptor.capture());
+        final DhcpResultsParcelable lease = dhcpResultsCaptor.getValue();
+        assertDhcpResultsParcelable(lease);
+
+        // Check if the IPv4 address lifetime has updated along with a success DHCP renew.
+        verify(mCb, timeout(TEST_TIMEOUT_MS)).onLinkPropertiesChange(argThat(x -> {
+            for (LinkAddress la : x.getLinkAddresses()) {
+                if (la.isIpv4()) {
+                    final long now = SystemClock.elapsedRealtime();
+                    final long when = now + 3600 * 1000;
+                    return (la.getDeprecationTime() != LinkAddress.LIFETIME_UNKNOWN)
+                            && (la.getExpirationTime() != LinkAddress.LIFETIME_UNKNOWN)
+                            && (la.getDeprecationTime() < when + TEST_LIFETIME_TOLERANCE_MS)
+                            && (la.getDeprecationTime() > when - TEST_LIFETIME_TOLERANCE_MS)
+                            && (la.getExpirationTime() < when + TEST_LIFETIME_TOLERANCE_MS)
+                            && (la.getExpirationTime() > when - TEST_LIFETIME_TOLERANCE_MS);
+                }
+            }
+            return false;
+        }));
     }
 
     private void doDhcpHostnameSettingTest(int hostnameSetting,

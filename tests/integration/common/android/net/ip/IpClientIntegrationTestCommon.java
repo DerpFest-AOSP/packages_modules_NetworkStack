@@ -720,6 +720,18 @@ public abstract class IpClientIntegrationTestCommon {
         setFeatureEnabled(NetworkStackUtils.IPCLIENT_POPULATE_LINK_ADDRESS_LIFETIME_VERSION,
                 true /* enabled */);
 
+        // Disable the experiment flag IP_REACHABILITY_IGNORE_INCOMPLETE_IPV6_DNS_SERVER_VERSION
+        // for testIpReachabilityMonitor_incompleteIpv6DnsServerInDualStack_flagoff testcase, given
+        // the experiment flag is read at IpReachabilityMonitor constructor so we have to turn it
+        // off before creating the IpClient instance.
+        // TODO: cleanup this code as well when cleaning up the experiment flag.
+        if (testMethodName.equals(
+                "testIpReachabilityMonitor_incompleteIpv6DnsServerInDualStack_flagoff")) {
+            setFeatureEnabled(
+                    NetworkStackUtils.IP_REACHABILITY_IGNORE_INCOMPLETE_IPV6_DNS_SERVER_VERSION,
+                    false /* enabled */);
+        }
+
         setUpTapInterface();
         // It turns out that Router Solicitation will also be sent out even after the tap interface
         // is brought up, however, we want to wait for RS which is sent due to IPv6 stack is enabled

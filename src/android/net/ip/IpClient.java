@@ -3138,7 +3138,27 @@ public class IpClient extends StateMachine {
         }
 
         private void deleteIpv6PrefixDelegationAddresses(final IpPrefix prefix) {
-            for (LinkAddress la : mLinkProperties.getLinkAddresses()) {
+            // b/290747921: some kernels require the mngtmpaddr to be deleted first, to prevent the
+            // creation of a new tempaddr.
+            final List<LinkAddress> linkAddresses = mLinkProperties.getLinkAddresses();
+            // delete addresses with IFA_F_MANAGETEMPADDR contained in the prefix.
+            for (LinkAddress la : linkAddresses) {
+                if (!hasFlag(la, IFA_F_MANAGETEMPADDR)) {
+                    continue;
+                }
+                final InetAddress address = la.getAddress();
+                if (prefix.contains(address)) {
+                    if (!NetlinkUtils.sendRtmDelAddressRequest(mInterfaceParams.index,
+                            (Inet6Address) address, (short) la.getPrefixLength())) {
+                        Log.e(TAG, "Failed to delete IPv6 address " + address.getHostAddress());
+                    }
+                }
+            }
+            // delete all other addresses contained in the prefix.
+            for (LinkAddress la : linkAddresses) {
+                if (hasFlag(la, IFA_F_MANAGETEMPADDR)) {
+                    continue;
+                }
                 final InetAddress address = la.getAddress();
                 if (prefix.contains(address)) {
                     if (!NetlinkUtils.sendRtmDelAddressRequest(mInterfaceParams.index,

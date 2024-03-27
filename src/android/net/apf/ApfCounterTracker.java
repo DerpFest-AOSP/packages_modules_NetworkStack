@@ -46,6 +46,7 @@ public class ApfCounterTracker {
         FILTER_AGE_SECONDS,
         FILTER_AGE_16384THS,
         APF_VERSION,
+        APF_PROGRAM_ID,
         PASSED_ARP,  // see also MIN_PASS_COUNTER below
         PASSED_DHCP,
         PASSED_IPV4,

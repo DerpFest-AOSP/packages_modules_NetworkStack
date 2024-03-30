@@ -1474,7 +1474,7 @@ public class IpClient extends StateMachine {
                         result.complete(snapshot);
                         break;
                     default:
-                        throw new IllegalArgumentException("Invalid apf read command: " + cmd);
+                        throw new IllegalArgumentException("Invalid apf command: " + cmd);
                 }
             } catch (Exception e) {
                 result.completeExceptionally(e);

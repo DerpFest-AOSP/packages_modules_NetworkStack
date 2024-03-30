@@ -170,6 +170,7 @@ public class ApfFilter implements AndroidPacketFilter {
         public int acceptRaMinLft;
         public boolean shouldHandleLightDoze;
         public long minMetricsSessionDurationMs;
+        public boolean enableApfV6;
     }
 
     /** A wrapper class of {@link SystemClock} to be mocked in unit tests. */
@@ -281,6 +282,7 @@ public class ApfFilter implements AndroidPacketFilter {
     private final int mAcceptRaMinLft;
     private final boolean mShouldHandleLightDoze;
 
+    private final boolean mEnableApfV6;
     private final NetworkQuirkMetrics mNetworkQuirkMetrics;
     private final IpClientRaInfoMetrics mIpClientRaInfoMetrics;
     private final ApfSessionInfoMetrics mApfSessionInfoMetrics;
@@ -378,6 +380,7 @@ public class ApfFilter implements AndroidPacketFilter {
         mClock = clock;
         mSessionStartMs = mClock.elapsedRealtime();
         mMinMetricsSessionDurationMs = config.minMetricsSessionDurationMs;
+        mEnableApfV6 = config.enableApfV6;
 
         if (mApfCapabilities.hasDataAccess()) {
             mCountAndPassLabel = "countAndPass";

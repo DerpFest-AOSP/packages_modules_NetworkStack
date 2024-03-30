@@ -1949,8 +1949,12 @@ public class ApfFilter implements AndroidPacketFilter {
     @VisibleForTesting
     protected ApfV4GeneratorBase<?> emitPrologueLocked() throws IllegalInstructionException {
         // This is guaranteed to succeed because of the check in maybeCreate.
-        ApfV4GeneratorBase<ApfV4Generator> gen = new ApfV4Generator(
-                mApfCapabilities.apfVersionSupported);
+        ApfV4GeneratorBase<?> gen;
+        if (mEnableApfV6 && mApfCapabilities.apfVersionSupported > 4) {
+            gen = new ApfV6Generator().addData();
+        } else {
+            gen = new ApfV4Generator(mApfCapabilities.apfVersionSupported);
+        }
 
         if (mApfCapabilities.hasDataAccess()) {
             // Increment TOTAL_PACKETS

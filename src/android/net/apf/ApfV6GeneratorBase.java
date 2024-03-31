@@ -182,6 +182,13 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
     }
 
     /**
+     * Add an instruction to the end of the program to encode int value as 4 bytes to output buffer.
+     */
+    public final Type addWrite32(int val) {
+        return addWriteU32((long) val & 0xffffffffL);
+    }
+
+    /**
      * Add an instruction to the end of the program to write 1 byte value from register to output
      * buffer.
      */

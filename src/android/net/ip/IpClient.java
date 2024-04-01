@@ -2521,7 +2521,7 @@ public class IpClient extends StateMachine {
         apfConfig.apfCapabilities = apfCapabilities;
         if (apfCapabilities != null && !SdkLevel.isAtLeastV()
                 && apfCapabilities.apfVersionSupported <= 4) {
-            apfConfig.installableProgramSizeClamp = 2000;
+            apfConfig.installableProgramSizeClamp = 1972;
         }
         apfConfig.multicastFilter = mMulticastFiltering;
         // Get the Configuration for ApfFilter from Context

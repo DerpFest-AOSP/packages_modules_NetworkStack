@@ -438,6 +438,7 @@ class ApfV5Test {
         gen.addWriteU16(0x8000)
         gen.addWriteU32(0x00000000)
         gen.addWriteU32(0x80000000)
+        gen.addWrite32(-2)
         program = gen.generate()
         assertContentEquals(byteArrayOf(
                 encodeInstruction(24, 1, 0), 0x01,
@@ -448,8 +449,9 @@ class ApfV5Test {
                 encodeInstruction(24, 2, 0), 0x00, 0x00,
                 encodeInstruction(24, 2, 0), 0x80.toByte(), 0x00,
                 encodeInstruction(24, 4, 0), 0x00, 0x00, 0x00, 0x00,
-                encodeInstruction(24, 4, 0), 0x80.toByte(), 0x00, 0x00,
-                0x00), program)
+                encodeInstruction(24, 4, 0), 0x80.toByte(), 0x00, 0x00, 0x00,
+                encodeInstruction(24, 4, 0), 0xff.toByte(), 0xff.toByte(),
+                0xff.toByte(), 0xfe.toByte()), program)
         assertContentEquals(listOf(
                 "0: write       0x01",
                 "2: write       0x0102",
@@ -459,7 +461,8 @@ class ApfV5Test {
                 "14: write       0x0000",
                 "17: write       0x8000",
                 "20: write       0x00000000",
-                "25: write       0x80000000"
+                "25: write       0x80000000",
+                "30: write       0xfffffffe"
         ), ApfJniUtils.disassembleApf(program).map { it.trim() })
 
         gen = ApfV6Generator()
@@ -601,6 +604,7 @@ class ApfV5Test {
             .addWriteU8(0x01)
             .addWriteU16(0x0203)
             .addWriteU32(0x04050607)
+            .addWrite32(-2)
             .addLoadImmediate(R0, 1)
             .addWriteU8(R0)
             .addLoadImmediate(R0, 0x0203)
@@ -610,8 +614,9 @@ class ApfV5Test {
             .addTransmitWithoutChecksum()
             .generate()
         assertPass(MIN_APF_VERSION_IN_DEV, program, ByteArray(MIN_PKT_SIZE))
-        assertContentEquals(byteArrayOf(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x01, 0x02, 0x03,
-                0x04, 0x05, 0x06, 0x07), ApfJniUtils.getTransmittedPacket())
+        assertContentEquals(byteArrayOf(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0xff.toByte(),
+                0xff.toByte(), 0xff.toByte(), 0xfe.toByte(), 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+                0x07), ApfJniUtils.getTransmittedPacket())
     }
 
     @Test

@@ -177,6 +177,8 @@ import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -1482,8 +1484,8 @@ public class IpClient extends StateMachine {
         });
 
         try {
-            return result.get();
-        } catch (ExecutionException | InterruptedException e) {
+            return result.get(30, TimeUnit.SECONDS);
+        } catch (ExecutionException | InterruptedException | TimeoutException e) {
             // completeExceptionally is solely used to return error messages back to the user, so
             // the stack trace is not all that interesting. (A similar argument can be made for
             // InterruptedException). Only extract the message from the checked exception.

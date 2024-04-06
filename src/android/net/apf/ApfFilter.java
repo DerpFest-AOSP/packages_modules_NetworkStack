@@ -2038,8 +2038,8 @@ public class ApfFilter implements AndroidPacketFilter {
      */
     @GuardedBy("this")
     private void emitEpilogue(ApfV4GeneratorBase<?> gen) throws IllegalInstructionException {
-        // Execution will reach the bottom of the program if none of the filters match,
-        // which will pass the packet to the application processor.
+        // Execution will reach here if none of the filters match, which will pass the packet to
+        // the application processor.
         gen.addCountAndPass(Counter.PASSED_IPV6_ICMP);
 
         // TODO: merge the addCountTrampoline() into generate() method

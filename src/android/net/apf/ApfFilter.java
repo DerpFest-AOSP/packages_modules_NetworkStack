@@ -2038,10 +2038,6 @@ public class ApfFilter implements AndroidPacketFilter {
      */
     @GuardedBy("this")
     private void emitEpilogue(ApfV4GeneratorBase<?> gen) throws IllegalInstructionException {
-        // If APFv4 is unsupported, no epilogue is necessary: if execution reached this far, it
-        // will just fall-through to the PASS label.
-        if (!mApfCapabilities.hasDataAccess()) return;
-
         // Execution will reach the bottom of the program if none of the filters match,
         // which will pass the packet to the application processor.
         gen.addCountAndPass(Counter.PASSED_IPV6_ICMP);

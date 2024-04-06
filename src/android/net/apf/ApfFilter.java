@@ -1520,8 +1520,7 @@ public class ApfFilter implements AndroidPacketFilter {
 
         // Drop if not ARP IPv4.
         gen.addLoadImmediate(R0, ARP_HEADER_OFFSET);
-        maybeSetupCounter(gen, Counter.DROPPED_ARP_NON_IPV4);
-        gen.addJumpIfBytesAtR0NotEqual(ARP_IPV4_HEADER, mCountAndDropLabel);
+        gen.addCountAndDropIfBytesAtR0NotEqual(ARP_IPV4_HEADER, Counter.DROPPED_ARP_NON_IPV4);
 
         gen.addLoad16(R0, ARP_OPCODE_OFFSET);
         if (mHasClat && mIPv4Address == null) {
@@ -1540,8 +1539,7 @@ public class ApfFilter implements AndroidPacketFilter {
 
         // Pass if non-broadcast reply.
         gen.addLoadImmediate(R0, ETH_DEST_ADDR_OFFSET);
-        maybeSetupCounter(gen, Counter.PASSED_ARP_UNICAST_REPLY);
-        gen.addJumpIfBytesAtR0NotEqual(ETHER_BROADCAST, mCountAndPassLabel);
+        gen.addCountAndPassIfBytesAtR0NotEqual(ETHER_BROADCAST, Counter.PASSED_ARP_UNICAST_REPLY);
 
         // Either a request, or a broadcast reply.
         gen.defineLabel(checkTargetIPv4);
@@ -1553,8 +1551,7 @@ public class ApfFilter implements AndroidPacketFilter {
             // When there is an IPv4 address, drop unicast/broadcast requests
             // and broadcast replies with a different target IPv4 address.
             gen.addLoadImmediate(R0, ARP_TARGET_IP_ADDRESS_OFFSET);
-            maybeSetupCounter(gen, Counter.DROPPED_ARP_OTHER_HOST);
-            gen.addJumpIfBytesAtR0NotEqual(mIPv4Address, mCountAndDropLabel);
+            gen.addCountAndDropIfBytesAtR0NotEqual(mIPv4Address, Counter.DROPPED_ARP_OTHER_HOST);
         }
 
         gen.addCountAndPass(Counter.PASSED_ARP);
@@ -1636,9 +1633,8 @@ public class ApfFilter implements AndroidPacketFilter {
             // Otherwise, this is an IPv4 unicast, pass
             // If L2 broadcast packet, drop.
             // TODO: can we invert this condition to fall through to the common pass case below?
-            maybeSetupCounter(gen, Counter.PASSED_IPV4_UNICAST);
             gen.addLoadImmediate(R0, ETH_DEST_ADDR_OFFSET);
-            gen.addJumpIfBytesAtR0NotEqual(ETHER_BROADCAST, mCountAndPassLabel);
+            gen.addCountAndPassIfBytesAtR0NotEqual(ETHER_BROADCAST, Counter.PASSED_IPV4_UNICAST);
             gen.addCountAndDrop(Counter.DROPPED_IPV4_L2_BROADCAST);
         }
 
@@ -2042,8 +2038,7 @@ public class ApfFilter implements AndroidPacketFilter {
 
         // Drop non-IP non-ARP broadcasts, pass the rest
         gen.addLoadImmediate(R0, ETH_DEST_ADDR_OFFSET);
-        maybeSetupCounter(gen, Counter.PASSED_NON_IP_UNICAST);
-        gen.addJumpIfBytesAtR0NotEqual(ETHER_BROADCAST, mCountAndPassLabel);
+        gen.addCountAndPassIfBytesAtR0NotEqual(ETHER_BROADCAST, Counter.PASSED_NON_IP_UNICAST);
         gen.addCountAndDrop(Counter.DROPPED_ETH_BROADCAST);
 
         // Add IPv6 filters:

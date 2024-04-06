@@ -2044,7 +2044,7 @@ public class ApfFilter implements AndroidPacketFilter {
 
         // Execution will reach the bottom of the program if none of the filters match,
         // which will pass the packet to the application processor.
-        maybeSetupCounter(gen, Counter.PASSED_IPV6_ICMP);
+        gen.addCountAndPass(Counter.PASSED_IPV6_ICMP);
 
         // TODO: merge the addCountTrampoline() into generate() method
         gen.addCountTrampoline();

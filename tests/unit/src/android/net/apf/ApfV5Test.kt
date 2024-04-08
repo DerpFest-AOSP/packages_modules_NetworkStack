@@ -19,6 +19,7 @@ import android.net.apf.ApfCounterTracker.Counter
 import android.net.apf.ApfCounterTracker.Counter.DROPPED_ETHERTYPE_DENYLISTED
 import android.net.apf.ApfCounterTracker.Counter.DROPPED_ETH_BROADCAST
 import android.net.apf.ApfCounterTracker.Counter.PASSED_ARP
+import android.net.apf.ApfCounterTracker.Counter.TOTAL_PACKETS
 import android.net.apf.ApfTestUtils.DROP
 import android.net.apf.ApfTestUtils.MIN_PKT_SIZE
 import android.net.apf.ApfTestUtils.PASS
@@ -716,6 +717,34 @@ class ApfV5Test {
                 Counter.TOTAL_PACKETS to 1,
                 Counter.PASSED_ARP to 1
         ), counterMap)
+    }
+
+    @Test
+    fun testLoadStoreCounter() {
+        doTestLoadStoreCounter (
+                { mutableMapOf() },
+                { ApfV4Generator(APF_VERSION_4) }
+        )
+        doTestLoadStoreCounter (
+                { mutableMapOf(TOTAL_PACKETS to 1) },
+                { ApfV6Generator() }
+        )
+    }
+
+    private fun doTestLoadStoreCounter(
+            getInitialMap: () -> MutableMap<Counter, Long>,
+            getGenerator: () -> ApfV4GeneratorBase<*>
+    ) {
+        val program = getGenerator()
+                .addIncrementCounter(PASSED_ARP, 2)
+                .addPass()
+                .generate()
+        var dataRegion = ByteArray(Counter.totalSize()) { 0 }
+        assertVerdict(MIN_APF_VERSION_IN_DEV, PASS, program, testPacket, dataRegion)
+        var counterMap = decodeCountersIntoMap(dataRegion)
+        var expectedMap = getInitialMap()
+        expectedMap[PASSED_ARP] = 2
+        assertEquals(expectedMap, counterMap)
     }
 
     @Test

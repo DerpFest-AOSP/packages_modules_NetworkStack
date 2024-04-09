@@ -1526,8 +1526,9 @@ public class ApfFilter implements AndroidPacketFilter {
         } else {
             // When there is an IPv4 address, drop broadcast replies with a different target IPv4
             // address.
-            gen.addLoadImmediate(R0, ARP_TARGET_IP_ADDRESS_OFFSET);
-            gen.addCountAndDropIfBytesAtR0NotEqual(mIPv4Address, Counter.DROPPED_ARP_OTHER_HOST);
+            gen.addLoad32(R0, ARP_TARGET_IP_ADDRESS_OFFSET);
+            gen.addCountAndDropIfR0NotEquals(bytesToBEInt(mIPv4Address),
+                    Counter.DROPPED_ARP_OTHER_HOST);
         }
         gen.addCountAndPass(Counter.PASSED_ARP_BROADCAST_REPLY);
 
@@ -1544,8 +1545,9 @@ public class ApfFilter implements AndroidPacketFilter {
         } else {
             // When there is an IPv4 address, drop unicast/broadcast requests with a different
             // target IPv4 address.
-            gen.addLoadImmediate(R0, ARP_TARGET_IP_ADDRESS_OFFSET);
-            gen.addCountAndDropIfBytesAtR0NotEqual(mIPv4Address, Counter.DROPPED_ARP_OTHER_HOST);
+            gen.addLoad32(R0, ARP_TARGET_IP_ADDRESS_OFFSET);
+            gen.addCountAndDropIfR0NotEquals(bytesToBEInt(mIPv4Address),
+                    Counter.DROPPED_ARP_OTHER_HOST);
         }
         gen.addCountAndPass(Counter.PASSED_ARP_REQUEST);
     }

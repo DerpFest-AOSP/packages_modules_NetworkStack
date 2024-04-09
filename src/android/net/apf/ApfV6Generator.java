@@ -19,6 +19,8 @@ import static android.net.apf.BaseApfGenerator.Register.R1;
 
 import com.android.internal.annotations.VisibleForTesting;
 
+import java.util.Objects;
+
 /**
  * APFv6 assembler/generator. A tool for generating an APFv6 program.
  *
@@ -33,6 +35,20 @@ public final class ApfV6Generator extends ApfV6GeneratorBase<ApfV6Generator> {
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
     public ApfV6Generator() throws IllegalInstructionException {
         super();
+        addData(new byte[0]);
+    }
+
+    /**
+     * Creates an ApfV6Generator instance which is able to emit instructions for the specified
+     * {@code version} of the APF interpreter. Throws {@code IllegalInstructionException} if
+     * the requested version is unsupported.
+     * Initializes the data region with {@code bytes}.
+     */
+    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
+    public ApfV6Generator(byte[] bytes) throws IllegalInstructionException {
+        super();
+        Objects.requireNonNull(bytes);
+        addData(bytes);
     }
 
     @Override

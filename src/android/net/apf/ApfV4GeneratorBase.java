@@ -48,7 +48,7 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
     public ApfV4GeneratorBase(int version) throws IllegalInstructionException {
         super(version);
-        requireApfVersion(MIN_APF_VERSION);
+        requireApfVersion(APF_VERSION_2);
     }
 
     final Type self() {

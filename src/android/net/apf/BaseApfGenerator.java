@@ -758,7 +758,7 @@ public abstract class BaseApfGenerator {
      * Returns true if the BaseApfGenerator supports the specified {@code version}, otherwise false.
      */
     public static boolean supportsVersion(int version) {
-        return version >= MIN_APF_VERSION;
+        return version >= APF_VERSION_2;
     }
 
     void requireApfVersion(int minimumVersion) throws IllegalInstructionException {
@@ -822,7 +822,7 @@ public abstract class BaseApfGenerator {
     public static final int LAST_PREFILLED_MEMORY_SLOT = FILTER_AGE_MEMORY_SLOT;
 
     // This version number syncs up with APF_VERSION in hardware/google/apf/apf_interpreter.h
-    public static final int MIN_APF_VERSION = 2;
+    public static final int APF_VERSION_2 = 2;
     public static final int APF_VERSION_4 = 4;
     public static final int APF_VERSION_6 = 6;
 

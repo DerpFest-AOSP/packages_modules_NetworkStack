@@ -1539,9 +1539,8 @@ public class ApfFilter implements AndroidPacketFilter {
                 // Drop if ARP REQUEST and we do not have an IPv4 address
                 gen.addCountAndDrop(Counter.DROPPED_ARP_REQUEST_NO_ADDRESS);
             }
-            gen.addLoad32(R0, ARP_TARGET_IP_ADDRESS_OFFSET);
-            gen.addCountAndDropIfR0Equals(IPV4_ANY_HOST_ADDRESS,
-                    Counter.DROPPED_ARP_REQUEST_ANYHOST);
+            // If we're not clat, and we don't have an ipv4 address, allow all ARP request to avoid
+            // racing against DHCP.
         } else {
             // When there is an IPv4 address, drop unicast/broadcast requests with a different
             // target IPv4 address.

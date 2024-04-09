@@ -338,7 +338,7 @@ public class ApfFilter implements AndroidPacketFilter {
 
     // mIsRunning is reflects the state of the ApfFilter during integration tests. ApfFilter can be
     // paused using "adb shell cmd apf <iface> <cmd>" commands. A paused ApfFilter will not install
-    // any new programs, but otherwise operate normally.
+    // any new programs, but otherwise operates normally.
     private volatile boolean mIsRunning = true;
 
     private final Dependencies mDependencies;

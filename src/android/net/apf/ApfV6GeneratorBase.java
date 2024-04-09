@@ -35,10 +35,6 @@ import java.util.Objects;
 public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> extends
         ApfV4GeneratorBase<Type> {
 
-    // We have not *yet* switched to APFv6 mode (see addData),
-    // and are thus still in APFv2/4 backward compatibility mode.
-    boolean mIsV6 = false;
-
     /**
      * Creates an ApfV6GeneratorBase instance which is able to emit instructions for the specified
      * {@code version} of the APF interpreter. Throws {@code IllegalInstructionException} if
@@ -119,7 +115,6 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
         if (data.length > 65535) {
             throw new IllegalArgumentException("data size larger than 65535");
         }
-        mIsV6 = true;
         return append(new Instruction(Opcodes.JMP, Rbit1).addUnsigned(data.length)
                 .setBytesImm(data).overrideImmSize(2));
     }

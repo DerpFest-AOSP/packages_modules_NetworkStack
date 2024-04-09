@@ -1945,7 +1945,7 @@ public class ApfFilter implements AndroidPacketFilter {
         // This is guaranteed to succeed because of the check in maybeCreate.
         ApfV4GeneratorBase<?> gen;
         if (mEnableApfV6 && mApfCapabilities.apfVersionSupported > 4) {
-            gen = new ApfV6Generator().addData();
+            gen = new ApfV6Generator();
         } else {
             gen = new ApfV4Generator(mApfCapabilities.apfVersionSupported);
         }

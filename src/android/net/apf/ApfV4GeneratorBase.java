@@ -493,30 +493,6 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
 
     /**
      * Add an instruction to the end of the program to load 32 bits from the data memory into
-     * {@code register}. The source address is computed by adding the signed immediate
-     * @{code offset} to the other register.
-     * Requires APF v4 or greater.
-     */
-    public final Type addLoadData(Register dst, int ofs)
-            throws IllegalInstructionException {
-        requireApfVersion(APF_VERSION_4);
-        return append(new Instruction(Opcodes.LDDW, dst).addSigned(ofs));
-    }
-
-    /**
-     * Add an instruction to the end of the program to store 32 bits from {@code register} into the
-     * data memory. The destination address is computed by adding the signed immediate
-     * @{code offset} to the other register.
-     * Requires APF v4 or greater.
-     */
-    public final Type addStoreData(Register src, int ofs)
-            throws IllegalInstructionException {
-        requireApfVersion(APF_VERSION_4);
-        return append(new Instruction(Opcodes.STDW, src).addSigned(ofs));
-    }
-
-    /**
-     * Add an instruction to the end of the program to load 32 bits from the data memory into
      * {@code register}.
      * In APFv2, it is a noop.
      * WARNING: clobbers the *other* register.

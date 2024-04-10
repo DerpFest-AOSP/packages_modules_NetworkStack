@@ -1505,6 +1505,11 @@ public class ApfFilter implements AndroidPacketFilter {
         gen.addLoadImmediate(R0, ARP_HEADER_OFFSET);
         gen.addCountAndDropIfBytesAtR0NotEqual(ARP_IPV4_HEADER, Counter.DROPPED_ARP_NON_IPV4);
 
+        // For IPv6 only network, drop all ARP packet.
+        if (mHasClat) {
+            gen.addCountAndDrop(Counter.DROPPED_ARP_V6_ONLY);
+        }
+
         gen.addLoad16(R0, ARP_OPCODE_OFFSET);
         gen.addJumpIfR0Equals(ARP_OPCODE_REQUEST, checkArpRequest); // Skip to arp request check.
         // Drop if unknown ARP opcode.
@@ -1538,21 +1543,15 @@ public class ApfFilter implements AndroidPacketFilter {
         /*----------  Handle ARP Requests. ----------*/
 
         gen.defineLabel(checkArpRequest);
-        if (mIPv4Address == null) {
-            // When there is no IPv4 address, drop arp request if the address is any host address.
-            if (mHasClat) {
-                // Drop if ARP REQUEST and we do not have an IPv4 address
-                gen.addCountAndDrop(Counter.DROPPED_ARP_REQUEST_NO_ADDRESS);
-            }
-            // If we're not clat, and we don't have an ipv4 address, allow all ARP request to avoid
-            // racing against DHCP.
-        } else {
+        if (mIPv4Address != null) {
             // When there is an IPv4 address, drop unicast/broadcast requests with a different
             // target IPv4 address.
             gen.addLoad32(R0, ARP_TARGET_IP_ADDRESS_OFFSET);
             gen.addCountAndDropIfR0NotEquals(bytesToBEInt(mIPv4Address),
                     Counter.DROPPED_ARP_OTHER_HOST);
         }
+        // If we're not clat, and we don't have an ipv4 address, allow all ARP request to avoid
+        // racing against DHCP.
         gen.addCountAndPass(Counter.PASSED_ARP_REQUEST);
     }
 

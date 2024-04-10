@@ -168,8 +168,12 @@ public final class ApfV4Generator extends ApfV4GeneratorBase<ApfV4Generator> {
                 .addJump(DROP_LABEL);
     }
 
+    private ApfV4Generator maybeAddLoadCounterOffset(Register reg, ApfCounterTracker.Counter cnt) {
+        if (mVersion < 4) return self();
+        return addLoadImmediate(reg, cnt.offset());
+    }
+
     private ApfV4Generator maybeAddLoadR1CounterOffset(ApfCounterTracker.Counter counter) {
-        if (mVersion >= 4) return addLoadImmediate(R1, counter.offset());
-        return self();
+        return maybeAddLoadCounterOffset(R1, counter);
     }
 }

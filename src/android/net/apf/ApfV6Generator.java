@@ -169,15 +169,6 @@ public final class ApfV6Generator extends ApfV6GeneratorBase<ApfV6Generator> {
         return append(new Instruction(Opcodes.STDW, register).addUnsigned(counter.value()));
     }
 
-    private int mLabelCount = 0;
-
-    /**
-     * Return a unique label string.
-     */
-    private String getUniqueLabel() {
-        return "LABEL_" + mLabelCount++;
-    }
-
     /**
      * This method is noop in APFv6.
      */

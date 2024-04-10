@@ -1221,6 +1221,10 @@ class ApfV5Test {
     }
 
     private fun ByteArray.skipEmptyData(): ByteArray {
+        assertEquals(
+                listOf(encodeInstruction(14, 2, 1), 0, 0),
+                this.take(3)
+        )
         return this.drop(3).toByteArray()
     }
 

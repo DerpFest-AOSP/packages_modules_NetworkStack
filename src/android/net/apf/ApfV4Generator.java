@@ -145,6 +145,30 @@ public final class ApfV4Generator extends ApfV4GeneratorBase<ApfV4Generator> {
                 mCountAndPassLabel);
     }
 
+    /**
+     * Add an instruction to the end of the program to load 32 bits from the data memory into
+     * {@code register}. The source address is computed by adding the signed immediate
+     * {@code offset} to the other register.
+     * Requires APF v4 or greater.
+     */
+    public final ApfV4Generator addLoadData(Register dst, int ofs)
+            throws IllegalInstructionException {
+        requireApfVersion(APF_VERSION_4);
+        return append(new Instruction(Opcodes.LDDW, dst).addSigned(ofs));
+    }
+
+    /**
+     * Add an instruction to the end of the program to store 32 bits from {@code register} into the
+     * data memory. The destination address is computed by adding the signed immediate
+     * {@code offset} to the other register.
+     * Requires APF v4 or greater.
+     */
+    public final ApfV4Generator addStoreData(Register src, int ofs)
+            throws IllegalInstructionException {
+        requireApfVersion(APF_VERSION_4);
+        return append(new Instruction(Opcodes.STDW, src).addSigned(ofs));
+    }
+
     @Override
     public ApfV4Generator addLoadCounter(Register register, ApfCounterTracker.Counter counter)
             throws IllegalInstructionException {

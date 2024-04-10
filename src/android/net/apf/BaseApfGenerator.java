@@ -180,6 +180,10 @@ public abstract class BaseApfGenerator {
     public enum Register {
         R0,
         R1;
+
+        Register other() {
+            return (this == R0) ? R1 : R0;
+        }
     }
 
     public enum Rbit {

@@ -181,15 +181,6 @@ public class ApfFilter implements AndroidPacketFilter {
         }
     }
 
-    /**
-     * When APFv4 is supported, loads R1 with the offset of the specified counter.
-     */
-    private void maybeSetupCounter(ApfV4GeneratorBase<?> gen, Counter c) {
-        if (mApfCapabilities.hasDataAccess()) {
-            gen.addLoadImmediate(R1, c.offset());
-        }
-    }
-
     // Thread to listen for RAs.
     @VisibleForTesting
     public class ReceiveThread extends Thread {
@@ -1761,9 +1752,6 @@ public class ApfFilter implements AndroidPacketFilter {
 
         gen.addCountAndDrop(Counter.DROPPED_IPV6_MULTICAST_NA);
         gen.defineLabel(skipUnsolicitedMulticastNALabel);
-
-        // Note that this is immediately followed emitEpilogue which will:
-        // maybeSetupCounter(gen, Counter.PASSED_IPV6_ICMP);
     }
 
     /** Encodes qname in TLV pattern. */

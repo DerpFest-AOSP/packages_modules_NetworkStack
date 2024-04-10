@@ -46,7 +46,7 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
      *
      */
     public ApfV6GeneratorBase() throws IllegalInstructionException {
-        super(MIN_APF_VERSION_IN_DEV);
+        super(APF_VERSION_6);
     }
 
     /**

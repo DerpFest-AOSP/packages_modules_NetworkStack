@@ -754,13 +754,6 @@ public abstract class BaseApfGenerator {
         return bytecode;
     }
 
-    /**
-     * Returns true if the BaseApfGenerator supports the specified {@code version}, otherwise false.
-     */
-    public static boolean supportsVersion(int version) {
-        return version >= APF_VERSION_2;
-    }
-
     void requireApfVersion(int minimumVersion) throws IllegalInstructionException {
         if (mVersion < minimumVersion) {
             throw new IllegalInstructionException("Requires APF >= " + minimumVersion);

@@ -1472,34 +1472,43 @@ public class ApfFilter implements AndroidPacketFilter {
             throws IllegalInstructionException {
         // Here's a basic summary of what the ARP filter program does:
         //
+        // if clat is enabled (and we're thus IPv6-only)
+        //   drop
         // if not ARP IPv4
         //   drop
-        // if not ARP IPv4 reply or request
+        // if unknown ARP opcode (ie. not reply or request)
         //   drop
-        // if ARP reply source ip is 0.0.0.0
-        //   drop
-        // if unicast ARP reply
+        //
+        // if ARP reply:
+        //   if source ip is 0.0.0.0
+        //     drop
+        //   if unicast (or multicast)
+        //     pass
+        //   if interface has no IPv4 address
+        //     if target ip is 0.0.0.0
+        //       drop
+        //   else
+        //     if target ip is not the interface ip
+        //       drop
         //   pass
-        // if interface has no IPv4 address
-        //   if ARP request and clat enabled
-        //      drop
-        //   if target ip is 0.0.0.0
-        //      drop
-        // else
-        //   if target ip is not the interface ip
-        //      drop
-        // pass
+        //
+        // if ARP request:
+        //   if interface has IPv4 address
+        //     if target ip is not the interface ip
+        //       drop
+        //   pass
 
-        final String checkArpRequest = "checkArpRequest";
+        // For IPv6 only network, drop all ARP packet.
+        if (mHasClat) {
+            gen.addCountAndDrop(Counter.DROPPED_ARP_V6_ONLY);
+            return;
+        }
 
         // Drop if not ARP IPv4.
         gen.addLoadImmediate(R0, ARP_HEADER_OFFSET);
         gen.addCountAndDropIfBytesAtR0NotEqual(ARP_IPV4_HEADER, Counter.DROPPED_ARP_NON_IPV4);
 
-        // For IPv6 only network, drop all ARP packet.
-        if (mHasClat) {
-            gen.addCountAndDrop(Counter.DROPPED_ARP_V6_ONLY);
-        }
+        final String checkArpRequest = "checkArpRequest";
 
         gen.addLoad16(R0, ARP_OPCODE_OFFSET);
         gen.addJumpIfR0Equals(ARP_OPCODE_REQUEST, checkArpRequest); // Skip to arp request check.

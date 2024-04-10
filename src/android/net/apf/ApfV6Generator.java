@@ -28,6 +28,13 @@ import java.util.Objects;
  */
 public final class ApfV6Generator extends ApfV6GeneratorBase<ApfV6Generator> {
     /**
+     * Returns true if we support the specified {@code version}, otherwise false.
+     */
+    public static boolean supportsVersion(int version) {
+        return version >= APF_VERSION_6;
+    }
+
+    /**
      * Creates an ApfV6Generator instance which is able to emit instructions for the specified
      * {@code version} of the APF interpreter. Throws {@code IllegalInstructionException} if
      * the requested version is unsupported.

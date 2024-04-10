@@ -760,6 +760,15 @@ public abstract class BaseApfGenerator {
         }
     }
 
+    private int mLabelCount = 0;
+
+    /**
+     * Return a unique label string.
+     */
+    protected String getUniqueLabel() {
+        return "LABEL_" + mLabelCount++;
+    }
+
     /**
      * Jump to this label to terminate the program and indicate the packet
      * should be dropped.

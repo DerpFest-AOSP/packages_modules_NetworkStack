@@ -1506,15 +1506,18 @@ public class ApfFilter implements AndroidPacketFilter {
         gen.addCountAndDropIfBytesAtR0NotEqual(ARP_IPV4_HEADER, Counter.DROPPED_ARP_NON_IPV4);
 
         gen.addLoad16(R0, ARP_OPCODE_OFFSET);
-        gen.addJumpIfR0Equals(ARP_OPCODE_REQUEST, checkArpRequest); // Skip to unicast check
+        gen.addJumpIfR0Equals(ARP_OPCODE_REQUEST, checkArpRequest); // Skip to arp request check.
         // Drop if unknown ARP opcode.
         gen.addCountAndDropIfR0NotEquals(ARP_OPCODE_REPLY, Counter.DROPPED_ARP_UNKNOWN);
+
+        /*----------  Handle ARP Replies. ----------*/
 
         // Drop if ARP reply source IP is 0.0.0.0
         gen.addLoad32(R0, ARP_SOURCE_IP_ADDRESS_OFFSET);
         gen.addCountAndDropIfR0Equals(IPV4_ANY_HOST_ADDRESS, Counter.DROPPED_ARP_REPLY_SPA_NO_HOST);
 
         // Pass if non-broadcast reply.
+        // This also accepts multicast arp, but we assume those don't exist.
         gen.addLoadImmediate(R0, ETH_DEST_ADDR_OFFSET);
         gen.addCountAndPassIfBytesAtR0NotEqual(ETHER_BROADCAST, Counter.PASSED_ARP_UNICAST_REPLY);
 
@@ -1532,7 +1535,8 @@ public class ApfFilter implements AndroidPacketFilter {
         }
         gen.addCountAndPass(Counter.PASSED_ARP_BROADCAST_REPLY);
 
-        // It is a request
+        /*----------  Handle ARP Requests. ----------*/
+
         gen.defineLabel(checkArpRequest);
         if (mIPv4Address == null) {
             // When there is no IPv4 address, drop arp request if the address is any host address.

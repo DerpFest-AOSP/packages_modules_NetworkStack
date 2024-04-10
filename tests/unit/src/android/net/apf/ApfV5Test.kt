@@ -29,7 +29,7 @@ import android.net.apf.ApfTestUtils.assertVerdict
 import android.net.apf.BaseApfGenerator.APF_VERSION_4
 import android.net.apf.BaseApfGenerator.DROP_LABEL
 import android.net.apf.BaseApfGenerator.IllegalInstructionException
-import android.net.apf.BaseApfGenerator.MIN_APF_VERSION
+import android.net.apf.BaseApfGenerator.APF_VERSION_2
 import android.net.apf.BaseApfGenerator.APF_VERSION_6
 import android.net.apf.BaseApfGenerator.Register.R0
 import android.net.apf.BaseApfGenerator.Register.R1
@@ -291,7 +291,7 @@ class ApfV5Test {
 
     @Test
     fun testApfInstructionsEncoding() {
-        val v4gen = ApfV4Generator(MIN_APF_VERSION)
+        val v4gen = ApfV4Generator(APF_VERSION_2)
         v4gen.addPass()
         var program = v4gen.generate()
         // encoding PASS opcode: opcode=0, imm_len=0, R=0
@@ -897,7 +897,7 @@ class ApfV5Test {
 
     @Test
     fun testV2CountAndPassDrop() {
-        var program = ApfV4Generator(MIN_APF_VERSION)
+        var program = ApfV4Generator(APF_VERSION_2)
                 .addCountAndDrop(Counter.DROPPED_ETH_BROADCAST)
                 .addCountTrampoline()
                 .generate()
@@ -905,7 +905,7 @@ class ApfV5Test {
         assertVerdict(APF_VERSION_6, DROP, program, testPacket, dataRegion)
         assertContentEquals(ByteArray(Counter.totalSize()) { 0 }, dataRegion)
 
-        program = ApfV4Generator(MIN_APF_VERSION)
+        program = ApfV4Generator(APF_VERSION_2)
                 .addCountAndPass(PASSED_ARP)
                 .addCountTrampoline()
                 .generate()

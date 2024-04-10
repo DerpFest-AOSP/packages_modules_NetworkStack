@@ -1921,6 +1921,10 @@ public class ApfFilter implements AndroidPacketFilter {
                 "skip_v6_keepalive_filter");
     }
 
+    private boolean shouldUseApfV6Generator() {
+        return mEnableApfV6 && mApfCapabilities.apfVersionSupported > 4;
+    }
+
     /**
      * Begin generating an APF program to:
      * <ul>
@@ -1946,15 +1950,19 @@ public class ApfFilter implements AndroidPacketFilter {
     protected ApfV4GeneratorBase<?> emitPrologueLocked() throws IllegalInstructionException {
         // This is guaranteed to succeed because of the check in maybeCreate.
         ApfV4GeneratorBase<?> gen;
-        if (mEnableApfV6 && mApfCapabilities.apfVersionSupported > 4) {
+        if (shouldUseApfV6Generator()) {
             gen = new ApfV6Generator();
         } else {
             gen = new ApfV4Generator(mApfCapabilities.apfVersionSupported);
         }
 
         if (mApfCapabilities.hasDataAccess()) {
-            // Increment TOTAL_PACKETS
-            gen.addIncrementCounter(Counter.TOTAL_PACKETS);
+            if (!shouldUseApfV6Generator()) {
+                // Increment TOTAL_PACKETS.
+                // Only needed in APFv4.
+                // In APFv6, the interpreter will increase the counter on packet receive.
+                gen.addIncrementCounter(Counter.TOTAL_PACKETS);
+            }
 
             gen.addLoadFromMemory(R0, 15);  // m[15] is filter age in seconds
             gen.addStoreCounter(Counter.FILTER_AGE_SECONDS, R0);

@@ -823,8 +823,8 @@ public abstract class BaseApfGenerator {
 
     // This version number syncs up with APF_VERSION in hardware/google/apf/apf_interpreter.h
     public static final int MIN_APF_VERSION = 2;
-    public static final int MIN_APF_VERSION_IN_DEV = 5;
     public static final int APF_VERSION_4 = 4;
+    public static final int APF_VERSION_6 = 6;
 
 
     final ArrayList<Instruction> mInstructions = new ArrayList<Instruction>();

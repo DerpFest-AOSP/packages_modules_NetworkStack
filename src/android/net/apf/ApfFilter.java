@@ -1954,29 +1954,22 @@ public class ApfFilter implements AndroidPacketFilter {
 
         if (mApfCapabilities.hasDataAccess()) {
             // Increment TOTAL_PACKETS
-            maybeSetupCounter(gen, Counter.TOTAL_PACKETS);
-            gen.addLoadData(R0, 0);  // load counter
-            gen.addAdd(1);
-            gen.addStoreData(R0, 0);  // write-back counter
+            gen.addIncrementCounter(Counter.TOTAL_PACKETS);
 
-            maybeSetupCounter(gen, Counter.FILTER_AGE_SECONDS);
             gen.addLoadFromMemory(R0, 15);  // m[15] is filter age in seconds
-            gen.addStoreData(R0, 0);  // store 'counter'
+            gen.addStoreCounter(Counter.FILTER_AGE_SECONDS, R0);
 
             // requires a new enough APFv5+ interpreter, otherwise will be 0
-            maybeSetupCounter(gen, Counter.FILTER_AGE_16384THS);
             gen.addLoadFromMemory(R0, 9);  // m[9] is filter age in 16384ths
-            gen.addStoreData(R0, 0);  // store 'counter'
+            gen.addStoreCounter(Counter.FILTER_AGE_16384THS, R0);
 
             // requires a new enough APFv5+ interpreter, otherwise will be 0
-            maybeSetupCounter(gen, Counter.APF_VERSION);
             gen.addLoadFromMemory(R0, 8);  // m[8] is apf version
-            gen.addStoreData(R0, 0);  // store 'counter'
+            gen.addStoreCounter(Counter.APF_VERSION, R0);
 
             // store this program's sequential id, for later comparison
-            maybeSetupCounter(gen, Counter.APF_PROGRAM_ID);
             gen.addLoadImmediate(R0, mNumProgramUpdates);
-            gen.addStoreData(R0, 0);  // store 'counter'
+            gen.addStoreCounter(Counter.APF_PROGRAM_ID, R0);
         }
 
         // Here's a basic summary of what the initial program does:

@@ -26,11 +26,11 @@ import android.net.apf.ApfTestUtils.PASS
 import android.net.apf.ApfTestUtils.assertDrop
 import android.net.apf.ApfTestUtils.assertPass
 import android.net.apf.ApfTestUtils.assertVerdict
+import android.net.apf.BaseApfGenerator.APF_VERSION_2
 import android.net.apf.BaseApfGenerator.APF_VERSION_4
+import android.net.apf.BaseApfGenerator.APF_VERSION_6
 import android.net.apf.BaseApfGenerator.DROP_LABEL
 import android.net.apf.BaseApfGenerator.IllegalInstructionException
-import android.net.apf.BaseApfGenerator.APF_VERSION_2
-import android.net.apf.BaseApfGenerator.APF_VERSION_6
 import android.net.apf.BaseApfGenerator.Register.R0
 import android.net.apf.BaseApfGenerator.Register.R1
 import androidx.test.filters.SmallTest

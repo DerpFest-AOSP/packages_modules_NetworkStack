@@ -49,7 +49,8 @@ public final class ApfV4Generator extends ApfV4GeneratorBase<ApfV4Generator> {
      */
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
     public ApfV4Generator(int version) throws IllegalInstructionException {
-        super(version);
+        // make sure mVersion is not greater than 4 when using this class
+        super(version >= 4 ? 4 : version);
         mCountAndDropLabel = version >= 4 ? COUNT_AND_DROP_LABEL : DROP_LABEL;
         mCountAndPassLabel = version >= 4 ? COUNT_AND_PASS_LABEL : PASS_LABEL;
     }

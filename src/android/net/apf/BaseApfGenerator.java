@@ -806,7 +806,7 @@ public abstract class BaseApfGenerator {
      * First memory slot containing prefilled values. Can be used in range comparisons to determine
      * if memory slot index is within prefilled slots.
      */
-    public static final int FIRST_PREFILLED_MEMORY_SLOT = IPV4_HEADER_SIZE_MEMORY_SLOT;
+    public static final int FIRST_PREFILLED_MEMORY_SLOT = 8;
 
     /**
      * Last memory slot containing prefilled values. Can be used in range comparisons to determine

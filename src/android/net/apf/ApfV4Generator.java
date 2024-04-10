@@ -145,6 +145,20 @@ public final class ApfV4Generator extends ApfV4GeneratorBase<ApfV4Generator> {
                 mCountAndPassLabel);
     }
 
+    @Override
+    public ApfV4Generator addLoadCounter(Register register, ApfCounterTracker.Counter counter)
+            throws IllegalInstructionException {
+        if (mVersion < 4) return self();
+        return maybeAddLoadCounterOffset(register.other(), counter).addLoadData(register, 0);
+    }
+
+    @Override
+    public ApfV4Generator addStoreCounter(ApfCounterTracker.Counter counter, Register register)
+            throws IllegalInstructionException {
+        if (mVersion < 4) return self();
+        return maybeAddLoadCounterOffset(register.other(), counter).addStoreData(register, 0);
+    }
+
     /**
      * Append the count & (pass|drop) trampoline, which increments the counter at the data address
      * pointed to by R1, then jumps to the (pass|drop) label. This saves a few bytes over inserting

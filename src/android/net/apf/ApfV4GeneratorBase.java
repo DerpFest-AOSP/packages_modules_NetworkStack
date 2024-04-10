@@ -515,6 +515,44 @@ public abstract class ApfV4GeneratorBase<Type extends ApfV4GeneratorBase<Type>> 
         return append(new Instruction(Opcodes.STDW, src).addSigned(ofs));
     }
 
+    /**
+     * Add an instruction to the end of the program to load 32 bits from the data memory into
+     * {@code register}.
+     * In APFv2, it is a noop.
+     * WARNING: clobbers the *other* register.
+     */
+    public abstract Type addLoadCounter(Register register, ApfCounterTracker.Counter counter)
+            throws IllegalInstructionException;
+
+    /**
+     * Add an instruction to the end of the program to store 32 bits from {@code register} into the
+     * data memory.
+     * In APFv2, it is a noop.
+     * WARNING: clobbers the *other* register.
+     */
+    public abstract Type addStoreCounter(ApfCounterTracker.Counter counter, Register register)
+            throws IllegalInstructionException;
+
+    /**
+     * Add an instruction to the end of the program to increment counter value by {@code val).
+     * In APFv2, it is a noop.
+     * WARNING: clobbers both registers.
+     */
+    public final Type addIncrementCounter(ApfCounterTracker.Counter counter, int val)
+            throws IllegalInstructionException {
+        if (mVersion < 4) return self();
+        return addLoadCounter(R0, counter).addAdd(val).addStoreCounter(counter, R0);
+    }
+
+    /**
+     * Add an instruction to the end of the program to increment counter value by one.
+     * In APFv2, it is a noop.
+     * WARNING: clobbers both registers.
+     */
+    public final Type addIncrementCounter(ApfCounterTracker.Counter counter)
+            throws IllegalInstructionException {
+        return addIncrementCounter(counter, 1);
+    }
 
     /**
      * The abstract method to generate count trampoline instructions.

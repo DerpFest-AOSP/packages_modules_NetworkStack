@@ -150,6 +150,18 @@ public final class ApfV6Generator extends ApfV6GeneratorBase<ApfV6Generator> {
         return addJumpIfBytesAtR0Equal(bytes, tgt).addCountAndPass(cnt).defineLabel(tgt);
     }
 
+    @Override
+    public ApfV6Generator addLoadCounter(Register register, ApfCounterTracker.Counter counter)
+            throws IllegalInstructionException {
+        return append(new Instruction(Opcodes.LDDW, register).addUnsigned(counter.value()));
+    }
+
+    @Override
+    public ApfV6Generator addStoreCounter(ApfCounterTracker.Counter counter, Register register)
+            throws IllegalInstructionException {
+        return append(new Instruction(Opcodes.STDW, register).addUnsigned(counter.value()));
+    }
+
     private int mLabelCount = 0;
 
     /**

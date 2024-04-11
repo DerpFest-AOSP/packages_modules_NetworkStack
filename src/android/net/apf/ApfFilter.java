@@ -62,6 +62,7 @@ import static android.net.apf.BaseApfGenerator.IPV4_HEADER_SIZE_MEMORY_SLOT;
 import static android.net.apf.BaseApfGenerator.PACKET_SIZE_MEMORY_SLOT;
 import static android.net.apf.BaseApfGenerator.Register.R0;
 import static android.net.apf.BaseApfGenerator.Register.R1;
+import static android.net.apf.BaseApfGenerator.TX_BUFFER_OUTPUT_POINTER_MEMORY_SLOT;
 import static android.net.util.SocketUtils.makePacketSocketAddress;
 import static android.os.PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED;
 import static android.os.PowerManager.ACTION_DEVICE_LIGHT_IDLE_MODE_CHANGED;
@@ -1572,6 +1573,9 @@ public class ApfFilter implements AndroidPacketFilter {
                         .addWrite32(mIPv4Address)
                         .addPacketCopy(ETHER_SRC_ADDR_OFFSET, ETHER_ADDR_LEN)
                         .addPacketCopy(ARP_SOURCE_IP_ADDRESS_OFFSET, IPV4_ADDR_LEN)
+                        .addLoadFromMemory(R0, TX_BUFFER_OUTPUT_POINTER_MEMORY_SLOT)
+                        .addAdd(18)
+                        .addStoreToMemory(R0, TX_BUFFER_OUTPUT_POINTER_MEMORY_SLOT)
                         .addTransmitWithoutChecksum()
                         .addCountAndDrop(Counter.DROPPED_ARP_REQUEST_REPLIED);
             }

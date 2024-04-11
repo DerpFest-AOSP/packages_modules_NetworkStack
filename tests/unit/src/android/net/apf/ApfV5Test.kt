@@ -1282,7 +1282,10 @@ class ApfV5Test {
         )
         val expectedArpReplyPacket = ByteArray(ARP_ETHER_IPV4_LEN)
         expectedArpReplyBuf.get(expectedArpReplyPacket)
-        assertContentEquals(expectedArpReplyPacket, transmittedPacket)
+        assertContentEquals(
+                expectedArpReplyPacket + ByteArray(18) {0},
+                transmittedPacket
+        )
         assertEquals(
                 mapOf<Counter, Long>(
                         TOTAL_PACKETS to 1,

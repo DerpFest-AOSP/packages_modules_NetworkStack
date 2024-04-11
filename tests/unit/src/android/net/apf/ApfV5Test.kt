@@ -976,7 +976,7 @@ class ApfV5Test {
                 .addAllocate(14)
                 // len: 13 is less than ETH_HLEN, trigger transmit failure.
                 .addLoadImmediate(R0, 13)
-                .addStoreToMemory(R0, 10)
+                .addStoreToMemory(10, R0)
                 .addTransmitWithoutChecksum()
                 .addDrop()
                 .generate()

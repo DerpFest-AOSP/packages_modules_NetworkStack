@@ -1575,7 +1575,7 @@ public class ApfFilter implements AndroidPacketFilter {
                         .addPacketCopy(ARP_SOURCE_IP_ADDRESS_OFFSET, IPV4_ADDR_LEN)
                         .addLoadFromMemory(R0, TX_BUFFER_OUTPUT_POINTER_MEMORY_SLOT)
                         .addAdd(18)
-                        .addStoreToMemory(R0, TX_BUFFER_OUTPUT_POINTER_MEMORY_SLOT)
+                        .addStoreToMemory(TX_BUFFER_OUTPUT_POINTER_MEMORY_SLOT, R0)
                         .addTransmitWithoutChecksum()
                         .addCountAndDrop(Counter.DROPPED_ARP_REQUEST_REPLIED);
             }

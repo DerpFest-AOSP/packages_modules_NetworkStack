@@ -675,7 +675,7 @@ public class ApfTest {
         gen = new ApfV4Generator(APF_VERSION_2);
         gen.addLoadFromMemory(R0, MemorySlot.IPV4_HEADER_SIZE);
         gen.addJumpIfR0Equals(20, DROP_LABEL);
-        assertDrop(gen, new byte[]{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x45}, 0);
+        assertDrop(gen, new byte[]{0,0,0,0,0,0,0,0,0,0,0,0,8,0,0x45,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, 0);
 
         // Test not.
         gen = new ApfV4Generator(APF_VERSION_2);

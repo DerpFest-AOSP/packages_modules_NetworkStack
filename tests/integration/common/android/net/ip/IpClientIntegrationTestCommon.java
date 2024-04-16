@@ -415,14 +415,10 @@ public abstract class IpClientIntegrationTestCommon {
     private static final int DHCP6_HEADER_OFFSET = ETH_HEADER_LEN + IPV6_HEADER_LEN
             + UDP_HEADER_LEN;
 
-    private static final Inet4Address SERVER_ADDR =
-            (Inet4Address) InetAddresses.parseNumericAddress("192.168.1.100");
-    private static final Inet4Address CLIENT_ADDR =
-            (Inet4Address) InetAddresses.parseNumericAddress("192.168.1.2");
-    private static final Inet4Address CLIENT_ADDR_NEW =
-            (Inet4Address) InetAddresses.parseNumericAddress("192.168.1.3");
-    private static final Inet4Address INADDR_ANY =
-            (Inet4Address) InetAddresses.parseNumericAddress("0.0.0.0");
+    private static final Inet4Address SERVER_ADDR = ipv4Addr("192.168.1.100");
+    private static final Inet4Address CLIENT_ADDR = ipv4Addr("192.168.1.2");
+    private static final Inet4Address CLIENT_ADDR_NEW = ipv4Addr("192.168.1.3");
+    private static final Inet4Address INADDR_ANY = ipv4Addr("0.0.0.0");
     private static final int PREFIX_LENGTH = 24;
     private static final Inet4Address NETMASK = getPrefixMaskAsInet4Address(PREFIX_LENGTH);
     private static final Inet4Address BROADCAST_ADDR = getBroadcastAddress(
@@ -437,8 +433,7 @@ public abstract class IpClientIntegrationTestCommon {
     private static final int TEST_MIN_MTU = 1280;
     private static final MacAddress ROUTER_MAC = MacAddress.fromString("00:1A:11:22:33:44");
     private static final byte[] ROUTER_MAC_BYTES = ROUTER_MAC.toByteArray();
-    private static final Inet6Address ROUTER_LINK_LOCAL =
-                (Inet6Address) InetAddresses.parseNumericAddress("fe80::1");
+    private static final Inet6Address ROUTER_LINK_LOCAL = ipv6Addr("fe80::1");
     private static final byte[] ROUTER_DUID = new byte[] {
             // type: Link-layer address, hardware type: EUI64(27)
             (byte) 0x00, (byte) 0x03, (byte) 0x00, (byte) 0x1b,
@@ -691,6 +686,18 @@ public abstract class IpClientIntegrationTestCommon {
             fail("Device running root tests doesn't support TestNetworkStackServiceClient.");
         }
         return !useNetworkStackSignature() && mIsSignatureRequiredTest;
+    }
+
+    private static InetAddress ipAddr(String addr) {
+        return InetAddresses.parseNumericAddress(addr);
+    }
+
+    private static Inet4Address ipv4Addr(String addr) {
+        return (Inet4Address) ipAddr(addr);
+    }
+
+    private static Inet6Address ipv6Addr(String addr) {
+        return (Inet6Address) ipAddr(addr);
     }
 
     private void setDhcpFeatures(final boolean isRapidCommitEnabled,
@@ -3077,8 +3084,7 @@ public abstract class IpClientIntegrationTestCommon {
     }
 
     private LinkProperties performDualStackProvisioning() throws Exception {
-        final Inet6Address dnsServer =
-                (Inet6Address) InetAddresses.parseNumericAddress(IPV6_OFF_LINK_DNS_SERVER);
+        final Inet6Address dnsServer = ipv6Addr(IPV6_OFF_LINK_DNS_SERVER);
         final ByteBuffer pio = buildPioOption(3600, 1800, "2001:db8:1::/64");
         final ByteBuffer rdnss = buildRdnssOption(3600, IPV6_OFF_LINK_DNS_SERVER);
         final ByteBuffer slla = buildSllaOption();
@@ -4337,8 +4343,7 @@ public abstract class IpClientIntegrationTestCommon {
             options.add(buildSllaOption());                         // SLLA
         }
         final ByteBuffer ra = buildRaPacket(options.toArray(new ByteBuffer[options.size()]));
-        final Inet6Address dnsServerIp =
-                (Inet6Address) InetAddresses.parseNumericAddress(dnsServer);
+        final Inet6Address dnsServerIp = ipv6Addr(dnsServer);
         final LinkProperties lp = performDualStackProvisioning(ra, dnsServerIp);
         runAsShell(MANAGE_TEST_NETWORKS, () -> createTestNetworkAgentAndRegister(lp));
 
@@ -4375,8 +4380,7 @@ public abstract class IpClientIntegrationTestCommon {
 
     @Test
     public void testIpReachabilityMonitor_incompleteIpv6DnsServerInDualStack() throws Exception {
-        final Inet6Address targetIp =
-                (Inet6Address) InetAddresses.parseNumericAddress(IPV6_ON_LINK_DNS_SERVER);
+        final Inet6Address targetIp = ipv6Addr(IPV6_ON_LINK_DNS_SERVER);
         runIpReachabilityMonitorAddressResolutionTest(IPV6_ON_LINK_DNS_SERVER, targetIp,
                 true /* isIgnoreIncompleteIpv6DnsServerEnabled */,
                 false /* isIgnoreIncompleteIpv6DefaultRouterEnabled */,
@@ -4387,8 +4391,7 @@ public abstract class IpClientIntegrationTestCommon {
     @Test
     public void testIpReachabilityMonitor_incompleteIpv6DnsServerInDualStack_flagoff()
             throws Exception {
-        final Inet6Address targetIp =
-                (Inet6Address) InetAddresses.parseNumericAddress(IPV6_ON_LINK_DNS_SERVER);
+        final Inet6Address targetIp = ipv6Addr(IPV6_ON_LINK_DNS_SERVER);
         runIpReachabilityMonitorAddressResolutionTest(IPV6_ON_LINK_DNS_SERVER, targetIp,
                 false /* isIgnoreIncompleteIpv6DnsServerEnabled */,
                 false /* isIgnoreIncompleteIpv6DefaultRouterEnabled */,
@@ -4421,8 +4424,7 @@ public abstract class IpClientIntegrationTestCommon {
     @Test
     public void testIpReachabilityMonitor_ignoreOnLinkIpv6DnsOrganicNudFailure()
             throws Exception {
-        final Inet6Address targetIp =
-                (Inet6Address) InetAddresses.parseNumericAddress(IPV6_ON_LINK_DNS_SERVER);
+        final Inet6Address targetIp = ipv6Addr(IPV6_ON_LINK_DNS_SERVER);
         runIpReachabilityMonitorAddressResolutionTest(IPV6_ON_LINK_DNS_SERVER, targetIp,
                 false /* isIgnoreIncompleteIpv6DnsServerEnabled */,
                 false /* isIgnoreIncompleteIpv6DefaultRouterEnabled */,
@@ -4433,8 +4435,7 @@ public abstract class IpClientIntegrationTestCommon {
     @Test
     public void testIpReachabilityMonitor_ignoreOnLinkIpv6DnsOrganicNudFailure_flagoff()
             throws Exception {
-        final Inet6Address targetIp =
-                (Inet6Address) InetAddresses.parseNumericAddress(IPV6_ON_LINK_DNS_SERVER);
+        final Inet6Address targetIp = ipv6Addr(IPV6_ON_LINK_DNS_SERVER);
         runIpReachabilityMonitorAddressResolutionTest(IPV6_ON_LINK_DNS_SERVER, targetIp,
                 false /* isIgnoreIncompleteIpv6DnsServerEnabled */,
                 false /* isIgnoreIncompleteIpv6DefaultRouterEnabled */,

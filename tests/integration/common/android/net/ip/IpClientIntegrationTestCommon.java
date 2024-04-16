@@ -327,6 +327,16 @@ public abstract class IpClientIntegrationTestCommon {
         String reason();
     }
 
+    /**
+     * Indicates that a test requires to enable the experiment flag that populates the link address
+     * lifetime when receiving RTM_NEWADDR netlink message.
+     */
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target({ElementType.METHOD})
+    private @interface PopulateLinkAddressLifetime {
+        boolean enabled();
+    }
+
     /**** BEGIN signature required test members ****/
     // Do not use unless the test *really* cannot be written to exercise IIpClient without mocks.
     // Tests using the below members must be annotated with @SignatureRequiredTest (otherwise the
@@ -716,9 +726,12 @@ public abstract class IpClientIntegrationTestCommon {
         setFeatureEnabled(NetworkStackUtils.IPCLIENT_DHCPV6_PREFIX_DELEGATION_VERSION,
                 true /* isDhcp6PrefixDelegationEnabled */);
 
-        // Enable populating the IP Link Address lifetime.
+        // Enable populating the IP Link Address lifetime if test case requires.
+        final PopulateLinkAddressLifetime anno =
+                testMethod.getAnnotation(PopulateLinkAddressLifetime.class);
+        final boolean populateLinkAddressLifetime = (anno == null) ? false : anno.enabled();
         setFeatureEnabled(NetworkStackUtils.IPCLIENT_POPULATE_LINK_ADDRESS_LIFETIME_VERSION,
-                true /* enabled */);
+                populateLinkAddressLifetime);
 
         // Disable the experiment flag IP_REACHABILITY_IGNORE_INCOMPLETE_IPV6_DNS_SERVER_VERSION
         // for testIpReachabilityMonitor_incompleteIpv6DnsServerInDualStack_flagoff testcase, given
@@ -4918,6 +4931,7 @@ public abstract class IpClientIntegrationTestCommon {
     }
 
     @Test
+    @PopulateLinkAddressLifetime(enabled = true)
     public void testDhcp6Pd() throws Exception {
         final IpPrefix prefix = new IpPrefix("2001:db8:1::/64");
         prepareDhcp6PdTest();
@@ -5704,6 +5718,7 @@ public abstract class IpClientIntegrationTestCommon {
     }
 
     @Test
+    @PopulateLinkAddressLifetime(enabled = true)
     public void testPopulateLinkAddressLifetime() throws Exception {
         final LinkProperties lp = doDualStackProvisioning();
         final long now = SystemClock.elapsedRealtime();
@@ -5725,6 +5740,7 @@ public abstract class IpClientIntegrationTestCommon {
     }
 
     @Test
+    @PopulateLinkAddressLifetime(enabled = true)
     public void testPopulateLinkAddressLifetime_infiniteLeaseDuration() throws Exception {
         final ProvisioningConfiguration cfg = new ProvisioningConfiguration.Builder()
                 .withoutIPv6()
@@ -5748,6 +5764,7 @@ public abstract class IpClientIntegrationTestCommon {
     }
 
     @Test
+    @PopulateLinkAddressLifetime(enabled = true)
     public void testPopulateLinkAddressLifetime_minimalLeaseDuration() throws Exception {
         final ProvisioningConfiguration cfg = new ProvisioningConfiguration.Builder()
                 .withoutIPv6()
@@ -5774,6 +5791,7 @@ public abstract class IpClientIntegrationTestCommon {
     }
 
     @Test
+    @PopulateLinkAddressLifetime(enabled = true)
     public void testPopulateLinkAddressLifetime_onDhcpRenew() throws Exception {
         final ProvisioningConfiguration cfg = new ProvisioningConfiguration.Builder()
                 .withoutIPv6()

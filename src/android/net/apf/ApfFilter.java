@@ -2147,7 +2147,7 @@ public class ApfFilter implements AndroidPacketFilter {
         }
         if (mIsRunning) {
             // Update data snapshot every time we install a new program
-            mIpClientCallback.startReadPacketFilter();
+            mIpClientCallback.startReadPacketFilter("new program install");
             if (!mIpClientCallback.installPacketFilter(program)) {
                 sendNetworkQuirkMetrics(NetworkQuirkEvent.QE_APF_INSTALL_FAILURE);
             }

@@ -213,6 +213,8 @@ public class IpClient extends StateMachine {
     private final IpProvisioningMetrics mIpProvisioningMetrics = new IpProvisioningMetrics();
     private final NetworkQuirkMetrics mNetworkQuirkMetrics;
 
+    private boolean mHasClatInterface = false;
+
     /**
      * Dump all state machine and connectivity packet logs to the specified writer.
      * @param skippedIfaces Interfaces for which logs should not be dumped.
@@ -994,6 +996,10 @@ public class IpClient extends StateMachine {
                         // becomes tied to more things that 464xlat operation.
                         getHandler().post(() -> {
                             mCallback.setNeighborDiscoveryOffload(add ? false : true);
+                            mHasClatInterface = add;
+                            if (mApfFilter != null) {
+                                mApfFilter.updateClatInterfaceState(add);
+                            }
                         });
                     }
                 },
@@ -2551,6 +2557,7 @@ public class IpClient extends StateMachine {
         }
         apfConfig.shouldHandleLightDoze = mApfShouldHandleLightDoze;
         apfConfig.minMetricsSessionDurationMs = mApfCounterPollingIntervalMs;
+        apfConfig.hasClatInterface = mHasClatInterface;
         return mDependencies.maybeCreateApfFilter(mContext, apfConfig, mInterfaceParams,
                 mCallback, mNetworkQuirkMetrics, mUseNewApfFilter);
     }

@@ -37,8 +37,9 @@ import java.util.List;
  */
 public abstract class BaseApfGenerator {
 
-    public BaseApfGenerator(int mVersion) {
+    public BaseApfGenerator(int mVersion, boolean mDisableCounterRangeCheck) {
         this.mVersion = mVersion;
+        this.mDisableCounterRangeCheck = mDisableCounterRangeCheck;
     }
 
     /**
@@ -681,7 +682,8 @@ public abstract class BaseApfGenerator {
                         upperBound));
     }
 
-    static void checkPassCounterRange(ApfCounterTracker.Counter cnt) {
+    void checkPassCounterRange(ApfCounterTracker.Counter cnt) {
+        if (mDisableCounterRangeCheck) return;
         if (cnt.value() < ApfCounterTracker.MIN_PASS_COUNTER.value()
                 || cnt.value() > ApfCounterTracker.MAX_PASS_COUNTER.value()) {
             throw new IllegalArgumentException(
@@ -691,7 +693,8 @@ public abstract class BaseApfGenerator {
         }
     }
 
-    static void checkDropCounterRange(ApfCounterTracker.Counter cnt) {
+    void checkDropCounterRange(ApfCounterTracker.Counter cnt) {
+        if (mDisableCounterRangeCheck) return;
         if (cnt.value() < ApfCounterTracker.MIN_DROP_COUNTER.value()
                 || cnt.value() > ApfCounterTracker.MAX_DROP_COUNTER.value()) {
             throw new IllegalArgumentException(
@@ -882,4 +885,5 @@ public abstract class BaseApfGenerator {
     private final Instruction mPassLabel = new Instruction(Opcodes.LABEL);
     public final int mVersion;
     public boolean mGenerated;
+    private final boolean mDisableCounterRangeCheck;
 }

@@ -56,7 +56,7 @@ public abstract class BaseApfGenerator {
         // An optional unsigned immediate value can be provided to encode the counter number.
         // If the value is non-zero, the instruction increments the counter.
         // The counter is located (-4 * counter number) bytes from the end of the data region.
-        // It is a U32 big-endian value and is always incremented by 1.
+        // It is a U32 native-endian value and is always incremented by 1.
         // This is more or less equivalent to: lddw R0, -N4; add R0,1; stdw R0, -N4; {pass,drop}
         // e.g. "pass", "pass 1", "drop", "drop 1"
         PASSDROP(0),

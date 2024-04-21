@@ -683,6 +683,15 @@ class ApfV5Test {
                 1, 1, 0, 1, 0, 0,
                 encodeInstruction(21, 1, 0), 47, 1, 9, 1, 2, 3
         ), program)
+
+        gen = ApfV6Generator()
+        gen.addJumpIfOneOf(R0, setOf(0, 128, 256, 65536), DROP_LABEL)
+        gen.addJumpIfNoneOf(R1, setOf(0, 128, 256, 65536), DROP_LABEL)
+        program = gen.generate().skipEmptyData()
+        assertContentEquals(listOf(
+                "0: joneof      r0, DROP, { 0, 128, 256, 65536 }",
+                "20: jnoneof     r1, DROP, { 0, 128, 256, 65536 }"
+        ), ApfJniUtils.disassembleApf(program).map{ it.trim() })
     }
 
     @Test

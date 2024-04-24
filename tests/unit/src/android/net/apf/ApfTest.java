@@ -3812,42 +3812,35 @@ public class ApfTest {
 
     @Test
     public void testFullApfV4ProgramGenerationNatTKeepAliveV4() throws IllegalInstructionException {
-        ApfV4Generator gen = new ApfV4Generator(APF_VERSION_4);
+        ApfV4Generator gen = new ApfV4Generator(APF_VERSION_4, true);
         gen.addLoadImmediate(R1, -4);
         gen.addLoadData(R0, 0);
         gen.addAdd(1);
         gen.addStoreData(R0, 0);
         gen.addLoad16(R0, 12);
-        gen.addLoadImmediate(R1, -108);
-        gen.addJumpIfR0LessThan(0x600, "LABEL_345");
+        gen.addCountAndDropIfR0LessThan(0x600, getCounterEnumFromOffset(-108));
         gen.addLoadImmediate(R1, -112);
-        gen.addJumpIfR0Equals(0x88a2, "LABEL_345");
-        gen.addJumpIfR0Equals(0x88a4, "LABEL_345");
-        gen.addJumpIfR0Equals(0x88b8, "LABEL_345");
-        gen.addJumpIfR0Equals(0x88cd, "LABEL_345");
-        gen.addJumpIfR0Equals(0x88e1, "LABEL_345");
-        gen.addJumpIfR0Equals(0x88e3, "LABEL_345");
+        gen.addJumpIfR0Equals(0x88a2, gen.mCountAndDropLabel);
+        gen.addJumpIfR0Equals(0x88a4, gen.mCountAndDropLabel);
+        gen.addJumpIfR0Equals(0x88b8, gen.mCountAndDropLabel);
+        gen.addJumpIfR0Equals(0x88cd, gen.mCountAndDropLabel);
+        gen.addJumpIfR0Equals(0x88e1, gen.mCountAndDropLabel);
+        gen.addJumpIfR0Equals(0x88e3, gen.mCountAndDropLabel);
         gen.addJumpIfR0NotEquals(0x806, "LABEL_115");
         gen.addLoadImmediate(R0, 14);
-        gen.addLoadImmediate(R1, -36);
-        gen.addJumpIfBytesAtR0NotEqual(hexStringToByteArray("000108000604"), "LABEL_339");
+        gen.addCountAndPassIfBytesAtR0NotEqual(hexStringToByteArray("000108000604"), getCounterEnumFromOffset(-36));
         gen.addLoad16(R0, 20);
         gen.addJumpIfR0Equals(0x1, "LABEL_100");
-        gen.addLoadImmediate(R1, -40);
-        gen.addJumpIfR0NotEquals(0x2, "LABEL_339");
+        gen.addCountAndPassIfR0NotEquals(0x2, getCounterEnumFromOffset(-40));
         gen.addLoad32(R0, 28);
-        gen.addLoadImmediate(R1, -116);
-        gen.addJumpIfR0Equals(0x0, "LABEL_345");
+        gen.addCountAndDropIfR0Equals(0x0, getCounterEnumFromOffset(-116));
         gen.addLoadImmediate(R0, 0);
-        gen.addLoadImmediate(R1, -44);
-        gen.addJumpIfBytesAtR0NotEqual(hexStringToByteArray("ffffffffffff"), "LABEL_339");
+        gen.addCountAndPassIfBytesAtR0NotEqual(hexStringToByteArray("ffffffffffff"), getCounterEnumFromOffset(-44));
 
         gen.defineLabel("LABEL_100");
         gen.addLoadImmediate(R0, 38);
-        gen.addLoadImmediate(R1, -68);
-        gen.addJumpIfBytesAtR0NotEqual(hexStringToByteArray("c0a801be"), "LABEL_345");
-        gen.addLoadImmediate(R1, -8);
-        gen.addJump("LABEL_339");
+        gen.addCountAndDropIfBytesAtR0NotEqual(hexStringToByteArray("c0a801be"), getCounterEnumFromOffset(-68));
+        gen.addCountAndPass(getCounterEnumFromOffset(-8));
 
         gen.defineLabel("LABEL_115");
         gen.addLoad16(R0, 12);
@@ -3862,19 +3855,16 @@ public class ApfTest {
         gen.addLoadImmediate(R0, 50);
         gen.addAddR1ToR0();
         gen.addJumpIfBytesAtR0NotEqual(hexStringToByteArray("ea42226789c0"), "LABEL_157");
-        gen.addLoadImmediate(R1, -12);
-        gen.addJump("LABEL_339");
+        gen.addCountAndPass(getCounterEnumFromOffset(-12));
 
         gen.defineLabel("LABEL_157");
         gen.addLoad8(R0, 30);
         gen.addAnd(240);
-        gen.addLoadImmediate(R1, -84);
-        gen.addJumpIfR0Equals(0xe0, "LABEL_345");
+        gen.addCountAndDropIfR0Equals(0xe0, getCounterEnumFromOffset(-84));
         gen.addLoadImmediate(R1, -76);
         gen.addLoad32(R0, 30);
-        gen.addJumpIfR0Equals(0xffffffff, "LABEL_345");
-        gen.addLoadImmediate(R1, -80);
-        gen.addJumpIfR0Equals(0xc0a801ff, "LABEL_345");
+        gen.addJumpIfR0Equals(0xffffffff, gen.mCountAndDropLabel);
+        gen.addCountAndDropIfR0Equals(0xc0a801ff, getCounterEnumFromOffset(-80));
         gen.addLoad8(R0, 23);
         gen.addJumpIfR0NotEquals(0x11, "LABEL_243");
         gen.addLoadImmediate(R0, 26);
@@ -3891,60 +3881,43 @@ public class ApfTest {
         gen.addJumpIfBytesAtR0NotEqual(hexStringToByteArray("1194ceca"), "LABEL_243");
         gen.addAdd(8);
         gen.addJumpIfBytesAtR0NotEqual(hexStringToByteArray("ff"), "LABEL_243");
-        gen.addLoadImmediate(R1, -128);
-        gen.addJump("LABEL_345");
+        gen.addCountAndDrop(getCounterEnumFromOffset(-128));
 
         gen.defineLabel("LABEL_243");
         gen.addLoadImmediate(R1, -24);
         gen.addLoadImmediate(R0, 0);
-        gen.addJumpIfBytesAtR0NotEqual(hexStringToByteArray("ffffffffffff"), "LABEL_339");
-        gen.addLoadImmediate(R1, -72);
-        gen.addJump("LABEL_345");
-        gen.addLoadImmediate(R1, -16);
-        gen.addJump("LABEL_339");
+        gen.addJumpIfBytesAtR0NotEqual(hexStringToByteArray("ffffffffffff"), gen.mCountAndPassLabel);
+        gen.addCountAndDrop(getCounterEnumFromOffset(-72));
+        gen.addCountAndPass(getCounterEnumFromOffset(-16));
 
         gen.defineLabel("LABEL_263");
         gen.addJumpIfR0Equals(0x86dd, "LABEL_284");
         gen.addLoadImmediate(R0, 0);
-        gen.addLoadImmediate(R1, -48);
-        gen.addJumpIfBytesAtR0NotEqual(hexStringToByteArray("ffffffffffff"), "LABEL_339");
-        gen.addLoadImmediate(R1, -56);
-        gen.addJump("LABEL_345");
+        gen.addCountAndPassIfBytesAtR0NotEqual(hexStringToByteArray("ffffffffffff"), getCounterEnumFromOffset(-48));
+        gen.addCountAndDrop(getCounterEnumFromOffset(-56));
 
         gen.defineLabel("LABEL_284");
         gen.addLoad8(R0, 20);
-        gen.addJumpIfR0Equals(0x0, "LABEL_339");
+        gen.addJumpIfR0Equals(0x0, gen.mCountAndPassLabel);
         gen.addJumpIfR0Equals(0x3a, "LABEL_303");
         gen.addLoadImmediate(R1, -104);
         gen.addLoad8(R0, 38);
-        gen.addJumpIfR0Equals(0xff, "LABEL_345");
-        gen.addLoadImmediate(R1, -32);
-        gen.addJump("LABEL_339");
+        gen.addJumpIfR0Equals(0xff, gen.mCountAndDropLabel);
+        gen.addCountAndPass(getCounterEnumFromOffset(-32));
 
         gen.defineLabel("LABEL_303");
         gen.addLoad8(R0, 54);
         gen.addLoadImmediate(R1, -88);
-        gen.addJumpIfR0Equals(0x85, "LABEL_345");
+        gen.addJumpIfR0Equals(0x85, gen.mCountAndDropLabel);
         gen.addJumpIfR0NotEquals(0x88, "LABEL_337");
         gen.addLoadImmediate(R0, 38);
         gen.addJumpIfBytesAtR0NotEqual(hexStringToByteArray("ff0200000000000000000000000000"), "LABEL_337");
-        gen.addLoadImmediate(R1, -92);
-        gen.addJump("LABEL_345");
+        gen.addCountAndDrop(getCounterEnumFromOffset(-92));
 
         gen.defineLabel("LABEL_337");
         gen.addLoadImmediate(R1, -28);
 
-        gen.defineLabel("LABEL_339");
-        gen.addLoadData(R0, 0);
-        gen.addAdd(1);
-        gen.addStoreData(R0, 0);
-        gen.addJump(PASS_LABEL);
-
-        gen.defineLabel("LABEL_345");
-        gen.addLoadData(R0, 0);
-        gen.addAdd(1);
-        gen.addStoreData(R0, 0);
-        gen.addJump(DROP_LABEL);
+        gen.addCountTrampoline();
 
         byte[] program = gen.generate();
         final String programString = toHexString(program).toLowerCase();

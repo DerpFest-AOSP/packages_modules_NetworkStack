@@ -40,6 +40,7 @@ import android.net.apf.BaseApfGenerator.APF_VERSION_6
 import android.net.apf.BaseApfGenerator.DROP_LABEL
 import android.net.apf.BaseApfGenerator.IllegalInstructionException
 import android.net.apf.BaseApfGenerator.MemorySlot
+import android.net.apf.BaseApfGenerator.PASS_LABEL
 import android.net.apf.BaseApfGenerator.Register.R0
 import android.net.apf.BaseApfGenerator.Register.R1
 import android.os.Build
@@ -301,6 +302,18 @@ class ApfV5Test {
         }
         assertFailsWith<IllegalArgumentException> {
             gen.addWrite32(byteArrayOf())
+        }
+        assertFailsWith<IllegalArgumentException> {
+            gen.addJumpIfOneOf(R0, setOf(), PASS_LABEL)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            gen.addJumpIfOneOf(R0, setOf(-1, 1), PASS_LABEL)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            gen.addJumpIfOneOf(R0, setOf(4294967296L, 1), PASS_LABEL)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            gen.addJumpIfOneOf(R0, List(34) { (it + 1).toLong() }.toSet(), PASS_LABEL)
         }
 
         val v4gen = ApfV4Generator(APF_VERSION_4)
@@ -662,6 +675,20 @@ class ApfV5Test {
                 "0: jdnsanesafe r0, DROP, (1)A(1)B(0)(0)",
                 "9: jdnsaeqsafe r0, DROP, (1)A(1)B(0)(0)"
         ), ApfJniUtils.disassembleApf(program).map{ it.trim() })
+
+        gen = ApfV6Generator()
+        gen.addJumpIfOneOf(R1, List(32) { (it + 1).toLong() }.toSet(), DROP_LABEL)
+        gen.addJumpIfOneOf(R0, setOf(0, 257, 65536), DROP_LABEL)
+        gen.addJumpIfNoneOf(R0, setOf(1, 2, 3), DROP_LABEL)
+        program = gen.generate().skipEmptyData()
+        assertContentEquals(byteArrayOf(
+                encodeInstruction(21, 1, 1), 47, 24, -16, 1, 2, 3, 4, 5, 6,
+                7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
+                29, 30, 31, 32,
+                encodeInstruction(21, 1, 0), 47, 8, 14, 0, 0, 0, 0, 0, 0,
+                1, 1, 0, 1, 0, 0,
+                encodeInstruction(21, 1, 0), 47, 1, 9, 1, 2, 3
+        ), program)
     }
 
     @Test
@@ -1254,6 +1281,37 @@ class ApfV5Test {
         val counterBytes = intArrayOf(0xff, 0, 0, 0, 0x78, 0x56, 0x34, 0x12)
                 .map { it.toByte() }.toByteArray()
         assertEquals(0xff, ApfCounterTracker.getCounterValue(counterBytes, Counter.TOTAL_PACKETS))
+    }
+
+    @Test
+    fun testJumpOneOf() {
+        var program = ApfV6Generator()
+                .addLoadImmediate(R0, 255)
+                .addJumpIfOneOf(R0, setOf(1, 2, 3, 128, 255), DROP_LABEL)
+                .addPass()
+                .generate()
+        assertDrop(APF_VERSION_6, program, testPacket)
+
+        program = ApfV6Generator()
+                .addLoadImmediate(R0, 254)
+                .addJumpIfOneOf(R0, setOf(1, 2, 3, 128, 255), DROP_LABEL)
+                .addPass()
+                .generate()
+        assertPass(APF_VERSION_6, program, testPacket)
+
+        program = ApfV6Generator()
+                .addLoadImmediate(R0, 254)
+                .addJumpIfNoneOf(R0, setOf(1, 2, 3, 128, 255), DROP_LABEL)
+                .addPass()
+                .generate()
+        assertDrop(APF_VERSION_6, program, testPacket)
+
+        program = ApfV6Generator()
+                .addLoadImmediate(R0, 255)
+                .addJumpIfNoneOf(R0, setOf(1, 2, 3, 128, 255), DROP_LABEL)
+                .addPass()
+                .generate()
+        assertPass(APF_VERSION_6, program, testPacket)
     }
 
     // The APFv6 code path is only turned on in V+

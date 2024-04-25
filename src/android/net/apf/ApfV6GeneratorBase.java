@@ -21,7 +21,6 @@ import static android.net.apf.BaseApfGenerator.Register.R1;
 
 import androidx.annotation.NonNull;
 
-import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.HexDump;
 
 import java.util.Collections;
@@ -471,7 +470,7 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
 
     private Type addJumpIfOneOfHelper(Register reg, @NonNull Set<Long> values,
             boolean jumpOnMatch, @NonNull String tgt) {
-        if (CollectionUtils.isEmpty(values) || values.size() > 33 || values.size() < 2) {
+        if (values == null || values.size() < 2 || values.size() > 33)  {
             throw new IllegalArgumentException(
                     "size of values set must be >= 2 and <= 33, current size: " + values.size());
         }

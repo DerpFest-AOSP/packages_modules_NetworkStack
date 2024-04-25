@@ -417,8 +417,9 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
      * packet at an offset specified by register0 match {@code bytes}.
      * R=1 means check for equal.
      */
-    public final Type addJumpIfBytesAtR0Equal(byte[] bytes, String tgt)
+    public final Type addJumpIfBytesAtR0Equal(@NonNull byte[] bytes, String tgt)
             throws IllegalInstructionException {
+        validateBytes(bytes);
         return append(new Instruction(Opcodes.JNEBS, R1).addUnsigned(
                 bytes.length).setTargetLabel(tgt).setBytesImm(bytes));
     }

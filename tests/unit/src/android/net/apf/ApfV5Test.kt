@@ -270,6 +270,12 @@ class ApfV5Test {
                 byteArrayOf(1, 'A'.code.toByte(), 1, 'B'.code.toByte()),
                 ApfV4Generator.DROP_LABEL
         ) }
+        assertFailsWith<IllegalArgumentException> {
+            gen.addJumpIfBytesAtR0Equal(ByteArray(2048) { 1 }, DROP_LABEL)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            gen.addJumpIfBytesAtR0NotEqual(ByteArray(2048) { 1 }, DROP_LABEL)
+        }
         assertFailsWith<IllegalArgumentException> { gen.addCountAndDrop(PASSED_ARP) }
         assertFailsWith<IllegalArgumentException> { gen.addCountAndPass(DROPPED_ETH_BROADCAST) }
         assertFailsWith<IllegalArgumentException> {

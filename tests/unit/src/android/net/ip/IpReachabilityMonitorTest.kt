@@ -65,6 +65,11 @@ import com.android.networkstack.util.NetworkStackUtils.IP_REACHABILITY_ROUTER_MA
 import com.android.testutils.makeNewNeighMessage
 import com.android.testutils.waitForIdle
 import java.io.FileDescriptor
+import java.lang.annotation.ElementType
+import java.lang.annotation.Repeatable
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 import java.net.Inet4Address
 import java.net.Inet6Address
 import java.net.InetAddress
@@ -208,6 +213,15 @@ class IpReachabilityMonitorTest {
     private lateinit var reachabilityMonitor: IpReachabilityMonitor
     private lateinit var neighborMonitor: TestIpNeighborMonitor
 
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.METHOD)
+    @Repeatable(FlagArray::class)
+    annotation class Flag(val name: String, val enabled: Boolean)
+
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.METHOD)
+    annotation class FlagArray(val value: Array<Flag>)
+
     /**
      * A version of [IpNeighborMonitor] that overrides packet reading from a socket, and instead
      * allows the test to enqueue test packets via [enqueuePacket].
@@ -286,20 +300,11 @@ class IpReachabilityMonitorTest {
             eq(IP_REACHABILITY_ROUTER_MAC_CHANGE_FAILURE_ONLY_AFTER_ROAM_VERSION)
         )
 
-        val ignoreOrganicNudFailureTestList = listOf(
-                "testLoseProvisioning_ignoreOrganicIpv4DnsLost",
-                "testLoseProvisioning_ignoreOrganicIpv6DnsLost",
-                "testLoseProvisioning_ignoreOrganicIpv4GatewayLost",
-                "testLoseProvisioning_ignoreOrganicIpv6GatewayLost"
-        )
-        // The experiment flag: IP_REACHABILITY_IGNORE_ORGANIC_NUD_FAILURE_VERSION is read at
-        // the IpReachabilityMonitor constructor, so we have to set the value before initializing
-        // an IpReachabilityMonitor instance.
-        if (ignoreOrganicNudFailureTestList.contains(mTestName.methodName)) {
-            doReturn(true).`when`(dependencies).isFeatureEnabled(
-                any(),
-                eq(IP_REACHABILITY_IGNORE_ORGANIC_NUD_FAILURE_VERSION)
-            )
+        // Set flags based on test method annotations.
+        var testMethod = this::class.java.getMethod(mTestName.methodName)
+        val flags = testMethod.getAnnotationsByType(Flag::class.java)
+        for (flag in flags) {
+            doReturn(flag.enabled).`when`(dependencies).isFeatureEnabled(any(), eq(flag.name))
         }
 
         val monitorFuture = CompletableFuture<IpReachabilityMonitor>()
@@ -459,6 +464,7 @@ class IpReachabilityMonitorTest {
     }
 
     @Test
+    @Flag(name = IP_REACHABILITY_IGNORE_ORGANIC_NUD_FAILURE_VERSION, enabled = true)
     fun testLoseProvisioning_ignoreOrganicIpv4DnsLost() {
         runLoseProvisioningTest(
             TEST_LINK_PROPERTIES,
@@ -469,6 +475,7 @@ class IpReachabilityMonitorTest {
     }
 
     @Test
+    @Flag(name = IP_REACHABILITY_IGNORE_ORGANIC_NUD_FAILURE_VERSION, enabled = true)
     fun testLoseProvisioning_ignoreOrganicIpv6DnsLost() {
         runLoseProvisioningTest(
             TEST_LINK_PROPERTIES,
@@ -479,6 +486,7 @@ class IpReachabilityMonitorTest {
     }
 
     @Test
+    @Flag(name = IP_REACHABILITY_IGNORE_ORGANIC_NUD_FAILURE_VERSION, enabled = true)
     fun testLoseProvisioning_ignoreOrganicIpv4GatewayLost() {
         runLoseProvisioningTest(
             TEST_LINK_PROPERTIES,
@@ -489,6 +497,7 @@ class IpReachabilityMonitorTest {
     }
 
     @Test
+    @Flag(name = IP_REACHABILITY_IGNORE_ORGANIC_NUD_FAILURE_VERSION, enabled = true)
     fun testLoseProvisioning_ignoreOrganicIpv6GatewayLost() {
         runLoseProvisioningTest(
             TEST_LINK_PROPERTIES,

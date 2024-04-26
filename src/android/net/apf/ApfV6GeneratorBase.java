@@ -423,7 +423,7 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
     public final Type addJumpIfBytesAtR0Equal(@NonNull byte[] bytes, String tgt)
             throws IllegalInstructionException {
         validateBytes(bytes);
-        return append(new Instruction(Opcodes.JNEBS, R1).addUnsigned(
+        return append(new Instruction(Opcodes.JBSMATCH, R1).addUnsigned(
                 bytes.length).setTargetLabel(tgt).setBytesImm(bytes));
     }
 

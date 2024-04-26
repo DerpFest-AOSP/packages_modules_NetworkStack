@@ -479,7 +479,9 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
         final Long min = Collections.min(values);
         checkRange("max value in set", max, 0, 4294967295L);
         checkRange("min value in set", min, 0, 4294967295L);
-        final int maxImmSize = Math.max(0, calculateImmSize(max.intValue(), false));
+        // Since sets are always of size > 1 and in range [0, uint32_max], max is guaranteed > 0,
+        // so maxImmSize can never be 0.
+        final int maxImmSize = calculateImmSize(max.intValue(), false);
 
         // imm3(u8): top 5 bits - number of following u8/be16/be32 values - 2
         // middle 2 bits - 1..4 length of immediates - 1

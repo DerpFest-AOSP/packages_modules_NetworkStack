@@ -15,8 +15,6 @@
  */
 package android.net.apf;
 
-import static android.net.apf.BaseApfGenerator.Register.R1;
-
 import com.android.internal.annotations.VisibleForTesting;
 
 import java.util.Objects;

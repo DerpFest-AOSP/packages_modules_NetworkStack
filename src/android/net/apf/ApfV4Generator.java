@@ -224,6 +224,12 @@ public final class ApfV4Generator extends ApfV4GeneratorBase<ApfV4Generator> {
                 .addJump(DROP_LABEL);
     }
 
+    /**
+     * This function is no-op in APFv4
+     */
+    @Override
+    void updateExceptionBufferSize(int programSize) { }
+
     private ApfV4Generator maybeAddLoadCounterOffset(Register reg, ApfCounterTracker.Counter cnt) {
         if (mVersion < 4) return self();
         return addLoadImmediate(reg, cnt.offset());

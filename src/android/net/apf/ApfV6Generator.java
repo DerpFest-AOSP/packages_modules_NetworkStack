@@ -35,9 +35,7 @@ public final class ApfV6Generator extends ApfV6GeneratorBase<ApfV6Generator> {
     }
 
     /**
-     * Creates an ApfV6Generator instance which is able to emit instructions for the specified
-     * {@code version} of the APF interpreter. Throws {@code IllegalInstructionException} if
-     * the requested version is unsupported.
+     * Creates an ApfV6Generator instance which is able to emit instructions for APFv6.
      */
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
     public ApfV6Generator() throws IllegalInstructionException {
@@ -46,9 +44,7 @@ public final class ApfV6Generator extends ApfV6GeneratorBase<ApfV6Generator> {
     }
 
     /**
-     * Creates an ApfV6Generator instance which is able to emit instructions for the specified
-     * {@code version} of the APF interpreter. Throws {@code IllegalInstructionException} if
-     * the requested version is unsupported.
+     * Creates an ApfV6Generator instance which is able to emit instructions APFv6.
      * Initializes the data region with {@code bytes}.
      */
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)

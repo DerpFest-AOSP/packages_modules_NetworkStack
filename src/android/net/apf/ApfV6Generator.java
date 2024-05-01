@@ -35,7 +35,6 @@ public final class ApfV6Generator extends ApfV6GeneratorBase<ApfV6Generator> {
     /**
      * Creates an ApfV6Generator instance which emits instructions for APFv6.
      */
-    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
     public ApfV6Generator(int maximumApfProgramSize) throws IllegalInstructionException {
         this(new byte[0], maximumApfProgramSize);
     }

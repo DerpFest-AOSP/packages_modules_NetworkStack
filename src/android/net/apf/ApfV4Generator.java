@@ -15,6 +15,7 @@
  */
 package android.net.apf;
 
+import static android.net.apf.BaseApfGenerator.Rbit.Rbit1;
 import static android.net.apf.BaseApfGenerator.Register.R0;
 import static android.net.apf.BaseApfGenerator.Register.R1;
 
@@ -73,8 +74,8 @@ public final class ApfV4Generator extends ApfV4GeneratorBase<ApfV4Generator> {
     }
 
     @Override
-    void addArithR1(Opcodes opcode) {
-        append(new Instruction(opcode, R1));
+    void addR0ArithR1(Opcodes opcode) {
+        append(new Instruction(opcode, Rbit1));  // APFv2/4: R0 op= R1
     }
 
     /**

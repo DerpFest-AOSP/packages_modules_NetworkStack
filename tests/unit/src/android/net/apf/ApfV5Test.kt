@@ -76,11 +76,11 @@ import org.mockito.Mockito
 import org.mockito.MockitoAnnotations
 
 /**
- * Tests for APF instructions.
+ * Tests for APFv6 specific instructions.
  */
 @RunWith(DevSdkIgnoreRunner::class)
 @SmallTest
-class ApfTest {
+class ApfV5Test {
 
     @get:Rule
     val ignoreRule = DevSdkIgnoreRule()

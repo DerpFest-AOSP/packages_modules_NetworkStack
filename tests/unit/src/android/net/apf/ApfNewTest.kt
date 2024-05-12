@@ -891,11 +891,15 @@ class ApfNewTest {
     }
 
     @Test
-    fun testCountAndPassDropCompareR0() {
+    fun testV4CountAndPassDropCompareR0() {
         doTestCountAndPassDropCompareR0(
                 { mutableMapOf() },
                 { ApfV4Generator(APF_VERSION_4) }
         )
+    }
+
+    @Test
+    fun testV6CountAndPassDropCompareR0() {
         doTestCountAndPassDropCompareR0(
                 { mutableMapOf(Counter.TOTAL_PACKETS to 1) },
                 { ApfV6Generator(defaultMaximumApfProgramSize) }

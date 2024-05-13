@@ -20,7 +20,7 @@ import static android.net.apf.BaseApfGenerator.Rbit.Rbit1;
 import static android.net.apf.BaseApfGenerator.Register.R0;
 import static android.net.apf.BaseApfGenerator.Register.R1;
 
-import androidx.annotation.NonNull;
+import android.annotation.NonNull;
 
 import com.android.net.module.util.HexDump;
 

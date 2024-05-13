@@ -20,7 +20,7 @@ import static android.net.apf.BaseApfGenerator.Rbit.Rbit0;
 import static android.net.apf.BaseApfGenerator.Rbit.Rbit1;
 import static android.net.apf.BaseApfGenerator.Register.R0;
 
-import androidx.annotation.NonNull;
+import android.annotation.NonNull;
 
 import com.android.net.module.util.ByteUtils;
 import com.android.net.module.util.CollectionUtils;

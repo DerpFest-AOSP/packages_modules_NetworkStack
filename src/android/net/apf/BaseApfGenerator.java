@@ -875,6 +875,9 @@ public abstract class BaseApfGenerator {
     public static final int MEMORY_SLOTS = 16;
 
     public enum MemorySlot {
+        /**
+         * These slots start with value 0 and are unused.
+         */
         SLOT_0(0),
         SLOT_1(1),
         SLOT_2(2),
@@ -884,7 +887,21 @@ public abstract class BaseApfGenerator {
         SLOT_6(6),
         SLOT_7(7),
 
+        /**
+         * First memory slot containing prefilled (ie. non-zero) values.
+         * Can be used in range comparisons to determine if memory slot index
+         * is within prefilled slots.
+         */
+        FIRST_PREFILLED(8),
+
+        /**
+         * Slot #8 is used for the APFv6+ version.
+         */
         APF_VERSION(8),
+
+        /**
+         * Slot #9 is used for the filter age in 16384ths of a second (APFv6+).
+         */
         FILTER_AGE_16384THS(9),
 
         /**
@@ -892,67 +909,36 @@ public abstract class BaseApfGenerator {
          */
         TX_BUFFER_OUTPUT_POINTER(10),
 
+        /**
+         * Slot #11 is used for the program byte code size (APFv2+).
+         */
         PROGRAM_SIZE(11),
+
+        /**
+         * Slot #12 is used for the total RAM length.
+         */
         RAM_LEN(12),
 
         /**
-         * Memory slot number that is prefilled with the IPv4 header length.
-         * Note that this memory slot may be overwritten by a program that
-         * executes stores to this memory slot. This must be kept in sync with
-         * the APF interpreter.
+         * Slot #13 is the IPv4 header length (in bytes).
          */
         IPV4_HEADER_SIZE(13),
 
         /**
-         * Memory slot number that is prefilled with the size of the packet being filtered in bytes.
-         * Note that this memory slot may be overwritten by a program that
-         * executes stores to this memory slot. This must be kept in sync with the APF interpreter.
+         * Slot #14 is the size of the packet being filtered in bytes.
          */
         PACKET_SIZE(14),
 
         /**
-         * Memory slot number that is prefilled with the age of the filter in seconds.
-         * The age of the filter is the time since the filter was installed until now.
-         * Note that this memory slot may be overwritten by a program that
-         * executes stores to this memory slot.
-         * This must be kept in sync with the APF interpreter.
+         * Slot #15 is the age of the filter (time since filter was installed
+         * till now) in seconds.
          */
-        FILTER_AGE_SECONDS(15),
-
-        /**
-         * First memory slot containing prefilled values. Can be used in range comparisons
-         * to determine if memory slot index is within prefilled slots.
-         */
-        FIRST_PREFILLED(8),
-
-        /**
-         * Last memory slot containing prefilled values. Can be used in range comparisons
-         * to determine if memory slot index is within prefilled slots.
-         */
-        LAST_PREFILLED(15);
+        FILTER_AGE_SECONDS(15);
 
         public final int value;
 
         MemorySlot(int value) {
             this.value = value;
-        }
-
-        /**
-         * Bpf2Apf.java needs to create MemorySlot by index
-         */
-        public static MemorySlot byIndex(int value) {
-            switch (value) {
-                case 0: return SLOT_0;
-                case 1: return SLOT_1;
-                case 2: return SLOT_2;
-                case 3: return SLOT_3;
-                case 4: return SLOT_4;
-                case 5: return SLOT_5;
-                case 6: return SLOT_6;
-                case 7: return SLOT_7;
-            }
-            throw new IllegalArgumentException(
-                    String.format("Memory slot %d not in range 0..7", value));
         }
     }
 

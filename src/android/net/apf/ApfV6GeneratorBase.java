@@ -608,7 +608,6 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
     @Override
     public final Type addCountAndDropIfR0Equals(long val, ApfCounterTracker.Counter cnt)
             throws IllegalInstructionException {
-        checkDropCounterRange(cnt);
         final String tgt = getUniqueLabel();
         return addJumpIfR0NotEquals(val, tgt).addCountAndDrop(cnt).defineLabel(tgt);
     }
@@ -616,7 +615,6 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
     @Override
     public final Type addCountAndPassIfR0Equals(long val, ApfCounterTracker.Counter cnt)
             throws IllegalInstructionException {
-        checkPassCounterRange(cnt);
         final String tgt = getUniqueLabel();
         return addJumpIfR0NotEquals(val, tgt).addCountAndPass(cnt).defineLabel(tgt);
     }
@@ -624,7 +622,6 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
     @Override
     public final Type addCountAndDropIfR0NotEquals(long val, ApfCounterTracker.Counter cnt)
             throws IllegalInstructionException {
-        checkDropCounterRange(cnt);
         final String tgt = getUniqueLabel();
         return addJumpIfR0Equals(val, tgt).addCountAndDrop(cnt).defineLabel(tgt);
     }
@@ -632,7 +629,6 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
     @Override
     public final Type addCountAndPassIfR0NotEquals(long val, ApfCounterTracker.Counter cnt)
             throws IllegalInstructionException {
-        checkPassCounterRange(cnt);
         final String tgt = getUniqueLabel();
         return addJumpIfR0Equals(val, tgt).addCountAndPass(cnt).defineLabel(tgt);
     }
@@ -640,7 +636,6 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
     @Override
     public Type addCountAndDropIfR0AnyBitsSet(long val, ApfCounterTracker.Counter cnt)
             throws IllegalInstructionException {
-        checkDropCounterRange(cnt);
         final String countAndDropLabel = getUniqueLabel();
         final String skipLabel = getUniqueLabel();
         return addJumpIfR0AnyBitsSet(val, countAndDropLabel)
@@ -653,7 +648,6 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
     @Override
     public Type addCountAndPassIfR0AnyBitsSet(long val, ApfCounterTracker.Counter cnt)
             throws IllegalInstructionException {
-        checkPassCounterRange(cnt);
         final String countAndPassLabel = getUniqueLabel();
         final String skipLabel = getUniqueLabel();
         return addJumpIfR0AnyBitsSet(val, countAndPassLabel)
@@ -666,7 +660,6 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
     @Override
     public final Type addCountAndDropIfR0LessThan(long val, ApfCounterTracker.Counter cnt)
             throws IllegalInstructionException {
-        checkDropCounterRange(cnt);
         if (val <= 0) {
             throw new IllegalArgumentException("val must > 0, current val: " + val);
         }
@@ -677,7 +670,6 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
     @Override
     public final Type addCountAndPassIfR0LessThan(long val, ApfCounterTracker.Counter cnt)
             throws IllegalInstructionException {
-        checkPassCounterRange(cnt);
         if (val <= 0) {
             throw new IllegalArgumentException("val must > 0, current val: " + val);
         }
@@ -688,7 +680,6 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
     @Override
     public final Type addCountAndDropIfBytesAtR0NotEqual(byte[] bytes,
             ApfCounterTracker.Counter cnt) throws IllegalInstructionException {
-        checkDropCounterRange(cnt);
         final String tgt = getUniqueLabel();
         return addJumpIfBytesAtR0Equal(bytes, tgt).addCountAndDrop(cnt).defineLabel(tgt);
     }
@@ -696,7 +687,6 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
     @Override
     public final Type addCountAndPassIfBytesAtR0NotEqual(byte[] bytes,
             ApfCounterTracker.Counter cnt) throws IllegalInstructionException {
-        checkPassCounterRange(cnt);
         final String tgt = getUniqueLabel();
         return addJumpIfBytesAtR0Equal(bytes, tgt).addCountAndPass(cnt).defineLabel(tgt);
     }
@@ -704,7 +694,6 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
     @Override
     public Type addCountAndPassIfR0IsOneOf(@NonNull Set<Long> values,
             ApfCounterTracker.Counter cnt) throws IllegalInstructionException {
-        checkPassCounterRange(cnt);
         final String tgt = getUniqueLabel();
         return addJumpIfNoneOf(R0, values, tgt).addCountAndPass(cnt).defineLabel(tgt);
     }
@@ -712,7 +701,6 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
     @Override
     public Type addCountAndDropIfR0IsOneOf(@NonNull Set<Long> values,
             ApfCounterTracker.Counter cnt) throws IllegalInstructionException {
-        checkDropCounterRange(cnt);
         final String tgt = getUniqueLabel();
         return addJumpIfNoneOf(R0, values, tgt).addCountAndDrop(cnt).defineLabel(tgt);
     }
@@ -720,7 +708,6 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
     @Override
     public Type addCountAndPassIfR0IsNoneOf(@NonNull Set<Long> values,
             ApfCounterTracker.Counter cnt) throws IllegalInstructionException {
-        checkPassCounterRange(cnt);
         final String tgt = getUniqueLabel();
         return addJumpIfOneOf(R0, values, tgt).addCountAndPass(cnt).defineLabel(tgt);
     }
@@ -729,7 +716,6 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
     public Type addCountAndDropIfBytesAtR0EqualsAnyOf(@NonNull List<byte[]> bytesList,
             ApfCounterTracker.Counter cnt)
             throws IllegalInstructionException {
-        checkDropCounterRange(cnt);
         final String tgt = getUniqueLabel();
         return addJumpIfBytesAtR0EqualNoneOf(bytesList, tgt).addCountAndDrop(cnt).defineLabel(tgt);
     }
@@ -738,7 +724,6 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
     public Type addCountAndPassIfBytesAtR0EqualsAnyOf(@NonNull List<byte[]> bytesList,
             ApfCounterTracker.Counter cnt)
             throws IllegalInstructionException {
-        checkPassCounterRange(cnt);
         final String tgt = getUniqueLabel();
         return addJumpIfBytesAtR0EqualNoneOf(bytesList, tgt).addCountAndPass(cnt).defineLabel(tgt);
     }
@@ -747,7 +732,6 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
     public Type addCountAndDropIfBytesAtR0EqualsNoneOf(@NonNull List<byte[]> bytesList,
             ApfCounterTracker.Counter cnt)
             throws IllegalInstructionException {
-        checkDropCounterRange(cnt);
         final String tgt = getUniqueLabel();
         return addJumpIfBytesAtR0EqualsAnyOf(bytesList, tgt).addCountAndDrop(cnt).defineLabel(tgt);
     }
@@ -756,7 +740,6 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
     public Type addCountAndPassIfBytesAtR0EqualsNoneOf(@NonNull List<byte[]> bytesList,
             ApfCounterTracker.Counter cnt)
             throws IllegalInstructionException {
-        checkPassCounterRange(cnt);
         final String tgt = getUniqueLabel();
         return addJumpIfBytesAtR0EqualsAnyOf(bytesList, tgt).addCountAndPass(cnt).defineLabel(tgt);
     }
@@ -764,7 +747,6 @@ public abstract class ApfV6GeneratorBase<Type extends ApfV6GeneratorBase<Type>> 
     @Override
     public Type addCountAndDropIfR0IsNoneOf(@NonNull Set<Long> values,
             ApfCounterTracker.Counter cnt) throws IllegalInstructionException {
-        checkDropCounterRange(cnt);
         final String tgt = getUniqueLabel();
         return addJumpIfOneOf(R0, values, tgt).addCountAndDrop(cnt).defineLabel(tgt);
     }

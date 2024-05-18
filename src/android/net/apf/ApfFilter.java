@@ -2040,9 +2040,12 @@ public class ApfFilter implements AndroidPacketFilter {
         }
 
         // Handle ether-type black list
-        for (int p : mEthTypeBlackList) {
-            // TODO: Refactorings increased APFv4 code size; optimize for reduction.
-            gen.addCountAndDropIfR0Equals(p, Counter.DROPPED_ETHERTYPE_DENYLISTED);
+        if (mEthTypeBlackList.length > 0) {
+            final Set<Long> deniedEtherTypes = new ArraySet<>();
+            for (int p : mEthTypeBlackList) {
+                deniedEtherTypes.add((long) p);
+            }
+            gen.addCountAndDropIfR0IsOneOf(deniedEtherTypes, Counter.DROPPED_ETHERTYPE_DENYLISTED);
         }
 
         // Add ARP filters:

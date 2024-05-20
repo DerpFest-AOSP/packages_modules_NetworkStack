@@ -15,6 +15,8 @@
  */
 package android.net.apf;
 
+import android.annotation.NonNull;
+import android.net.MacAddress;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -36,6 +38,8 @@ public final class ProcfsParsingUtils {
 
     private static final String IPV6_CONF_PATH = "/proc/sys/net/ipv6/conf/";
     private static final String IPV6_ANYCAST_PATH = "/proc/net/anycast6";
+    private static final String ETHER_MCAST_PATH = "/proc/net/dev_mcast";
+    private static final String IPV6_MCAST_PATH = "/proc/net/igmp6";
 
     private ProcfsParsingUtils() {
     }
@@ -116,6 +120,59 @@ public final class ProcfsParsingUtils {
     }
 
     /**
+     * Parses Ethernet multicast MAC addresses with a specific interface from a list of strings.
+     *
+     * @param lines A list of strings, each containing interface and MAC address information.
+     * @param ifname The name of the network interface for which to extract multicast addresses.
+     * @return A list of MacAddress objects representing the parsed multicast addresses.
+     */
+    @VisibleForTesting
+    public static List<MacAddress> parseEtherMulticastAddresses(
+            @NonNull List<String> lines, @NonNull String ifname) {
+        final List<MacAddress> addresses = new ArrayList<>();
+        for (String line: lines) {
+            final String[] fields = line.split("\\s+");
+            if (!fields[1].equals(ifname)) {
+                continue;
+            }
+
+            final byte[] addr = HexDump.hexStringToByteArray(fields[4]);
+            addresses.add(MacAddress.fromBytes(addr));
+        }
+
+        return addresses;
+    }
+
+    /**
+     * Parses IPv6 multicast addresses associated with a specific interface from a list of strings.
+     *
+     * @param lines A list of strings, each containing interface and IPv6 address information.
+     * @param ifname The name of the network interface for which to extract multicast addresses.
+     * @return A list of Inet6Address objects representing the parsed IPv6 multicast addresses.
+     *         If an error occurs during parsing, an empty list is returned.
+     */
+    @VisibleForTesting
+    public static List<Inet6Address> parseIPv6MulticastAddresses(
+            @NonNull List<String> lines, @NonNull String ifname) {
+        final List<Inet6Address> addresses = new ArrayList<>();
+        try {
+            for (String line: lines) {
+                final String[] fields = line.split("\\s+");
+                if (!fields[1].equals(ifname)) {
+                    continue;
+                }
+
+                final byte[] addr = HexDump.hexStringToByteArray(fields[2]);
+                addresses.add((Inet6Address) InetAddress.getByAddress(addr));
+            }
+        } catch (UnknownHostException e) {
+            Log.wtf(TAG, "failed to convert to Inet6Address.", e);
+            addresses.clear();
+        }
+
+        return addresses;
+    }
+    /**
      * Returns the traffic class for the specified interface.
      * The function loads the existing traffic class from the file
      * `/proc/sys/net/ipv6/conf/{ifname}/ndisc_tclass`. If the file does not exist, the
@@ -138,8 +195,37 @@ public final class ProcfsParsingUtils {
      * @param ifname The name of the interface.
      * @return The IPv6 anycast address for the interface.
      */
-    public static Inet6Address getAnycast6Address(final String ifname) {
+    public static Inet6Address getAnycast6Address(@NonNull String ifname) {
         final List<String> lines = readFile(IPV6_ANYCAST_PATH);
         return parseAnycast6Address(lines, ifname);
+    }
+
+    /**
+     * The function loads the existing Ethernet multicast addresses from
+     * the file `/proc/net/dev_mcast`.
+     * If the file does not exist or the interface is not found, the function returns empty list.
+     *
+     * @param ifname The name of the interface.
+     * @return A list of MacAddress objects representing the multicast addresses
+     *         found for the interface.
+     *         If the file cannot be read or there are no addresses, an empty list is returned.
+     */
+    public static List<MacAddress> getEtherMulticastAddresses(@NonNull String ifname) {
+        final List<String> lines = readFile(ETHER_MCAST_PATH);
+        return parseEtherMulticastAddresses(lines, ifname);
+    }
+
+    /**
+     * The function loads the existing IPv6 multicast addresses from the file `/proc/net/igmp6`.
+     * If the file does not exist or the interface is not found, the function returns empty list.
+     *
+     * @param ifname The name of the network interface to query.
+     * @return A list of Inet6Address objects representing the IPv6 multicast addresses
+     *         found for the interface.
+     *         If the file cannot be read or there are no addresses, an empty list is returned.
+     */
+    public static List<Inet6Address> getIpv6MulticastAddresses(@NonNull String ifname) {
+        final List<String> lines = readFile(IPV6_MCAST_PATH);
+        return parseIPv6MulticastAddresses(lines, ifname);
     }
 }

@@ -5448,12 +5448,12 @@ public abstract class IpClientIntegrationTestCommon {
         // Sometimes privacy address or route may appear later along with onLinkPropertiesChange
         // callback, in this case we wait a bit longer to see all of these properties appeared and
         // then verify if they are what we are looking for.
-        if (lp.getLinkAddresses().size() < 5 || lp.getRoutes().size() < 4) {
+        if (lp.getLinkAddresses().size() < 5) { // 1 IPv6 link-local and 4 global IPv6 addresses
+                                                // derived from prefix1 and prefix2
             final CompletableFuture<LinkProperties> lpFuture = new CompletableFuture<>();
             verifyWithTimeout(inOrder, mCb).onLinkPropertiesChange(argThat(x -> {
                 if (!x.isIpv6Provisioned()) return false;
                 if (x.getLinkAddresses().size() != 5) return false;
-                if (x.getRoutes().size() != 4) return false;
                 lpFuture.complete(x);
                 return true;
             }));

@@ -65,7 +65,6 @@ import com.android.networkstack.R;
 import com.android.networkstack.metrics.IpReachabilityMonitorMetrics;
 
 import java.io.PrintWriter;
-import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -478,14 +477,6 @@ public class IpReachabilityMonitor {
         // mIgnoreNeverReachableNeighbor already takes care of incomplete IPv6 neighbors, so do not
         // apply this logic.
         if (mIgnoreNeverReachableNeighbor) return false;
-
-        if (!(event.ip instanceof Inet6Address || event.ip instanceof Inet4Address)) {
-            Log.e(TAG, "Invalid IP address " + event.ip);
-            return false;
-        }
-
-        // If neighbor isn't in the watch list, return false.
-        if (!mNeighborWatchList.containsKey(event.ip)) return false;
 
         // For on-link IPv4/v6 DNS server or default router that never ever responds to
         // address resolution(e.g. ARP or NS), kernel will send RTM_NEWNEIGH with NUD_FAILED

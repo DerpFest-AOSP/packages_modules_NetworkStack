@@ -318,6 +318,13 @@ public class IpReachabilityMonitor {
                         mLog.w("ALERT neighbor went from: " + prev + " to: " + event);
                         handleNeighborLost(prev, event);
                     } else if (event.nudState == StructNdMsg.NUD_REACHABLE) {
+                        // TODO: do not ignore NUD_REACHABLE events before neighbors are added to
+                        // the watchlist.
+                        // If the NUD_REACHABLE event is received before the neighbor is put in the
+                        // watchlist via updateLinkProperties, it is not recorded in
+                        // mEverReachableNeighbors. This means that if a NUD_FAILURE occurs before
+                        // another NUD_REACHABLE, it is ignored. This race already exists today for
+                        // incomplete IPv6 neighbors.
                         mEverReachableNeighbors.add(event.ip);
                         handleNeighborReachable(prev, event);
                     }
@@ -432,13 +439,8 @@ public class IpReachabilityMonitor {
         }
 
         mNeighborWatchList = newNeighborWatchList;
-        // Remove the corresponding neighbor from mEverReachableNeighbors if it doesn't exist in
-        // the watchlist after updating the LinkProperties. Note that a neighbor might already be
-        // ever reachable even before updating the LinkProperties at the first time (e.g. after a
-        // success provisioning), current implementation will lose that information, that being
-        // said, mEverReachableNeighbors doesn't contain that neighbor's IP address. But that's
-        // probably fine given the user space should receive another NUD_REACHABLE event soon if
-        // the neighbor was ever reachable.
+        // Remove the corresponding neighbor from mEverReachableNeighbors if it was removed from the
+        // watchlist.
         mEverReachableNeighbors.removeIf(addr -> !newNeighborWatchList.containsKey(addr));
         if (DBG) { Log.d(TAG, "watch: " + describeWatchList()); }
     }
@@ -473,6 +475,8 @@ public class IpReachabilityMonitor {
 
     private boolean shouldIgnoreIncompleteNeighbor(@Nullable final NeighborEvent prev,
             @NonNull final NeighborEvent event) {
+        // mIgnoreNeverReachableNeighbor already takes care of incomplete IPv6 neighbors, so do not
+        // apply this logic.
         if (mIgnoreNeverReachableNeighbor) return false;
 
         if (!(event.ip instanceof Inet6Address || event.ip instanceof Inet4Address)) {

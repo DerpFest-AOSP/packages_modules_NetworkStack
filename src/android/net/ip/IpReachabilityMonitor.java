@@ -173,7 +173,7 @@ public class IpReachabilityMonitor {
          *
          * TODO: refactor to something like notifyProvisioningLost(String msg).
          */
-        void notifyLost(InetAddress ip, String logMsg, NudEventType type);
+        void notifyLost(String logMsg, NudEventType type);
     }
 
     /**
@@ -443,7 +443,7 @@ public class IpReachabilityMonitor {
             final NudEventType type =
                     getMacAddressChangedEventType(isFromProbe(), isNudFailureDueToRoam());
             mLog.w(logMsg);
-            mCallback.notifyLost(event.ip, logMsg, type);
+            mCallback.notifyLost(logMsg, type);
             logNudFailed(event, type);
             return;
         }
@@ -471,7 +471,6 @@ public class IpReachabilityMonitor {
             @NonNull final NeighborEvent event) {
         final LinkProperties whatIfLp = new LinkProperties(mLinkProperties);
 
-        InetAddress ip = null;
         for (Map.Entry<InetAddress, NeighborEvent> entry : mNeighborWatchList.entrySet()) {
             // TODO: Consider using NeighborEvent#isValid() here; it's more
             // strict but may interact badly if other entries are somehow in
@@ -485,7 +484,7 @@ public class IpReachabilityMonitor {
             // populate the map and the subsequent FAILED event will be processed.
             if (val == null || val.nudState != StructNdMsg.NUD_FAILED) continue;
 
-            ip = entry.getKey();
+            final InetAddress ip = entry.getKey();
             for (RouteInfo route : mLinkProperties.getRoutes()) {
                 if (ip.equals(route.getGateway())) {
                     whatIfLp.removeRoute(route);
@@ -544,14 +543,12 @@ public class IpReachabilityMonitor {
                     + ", NUD event type: " + type.name()
                     + (isOrganicNudFailureAndToBeIgnored ? ", to be ignored" : "");
             Log.w(TAG, logMsg);
-            // TODO: remove |ip| when the callback signature no longer has
-            // an InetAddress argument.
             // Notify critical neighbor lost as long as the NUD failures
             // are not from kernel organic or the NUD failure event type is
             // NUD_ORGANIC_FAILED_CRITICAL but the experiment flag is not
             // enabled. Regardless, the event metrics are still recoreded.
             if (!isOrganicNudFailureAndToBeIgnored) {
-                mCallback.notifyLost(ip, logMsg, type);
+                mCallback.notifyLost(logMsg, type);
             }
         }
         logNudFailed(event, type);

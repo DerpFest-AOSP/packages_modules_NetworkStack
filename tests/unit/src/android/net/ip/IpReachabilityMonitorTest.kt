@@ -342,7 +342,6 @@ class IpReachabilityMonitorTest {
 
         neighborMonitor.enqueuePacket(makeNewNeighMessage(TEST_IPV4_DNS, NUD_FAILED))
         verify(callback, timeout(TEST_TIMEOUT_MS)).notifyLost(
-            eq(TEST_IPV4_DNS),
             anyString(),
             eq(NUD_ORGANIC_FAILED_CRITICAL)
         )
@@ -374,12 +373,11 @@ class IpReachabilityMonitorTest {
 
         if (expectedNotifyLost) {
             verify(callback, timeout(TEST_TIMEOUT_MS)).notifyLost(
-                eq(lostNeighbor),
                 anyString(),
                 eq(eventType)
             )
         } else {
-             verify(callback, never()).notifyLost(eq(lostNeighbor), anyString(), any())
+             verify(callback, never()).notifyLost(anyString(), any())
         }
     }
 
@@ -415,7 +413,7 @@ class IpReachabilityMonitorTest {
 
         neighborMonitor.enqueuePacket(makeNewNeighMessage(lostNeighbor, NUD_FAILED))
         handlerThread.waitForIdle(TEST_TIMEOUT_MS)
-        verify(callback, never()).notifyLost(any(), anyString(), any(NudEventType::class.java))
+        verify(callback, never()).notifyLost(anyString(), any(NudEventType::class.java))
         verifyNudFailureMetrics(eventType, ipType, lostNeighborType)
     }
 
@@ -429,7 +427,6 @@ class IpReachabilityMonitorTest {
         neighborMonitor.enqueuePacket(makeNewNeighMessage(neighbor, NUD_REACHABLE, macaddr))
         handlerThread.waitForIdle(TEST_TIMEOUT_MS)
         verify(callback, never()).notifyLost(
-            eq(neighbor),
             anyString(),
             any(NudEventType::class.java)
         )
@@ -805,7 +802,6 @@ class IpReachabilityMonitorTest {
     ) {
         neighborMonitor.enqueuePacket(makeNewNeighMessage(neighbor, NUD_REACHABLE, TEST_MAC_2))
         verify(callback, timeout(TEST_TIMEOUT_MS)).notifyLost(
-            eq(neighbor),
             anyString(),
             eq(eventType)
         )
@@ -816,7 +812,7 @@ class IpReachabilityMonitorTest {
         neighbor: InetAddress,
     ) {
         neighborMonitor.enqueuePacket(makeNewNeighMessage(neighbor, NUD_REACHABLE, TEST_MAC_2))
-        verify(callback, never()).notifyLost(eq(neighbor), anyString(), any())
+        verify(callback, never()).notifyLost(anyString(), any())
         verifyNudFailureMetricsNotReported()
     }
 

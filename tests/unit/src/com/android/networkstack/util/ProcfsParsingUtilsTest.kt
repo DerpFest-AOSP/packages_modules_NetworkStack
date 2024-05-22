@@ -41,17 +41,23 @@ class ProcfsParsingUtilsTest {
     fun testParseAnycast6Address() {
         val inputString = listOf(
             "41 eth0  2a0034e2abc1334591a733387s2e322e 2",
+            "42 wlan0 2a0012e2abcddee459123738456e134a 4",
             "47 wlan0 2a0079e10abc15391ba735397a2e311f 1",
             "48 wlan1 2a004591a733387s2e334e2abc13322e 3"
         )
 
-        val expectedResult = InetAddress.getByAddress(
-            HexDump.hexStringToByteArray("2a0079e10abc15391ba735397a2e311f")
-        ) as Inet6Address
+        val expectedResult = listOf(
+            InetAddress.getByAddress(
+                HexDump.hexStringToByteArray("2a0012e2abcddee459123738456e134a")
+            ) as Inet6Address,
+            InetAddress.getByAddress(
+                HexDump.hexStringToByteArray("2a0079e10abc15391ba735397a2e311f")
+            ) as Inet6Address
+        )
 
         assertEquals(
             expectedResult,
-            ProcfsParsingUtils.parseAnycast6Address(inputString, "wlan0")
+            ProcfsParsingUtils.parseAnycast6Addresses(inputString, "wlan0")
         )
     }
 

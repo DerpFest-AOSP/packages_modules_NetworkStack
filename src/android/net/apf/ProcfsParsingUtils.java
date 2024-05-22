@@ -85,7 +85,7 @@ public final class ProcfsParsingUtils {
     }
 
     /**
-     * Parses an anycast6 address associated with a specific interface from a list of strings.
+     * Parses anycast6 addresses associated with a specific interface from a list of strings.
      *
      * This function searches the input list for a line containing the specified interface name.
      * If found, it extracts the IPv6 address from that line and
@@ -94,29 +94,29 @@ public final class ProcfsParsingUtils {
      * @param lines   A list of strings where each line is expected to contain
      *                interface and address information.
      * @param ifname  The name of the network interface to search for.
-     * @return       The parsed `Inet6Address` representing the anycast address
-     *               associated with the specified interface,
-     *               or `null` if no matching line is found or if an error occurs during parsing.
+     * @return        A list of The `Inet6Address` representing the anycast address
+     *                associated with the specified interface,
+     *                If an error occurs during parsing, an empty list is returned.
      */
     @VisibleForTesting
-    public static Inet6Address parseAnycast6Address(final List<String> lines, final String ifname) {
+    public static List<Inet6Address> parseAnycast6Addresses(
+            @NonNull List<String> lines, @NonNull String ifname) {
+        final List<Inet6Address> addresses = new ArrayList<>();
         try {
             for (String line : lines) {
-                if (!line.contains(ifname)) {
+                final String[] fields = line.split("\\s+");
+                if (!fields[1].equals(ifname)) {
                     continue;
                 }
 
-                // If there's multiple anycast addresses, only the first one will be returned.
-                // It only has one anycast address per interface for clat.
-                final String[] fields = line.split(" ");
                 final byte[] addr = HexDump.hexStringToByteArray(fields[2]);
-                return (Inet6Address) InetAddress.getByAddress(addr);
+                addresses.add((Inet6Address) InetAddress.getByAddress(addr));
             }
         } catch (UnknownHostException e) {
             Log.wtf("failed to convert to Inet6Address.", e);
-            return null;
+            addresses.clear();
         }
-        return null;
+        return addresses;
     }
 
     /**
@@ -190,14 +190,14 @@ public final class ProcfsParsingUtils {
     /**
      * The function loads the existing IPv6 anycast address from the file `/proc/net/anycast6`.
      * If the file does not exist or the interface is not found, the function
-     * returns null.
+     * returns an empty list.
      *
      * @param ifname The name of the interface.
-     * @return The IPv6 anycast address for the interface.
+     * @return A list of the IPv6 anycast addresses for the interface.
      */
-    public static Inet6Address getAnycast6Address(@NonNull String ifname) {
+    public static List<Inet6Address> getAnycast6Addresses(@NonNull String ifname) {
         final List<String> lines = readFile(IPV6_ANYCAST_PATH);
-        return parseAnycast6Address(lines, ifname);
+        return parseAnycast6Addresses(lines, ifname);
     }
 
     /**

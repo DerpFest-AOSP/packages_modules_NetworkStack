@@ -31,6 +31,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * The base class for APF assembler/generator.
@@ -821,23 +823,17 @@ public abstract class BaseApfGenerator {
         if (elementSize > 2097151) { // 2 ^ 21 - 1
             throw new IllegalArgumentException("too many elements");
         }
-        List<byte[]> deduplicatedList = new ArrayList<>();
-        deduplicatedList.add(bytesList.get(0));
         for (int i = 1; i < bytesList.size(); ++i) {
             if (elementSize != bytesList.get(i).length) {
                 throw new IllegalArgumentException("byte arrays in the set have different size");
             }
-            int j = 0;
-            for (; j < deduplicatedList.size(); ++j) {
-                if (Arrays.equals(bytesList.get(i), deduplicatedList.get(j))) {
-                    break;
-                }
-            }
-            if (j == deduplicatedList.size()) {
-                deduplicatedList.add(bytesList.get(i));
-            }
         }
-        return deduplicatedList;
+        // Arrays::compare() is only available since API level 33.
+        // As we only use TreeSet to deduplicate the value, and don't care the order. We always
+        // return 1 if the elements are not equals.
+        final Set<byte[]> dedupedSet = new TreeSet<>((a, b) -> Arrays.equals(a, b) ? 0 : 1);
+        dedupedSet.addAll(bytesList);
+        return new ArrayList<>(dedupedSet);
     }
 
     void requireApfVersion(int minimumVersion) throws IllegalInstructionException {

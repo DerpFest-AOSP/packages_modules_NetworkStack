@@ -26,6 +26,7 @@ import android.net.apf.ApfCounterTracker.Counter.DROPPED_ARP_REQUEST_REPLIED
 import android.net.apf.ApfCounterTracker.Counter.DROPPED_ETHERTYPE_NOT_ALLOWED
 import android.net.apf.ApfCounterTracker.Counter.DROPPED_ETH_BROADCAST
 import android.net.apf.ApfCounterTracker.Counter.DROPPED_IPV4_NON_DHCP4
+import android.net.apf.ApfCounterTracker.Counter.DROPPED_IPV6_NS_INVALID
 import android.net.apf.ApfCounterTracker.Counter.DROPPED_IPV6_NS_NO_ADDRESS
 import android.net.apf.ApfCounterTracker.Counter.DROPPED_IPV6_NS_OTHER_HOST
 import android.net.apf.ApfCounterTracker.Counter.PASSED_ALLOCATE_FAILURE
@@ -33,6 +34,7 @@ import android.net.apf.ApfCounterTracker.Counter.PASSED_ARP
 import android.net.apf.ApfCounterTracker.Counter.PASSED_IPV4
 import android.net.apf.ApfCounterTracker.Counter.PASSED_IPV4_FROM_DHCPV4_SERVER
 import android.net.apf.ApfCounterTracker.Counter.PASSED_IPV6_ICMP
+import android.net.apf.ApfCounterTracker.Counter.PASSED_IPV6_NS_MULTIPLE_OPTIONS
 import android.net.apf.ApfCounterTracker.Counter.PASSED_TRANSMIT_FAILURE
 import android.net.apf.ApfCounterTracker.Counter.TOTAL_PACKETS
 import android.net.apf.ApfFilter.Dependencies
@@ -576,7 +578,7 @@ class ApfNewTest {
                 program
         )
         assertContentEquals(
-                listOf("0: drop        counter=41"),
+                listOf("0: drop        counter=43"),
                 ApfJniUtils.disassembleApf(program).map { it.trim() }
         )
 
@@ -625,14 +627,14 @@ class ApfNewTest {
                 byteArrayOf(
                         encodeInstruction(opcode = 14, immLength = 2, register = 1), 1, 0
                 ) + largeByteArray + byteArrayOf(
-                        encodeInstruction(opcode = 21, immLength = 1, register = 0), 48, 6, 33
+                        encodeInstruction(opcode = 21, immLength = 1, register = 0), 48, 6, 25
                 ),
                 program
         )
         assertContentEquals(
                 listOf(
                         "0: data        256, " + "01".repeat(256),
-                        "259: debugbuf    size=1569"
+                        "259: debugbuf    size=1561"
                 ),
                 ApfJniUtils.disassembleApf(program).map { it.trim() }
         )
@@ -918,7 +920,7 @@ class ApfNewTest {
                 .generate()
         assertContentEquals(listOf(
                 "0: data        9, 112233445566778899",
-                "12: debugbuf    size=1796",
+                "12: debugbuf    size=1788",
                 "16: allocate    18",
                 "20: datacopy    src=3, len=6",
                 "23: datacopy    src=4, len=3",
@@ -2048,6 +2050,95 @@ class ApfNewTest {
                 HexDump.hexStringToByteArray(hostMcastDstIpNsPkt),
                 PASSED_IPV6_ICMP
         )
+
+        // validate IPv6 NS payload check
+
+        // Using scapy to generate IPv6 NS packet:
+        // eth = Ether(src="00:01:02:03:04:05", dst="02:03:04:05:06:07")
+        // ip6 = IPv6(src="2001::200:1a:1122:3344", dst="2001::200:1a:3344:1122", hlim=255, plen=20)
+        // icmp6 = ICMPv6ND_NS(tgt="2001::200:1a:3344:1122")
+        // icmp6_opt = ICMPv6NDOptSrcLLAddr(lladdr="01:02:03:04:05:06")
+        // pkt = eth/ip6/icmp6/icmp6_opt
+        val shortNsPkt = "02030405060700010203040586DD6000000000143AFF20010000000000000200001A1" +
+                         "122334420010000000000000200001A3344112287003B140000000020010000000000" +
+                         "000200001A334411220101010203040506"
+        // payload len < 24 -> drop
+        verifyProgramRun(
+                APF_VERSION_6,
+                program,
+                HexDump.hexStringToByteArray(shortNsPkt),
+                DROPPED_IPV6_NS_INVALID
+        )
+
+        // Using scapy to generate IPv6 NS packet:
+        // eth = Ether(src="00:01:02:03:04:05", dst="02:03:04:05:06:07")
+        // ip6 = IPv6(src="2001::200:1a:1122:3344", dst="2001::200:1a:3344:1122", hlim=255)
+        // icmp6 = ICMPv6ND_NS(tgt="2001::200:1a:3344:1122")
+        // icmp6_opt_1 = ICMPv6NDOptSrcLLAddr(lladdr="01:02:03:04:05:06")
+        // icmp6_opt_2 = ICMPv6NDOptUnknown(type=14, len=6, data='\x11\x22\x33\x44\x55\x66')
+        // pkt = eth/ip6/icmp6/icmp6_opt_1/icmp6_opt_2
+        val longNsPkt = "02030405060700010203040586DD6000000000283AFF20010000000000000200001A11" +
+                        "22334420010000000000000200001A3344112287009339000000002001000000000000" +
+                        "0200001A3344112201010102030405060E06112233445566"
+        // payload len > 32 -> pass
+        verifyProgramRun(
+                APF_VERSION_6,
+                program,
+                HexDump.hexStringToByteArray(longNsPkt),
+                PASSED_IPV6_NS_MULTIPLE_OPTIONS
+        )
+
+        // Using scapy to generate IPv6 NS packet:
+        // eth = Ether(src="00:01:02:03:04:05", dst="02:03:04:05:06:07")
+        // ip6 = IPv6(src="2001::200:1a:1122:3344", dst="2001::200:1a:3344:1122", hlim=255)
+        // icmp6 = ICMPv6ND_NS(tgt="2001::200:1a:4444:5555")
+        // icmp6_opt = ICMPv6NDOptSrcLLAddr(lladdr="01:02:03:04:05:06")
+        // pkt = eth/ip6/icmp6/icmp6_opt
+        val otherHostNsPkt = "02030405060700010203040586DD6000000000203AFF200100000000000002000" +
+                             "01A1122334420010000000000000200001A334411228700E5E000000000200100" +
+                             "00000000000200001A444455550101010203040506"
+        // target ip is not one of device's ip -> drop
+        verifyProgramRun(
+                APF_VERSION_6,
+                program,
+                HexDump.hexStringToByteArray(otherHostNsPkt),
+                DROPPED_IPV6_NS_OTHER_HOST
+        )
+
+        // Using scapy to generate IPv6 NS packet:
+        // eth = Ether(src="00:01:02:03:04:05", dst="02:03:04:05:06:07")
+        // ip6 = IPv6(src="2001::200:1a:1122:3344", dst="2001::200:1a:3344:1122", hlim=20)
+        // icmp6 = ICMPv6ND_NS(tgt="2001::200:1a:3344:1122")
+        // icmp6_opt = ICMPv6NDOptSrcLLAddr(lladdr="01:02:03:04:05:06")
+        // pkt = eth/ip6/icmp6/icmp6_opt
+        val invalidHoplimitNsPkt = "02030405060700010203040586DD6000000000203A14200100000000000" +
+                                   "00200001A1122334420010000000000000200001A3344112287003B1400" +
+                                   "00000020010000000000000200001A334411220101010203040506"
+        // hoplimit is not 255 -> drop
+        verifyProgramRun(
+                APF_VERSION_6,
+                program,
+                HexDump.hexStringToByteArray(invalidHoplimitNsPkt),
+                DROPPED_IPV6_NS_INVALID
+        )
+
+        // Using scapy to generate IPv6 NS packet:
+        // eth = Ether(src="00:01:02:03:04:05", dst="02:03:04:05:06:07")
+        // ip6 = IPv6(src="2001::200:1a:1122:3344", dst="2001::200:1a:3344:1122", hlim=255)
+        // icmp6 = ICMPv6ND_NS(tgt="2001::200:1a:3344:1122", code=5)
+        // icmp6_opt = ICMPv6NDOptSrcLLAddr(lladdr="01:02:03:04:05:06")
+        // pkt = eth/ip6/icmp6/icmp6_opt
+        val invalidIcmpCodeNsPkt = "02030405060700010203040586DD6000000000203AFF200100000000000" +
+                                   "00200001A1122334420010000000000000200001A3344112287053B0F00" +
+                                   "00000020010000000000000200001A334411220101010203040506"
+        // icmp6 code is not 0 -> drop
+        verifyProgramRun(
+                APF_VERSION_6,
+                program,
+                HexDump.hexStringToByteArray(invalidIcmpCodeNsPkt),
+                DROPPED_IPV6_NS_INVALID
+        )
+
         apfFilter.shutdown()
     }
 

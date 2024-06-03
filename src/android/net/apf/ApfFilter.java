@@ -36,6 +36,8 @@ import static android.net.apf.ApfConstants.ETH_MULTICAST_MDNS_V6_MAC_ADDRESS;
 import static android.net.apf.ApfConstants.ETH_TYPE_MAX;
 import static android.net.apf.ApfConstants.ETH_TYPE_MIN;
 import static android.net.apf.ApfConstants.FIXED_ARP_REPLY_HEADER;
+import static android.net.apf.ApfConstants.ICMP6_CODE_OFFSET;
+import static android.net.apf.ApfConstants.ICMP6_NS_TARGET_IP_OFFSET;
 import static android.net.apf.ApfConstants.ICMP6_TYPE_OFFSET;
 import static android.net.apf.ApfConstants.IPPROTO_HOPOPTS;
 import static android.net.apf.ApfConstants.IPV4_ANY_HOST_ADDRESS;
@@ -51,15 +53,19 @@ import static android.net.apf.ApfConstants.IPV6_DEST_ADDR_OFFSET;
 import static android.net.apf.ApfConstants.IPV6_FLOW_LABEL_LEN;
 import static android.net.apf.ApfConstants.IPV6_FLOW_LABEL_OFFSET;
 import static android.net.apf.ApfConstants.IPV6_HEADER_LEN;
+import static android.net.apf.ApfConstants.IPV6_HOP_LIMIT_OFFSET;
 import static android.net.apf.ApfConstants.IPV6_NEXT_HEADER_OFFSET;
 import static android.net.apf.ApfConstants.IPV6_SOLICITED_NODES_PREFIX;
+import static android.net.apf.ApfConstants.IPV6_PAYLOAD_LEN_OFFSET;
 import static android.net.apf.ApfConstants.IPV6_SRC_ADDR_OFFSET;
 import static android.net.apf.ApfConstants.MDNS_PORT;
 import static android.net.apf.ApfConstants.TCP_HEADER_SIZE_OFFSET;
 import static android.net.apf.ApfConstants.TCP_UDP_DESTINATION_PORT_OFFSET;
 import static android.net.apf.ApfConstants.TCP_UDP_SOURCE_PORT_OFFSET;
+import static android.net.apf.ApfCounterTracker.Counter.DROPPED_IPV6_NS_INVALID;
 import static android.net.apf.ApfCounterTracker.Counter.DROPPED_IPV6_NS_NO_ADDRESS;
 import static android.net.apf.ApfCounterTracker.Counter.DROPPED_IPV6_NS_OTHER_HOST;
+import static android.net.apf.ApfCounterTracker.Counter.PASSED_IPV6_NS_MULTIPLE_OPTIONS;
 import static android.net.apf.BaseApfGenerator.MemorySlot;
 import static android.net.apf.BaseApfGenerator.Register.R0;
 import static android.net.apf.BaseApfGenerator.Register.R1;
@@ -1824,6 +1830,33 @@ public class ApfFilter implements AndroidPacketFilter {
                 .defineLabel(notIpV6SolicitedNodeMcast)
                 .addCountAndDropIfBytesAtR0EqualsNoneOf(allIPv6Addrs, DROPPED_IPV6_NS_OTHER_HOST)
                 .defineLabel(endOfIpV6DstCheck);
+
+        // Hop limit not 255, NS requires hop limit to be 255 -> drop
+        v6Gen.addLoad8(R0, IPV6_HOP_LIMIT_OFFSET)
+                .addCountAndDropIfR0NotEquals(255, DROPPED_IPV6_NS_INVALID);
+
+        // payload length < 24 (8 bytes ICMP6 header + 16 bytes target address) -> drop
+        v6Gen.addLoad16(R0, IPV6_PAYLOAD_LEN_OFFSET)
+                .addCountAndDropIfR0LessThan(24, DROPPED_IPV6_NS_INVALID);
+
+        // ICMPv6 code not 0 -> drop
+        v6Gen.addLoad8(R0, ICMP6_CODE_OFFSET)
+                .addCountAndDropIfR0NotEquals(0, DROPPED_IPV6_NS_INVALID);
+
+        // target address (ICMPv6 NS/NA payload) is not interface addresses -> drop
+        v6Gen.addLoadImmediate(R0, ICMP6_NS_TARGET_IP_OFFSET)
+                .addCountAndDropIfBytesAtR0EqualsNoneOf(allIPv6Addrs, DROPPED_IPV6_NS_OTHER_HOST);
+
+        // Only offload the following cases:
+        //   1) NS packet with no options.
+        //   2) NS packet with only one option: nonce.
+        //   3) NS packet with only one option: SLLA.
+        // For packets containing more than one option,
+        // pass the packet to the CPU for processing.
+        // payload length > 32
+        //   (8 bytes ICMP6 header + 16 bytes target address + 8 bytes option) -> pass
+        v6Gen.addLoad16(R0, IPV6_PAYLOAD_LEN_OFFSET)
+                .addCountAndPassIfR0GreaterThan(32, PASSED_IPV6_NS_MULTIPLE_OPTIONS);
     }
 
     /**
@@ -1854,6 +1887,16 @@ public class ApfFilter implements AndroidPacketFilter {
         //     drop
         //   else if IPv6 dst is none of interface unicast IPv6 addresses (incl. anycast):
         //     drop
+        //   if hop limit is not 255 (NS requires hop limit to be 255):
+        //     drop
+        //   if payload len < 24 (8 bytes ICMP6 header + 16 bytes target address):
+        //     drop
+        //   if ICMPv6 code is not 0:
+        //     drop
+        //   if target IP is none of interface unicast IPv6 addresses (incl. anycast):
+        //     drop
+        //   if payload len > 32 (8 bytes ICMP6 header + 16 bytes target address + 8 bytes option):
+        //     pass
         // if it's ICMPv6 RS to any:
         //   drop
         // if it's ICMPv6 NA to anything in ff02::/120

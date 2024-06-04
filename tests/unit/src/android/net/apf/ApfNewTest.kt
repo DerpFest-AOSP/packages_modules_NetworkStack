@@ -86,6 +86,10 @@ import org.mockito.Mockito
 import org.mockito.Mockito.`when`
 import org.mockito.MockitoAnnotations
 
+const val ETH_HLEN = 14
+const val IPV4_HLEN = 20
+const val IPPROTO_UDP = 17
+
 /**
  * Tests for APF instructions.
  */
@@ -2248,11 +2252,5 @@ class ApfNewTest {
         config.ieee802_3Filter = false
         config.ethTypeBlackList = IntArray(0)
         return config
-    }
-
-    companion object {
-        const val ETH_HLEN = 14
-        const val IPV4_HLEN = 20
-        const val IPPROTO_UDP = 17
     }
 }

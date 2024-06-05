@@ -1857,6 +1857,8 @@ public class ApfFilter implements AndroidPacketFilter {
         //   (8 bytes ICMP6 header + 16 bytes target address + 8 bytes option) -> pass
         v6Gen.addLoad16(R0, IPV6_PAYLOAD_LEN_OFFSET)
                 .addCountAndPassIfR0GreaterThan(32, PASSED_IPV6_NS_MULTIPLE_OPTIONS);
+
+        v6Gen.addCountAndPass(Counter.PASSED_IPV6_ICMP);
     }
 
     /**

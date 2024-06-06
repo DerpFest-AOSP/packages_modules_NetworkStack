@@ -340,7 +340,7 @@ public class ApfFilter implements AndroidPacketFilter {
 
     // Our IPv6 non-tentative addresses
     @GuardedBy("this")
-    private Set<Inet6Address> mIPv6Addresses = new ArraySet<>();
+    private Set<Inet6Address> mIPv6NonTentativeAddresses = new ArraySet<>();
 
     // Our tentative IPv6 addresses
     @GuardedBy("this")
@@ -1790,7 +1790,7 @@ public class ApfFilter implements AndroidPacketFilter {
     @GuardedBy("this")
     private List<byte[]> getUnicastIpv6Addresses() {
         final List<byte[]> addresses = new ArrayList<>();
-        for (Inet6Address addr : mIPv6Addresses) {
+        for (Inet6Address addr : mIPv6NonTentativeAddresses) {
             addresses.add(addr.getAddress());
         }
 
@@ -2552,14 +2552,14 @@ public class ApfFilter implements AndroidPacketFilter {
         if ((prefix == mIPv4PrefixLength)
                 && Arrays.equals(addr, mIPv4Address)
                 && ipv6Addresses.first.equals(mIPv6TentativeAddresses)
-                && ipv6Addresses.second.equals(mIPv6Addresses)
+                && ipv6Addresses.second.equals(mIPv6NonTentativeAddresses)
         ) {
             return;
         }
         mIPv4Address = addr;
         mIPv4PrefixLength = prefix;
         mIPv6TentativeAddresses = ipv6Addresses.first;
-        mIPv6Addresses = ipv6Addresses.second;
+        mIPv6NonTentativeAddresses = ipv6Addresses.second;
 
         installNewProgramLocked();
     }
@@ -2638,7 +2638,7 @@ public class ApfFilter implements AndroidPacketFilter {
             pw.println("IPv4 address: " + InetAddress.getByAddress(mIPv4Address).getHostAddress());
             pw.println("IPv6 addresses: ");
             pw.increaseIndent();
-            for (Inet6Address addr: mIPv6Addresses) {
+            for (Inet6Address addr: mIPv6NonTentativeAddresses) {
                 pw.println(addr.getHostAddress());
             }
             pw.decreaseIndent();

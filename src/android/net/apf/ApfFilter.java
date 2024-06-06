@@ -501,6 +501,17 @@ public class ApfFilter implements AndroidPacketFilter {
 
             return addresses;
         }
+
+        /**
+         * Loads the existing ND traffic class for the specific interface from the file
+         * /proc/sys/net/ipv6/conf/{ifname}/ndisc_tclass.
+         *
+         * If the file does not exist or the interface is not found,
+         * the function returns 0..255, 0 as default ND traffic class.
+         */
+        public int getNdTrafficClass(@NonNull String ifname) {
+            return ProcfsParsingUtils.getNdTrafficClass(ifname);
+        }
     }
 
     public synchronized void setDataSnapshot(byte[] data) {

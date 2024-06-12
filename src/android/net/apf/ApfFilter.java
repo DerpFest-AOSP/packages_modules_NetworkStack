@@ -65,9 +65,9 @@ import static android.net.apf.ApfConstants.TCP_HEADER_SIZE_OFFSET;
 import static android.net.apf.ApfConstants.TCP_UDP_DESTINATION_PORT_OFFSET;
 import static android.net.apf.ApfConstants.TCP_UDP_SOURCE_PORT_OFFSET;
 import static android.net.apf.ApfCounterTracker.Counter.DROPPED_IPV6_NS_INVALID;
-import static android.net.apf.ApfCounterTracker.Counter.DROPPED_IPV6_NS_NO_ADDRESS;
 import static android.net.apf.ApfCounterTracker.Counter.DROPPED_IPV6_NS_OTHER_HOST;
 import static android.net.apf.ApfCounterTracker.Counter.PASSED_IPV6_NS_MULTIPLE_OPTIONS;
+import static android.net.apf.ApfCounterTracker.Counter.PASSED_IPV6_NS_NO_ADDRESS;
 import static android.net.apf.BaseApfGenerator.MemorySlot;
 import static android.net.apf.BaseApfGenerator.Register.R0;
 import static android.net.apf.BaseApfGenerator.Register.R1;
@@ -1891,8 +1891,9 @@ public class ApfFilter implements AndroidPacketFilter {
                 true /* includeTentative */,
                 true /* includeAnycast */);
         if (allIPv6Addrs.isEmpty()) {
-            // There is no IPv6 link local address.
-            v6Gen.addCountAndDrop(DROPPED_IPV6_NS_NO_ADDRESS);
+            // If there is no IPv6 link local address, allow all NS packets to avoid racing
+            // against RS.
+            v6Gen.addCountAndPass(PASSED_IPV6_NS_NO_ADDRESS);
             return;
         }
 
@@ -1966,7 +1967,7 @@ public class ApfFilter implements AndroidPacketFilter {
         //     pass
         // (APFv6+ specific logic) if it's ICMPv6 NS:
         //   if there are no IPv6 addresses (including link local address) on the interface:
-        //     drop
+        //     pass
         //   if MAC dst is none of known {unicast, multicast, broadcast} MAC addresses
         //     drop
         //   if IPv6 dst prefix is "ff02::1:ff00:0/104" but is none of solicited-node multicast

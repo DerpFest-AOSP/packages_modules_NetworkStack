@@ -1693,8 +1693,8 @@ public class ApfFilter implements AndroidPacketFilter {
             // Check 1) it's not a fragment. 2) it's UDP.
             // Load 16 bit frag flags/offset field, 8 bit ttl, 8 bit protocol
             gen.addLoad32(R0, IPV4_FRAGMENT_OFFSET_OFFSET);
-            gen.addOr(0xFF00);
-            gen.addCountAndDropIfR0NotEquals(0xFF11, Counter.DROPPED_IPV4_NON_DHCP4);
+            gen.addAnd(0x3FFF00FF);
+            gen.addCountAndDropIfR0NotEquals(IPPROTO_UDP, Counter.DROPPED_IPV4_NON_DHCP4);
             // Check it's addressed to DHCP client port.
             gen.addLoadFromMemory(R1, MemorySlot.IPV4_HEADER_SIZE);
             gen.addLoad32Indexed(R0, TCP_UDP_SOURCE_PORT_OFFSET);
@@ -1711,8 +1711,8 @@ public class ApfFilter implements AndroidPacketFilter {
             // Check 1) it's not a fragment. 2) it's UDP.
             // Load 16 bit frag flags/offset field, 8 bit ttl, 8 bit protocol
             gen.addLoad32(R0, IPV4_FRAGMENT_OFFSET_OFFSET);
-            gen.addOr(0xFF00);
-            gen.addJumpIfR0NotEquals(0xFF11, skipDhcpv4Filter);
+            gen.addAnd(0x3FFF00FF);
+            gen.addJumpIfR0NotEquals(IPPROTO_UDP, skipDhcpv4Filter);
             // Check it's addressed to DHCP client port.
             gen.addLoadFromMemory(R1, MemorySlot.IPV4_HEADER_SIZE);
             gen.addLoad16Indexed(R0, TCP_UDP_DESTINATION_PORT_OFFSET);
